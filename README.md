@@ -2,6 +2,8 @@
 
 A Linux host and layout lab for the **Akai APC64**, in two parts: the **Host** and the **Lab** (below).
 
+![The page: the live replica in Custom view with the generated Tonnetz C layout, and the Lab panel](docs/screenshot.png)
+
 The Host is a Linux service that hosts the **Akai APC64** in its DAW ("Ableton") mode — without Ableton — when, and only
 when, you say yes. Every pad, button, touch strip and the encoder does what the current **layout** says: MIDI to
 any named port (the MPC, Bitwig, anything ALSA can see). The pads stay expressive: in the unit's own Note, Chord,
