@@ -1,0 +1,12 @@
+[Desktop Entry]
+# Launcher that opens the APC64 host page. Install:
+#   cp deploy/apc64-host.desktop ~/.local/share/applications/
+# Change the port in Exec= if config.local sets another APC64_HTTP_PORT.
+Type=Application
+Name=APC64 Control
+Comment=Open the APC64 replica: what every control does, layouts, pages, banks, activity
+Exec=xdg-open http://localhost:5058/
+Icon=audio-midi
+Terminal=false
+Categories=AudioVideo;Audio;Midi;
+StartupNotify=false

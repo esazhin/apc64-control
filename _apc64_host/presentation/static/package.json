@@ -1,0 +1,7 @@
+{
+  "name": "apc64-host-page",
+  "private": true,
+  "type": "module",
+  "description": "The APC64 host page: vanilla ES modules, no build step. Tests: node --test (in this directory).",
+  "scripts": { "test": "node --test" }
+}

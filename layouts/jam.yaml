@@ -1,0 +1,15 @@
+# Jam: MPC drums on the grid, a mixer on the strips, and the unit's own Note view played into the MPC.
+# The format is described in docs/layout-guide.md; check a change with:  apc64 validate layouts/jam.yaml
+name: Jam
+devices:
+  mpc: MPC Live III MIDI 1     # example: the author's MPC; use your own port (`apc64 ports`); a unique part of the name is enough
+pages:
+  1 Drums:
+    pads r1c1-r2c8: notes from 36 on mpc ch 10 colour red   # 16 drum pads, C1 (36) upwards
+    play: cc 118 on mpc ch 1
+    stop: cc 117 on mpc ch 1
+banks:
+  1 Mix:
+    strips 1-8: cc 20-27 on mpc ch 1
+routing:
+  notes: mpc ch 2 aftertouch pass   # Note/Chord/Step/Drum views: velocity and aftertouch as played

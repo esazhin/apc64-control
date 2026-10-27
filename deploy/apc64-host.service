@@ -1,0 +1,23 @@
+# systemd user unit for the APC64 host (contract §7: started at login; it still never takes the APC64 without a yes).
+# Install (replace <repo> with the repository's absolute path, see README.md):
+#   sed "s|<repo>|$PWD|g" deploy/apc64-host.service > ~/.config/systemd/user/apc64-host.service
+#   systemctl --user daemon-reload && systemctl --user enable --now apc64-host
+[Unit]
+Description=APC64 host (DAW-mode host for the Akai APC64; page and API on port 5058 by default)
+After=sound.target
+
+[Service]
+Type=simple
+WorkingDirectory=<repo>
+# optional machine-specific settings (KEY=VALUE); the leading '-' means a missing file is fine
+EnvironmentFile=-<repo>/config.local
+ExecStart="<repo>/.venv/bin/python" -m _apc64_host
+Restart=on-failure
+RestartSec=2
+# SIGTERM runs the release: LEDs and OLED cleared, DAW mode off, port freed. Each write may wait up to 2 s on a
+# stuck device, so allow well over that before systemd escalates to SIGKILL.
+KillSignal=SIGTERM
+TimeoutStopSec=20
+
+[Install]
+WantedBy=default.target

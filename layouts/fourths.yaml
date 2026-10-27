@@ -1,0 +1,10 @@
+# Fourths: an isomorphic layout, every pad lit; one semitone per column, a fourth (+5) per row (docs/lab-guide.md).
+# Pads with the same pitch class share a colour. Without a routing line the notes go to the lab's default note
+# target (APC64_LAB_TARGET), or are only shown when none is set.
+name: Fourths
+lab:
+  generator: isomorphic
+  base: 36            # the note on pad r1c1: a number, or a name (C1 = 36)
+  column: 1           # semitones per column to the right
+  row: 5              # semitones per row upwards
+  scheme: fifths

@@ -1,0 +1,24 @@
+APC64 Control
+Copyright 2026 esazhin and contributors
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This project is not affiliated with, endorsed by or sponsored by Akai Professional or inMusic Brands, Inc.
+"Akai", "APC64", "MPC" and the other product names mentioned here (among them Ableton Live, Bitwig Studio and
+Boss RC-600) are trademarks of their respective owners, used here only to identify the hardware and software this
+project interoperates with.
+
+Interoperability sources:
+
+  - The protocol facts tagged [CODE] in PROTOCOL-SPEC.md were read from Bitwig's MIT-licensed controller
+    extensions (the APC64 extension) and from Akai's APC64 Project Editor for Windows. No Bitwig or Akai source
+    or program files are redistributed in this repository.
+  - The harmony core's note spelling and chord detection follow the author's own MusicCat Explorer.
+
+Test fixtures (fixtures/):
+
+  - Captures of a real APC64's own MIDI and SysEx output (identity replies, surface presses, mode reports,
+    project and global-settings dumps), recorded for testing. The unit's serial number is replaced by a
+    placeholder (ASCII "000000000000000") in every capture.
+  - "Boss RC-600.APC64", a preset file the author made and saved with Akai's APC64 Project Editor, used only as a test vector for the
+    .APC64 file format (PROTOCOL-SPEC.md §8.4).

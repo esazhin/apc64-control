@@ -1,0 +1,32 @@
+# Copy to config.local (git-ignored) and adjust for your machine.
+# Read by the service (python -m _apc64_host), the apc64 command and the systemd unit (EnvironmentFile).
+# Plain KEY=VALUE lines; real environment variables override this file. Every key is optional: the values below
+# are the defaults.
+
+# the port the page, the API and the apc64 command use (if you change it, change deploy/apc64-host.desktop too)
+APC64_HTTP_PORT=5058
+# the listen address: :: = every IPv6 and IPv4 address (dual-stack); 127.0.0.1 = this machine only
+APC64_HTTP_HOST=::
+# where layouts live; relative paths are under the repository (the examples in layouts/ are tracked in git)
+APC64_LAYOUTS_DIR=layouts
+# version copies, the holding marker, calibration, the last page/bank and the lab's remembered inputs
+APC64_STATE_DIR=~/.local/state/apc64-host
+# who may use the page and API without login: loopback and private ranges (add 100.64.0.0/10 for Tailscale)
+APC64_ALLOWED_NETWORKS=127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16,::1/128,fe80::/10,fc00::/7
+# 1 = take the APC64 without asking whenever it appears (default 0: ask first)
+APC64_AUTO_ACCEPT=0
+# the start of the APC64's ALSA port names, as `amidi -l` lists them (never a card number)
+APC64_PORT_STEM=APC64
+
+# --- the layout lab ---
+# the default note target for generated layouts: '<port> ch <1-16> [aftertouch pass|pressure|drop]',
+# e.g. 'MPC Live III MIDI 1 ch 2 aftertouch pass' (a port name as `apc64 ports` lists it).
+# Empty: Custom-view notes of a generated layout are only shown, unless the layout has 'routing: custom:'.
+APC64_LAB_TARGET=
+# the unit-memory backups (dated, never deleted) and the layout library (captured and imported projects); both
+# hold your unit's data and are git-ignored; relative paths are under the repository
+APC64_LAB_BACKUPS_DIR=backups
+APC64_LAB_LIBRARY_DIR=library
+
+# The apc64 command finds the service at http://127.0.0.1:$APC64_HTTP_PORT; set APC64_URL in the environment
+# (not here) to reach a service on another machine, e.g. APC64_URL=http://my-audio-pc:5058

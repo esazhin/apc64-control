@@ -1,0 +1,776 @@
+"""SessionService and Slot0Writer: a generated layout (or a library preview) played in slot 0 (contract §7.1;
+inv5, inv6, inv7, inv11; §2.7 a2, a5/q9, q3, q4; a8; d21, d22, d38, d47, d75, d80).
+
+The LabSession aggregate decides; this service does the I/O and talks to the host:
+- Activation backs slot 0 up once (the session backup, with an open-session marker beside it), then writes the
+  layout at Oct +0. Right after that first write a full backup of slots 1–24 runs in the background (or a full
+  backup younger than 10 minutes is reused), so an on-unit save of the generated layout stays recoverable. It
+  steps aside for every slot-0 write, so it never delays an encoder shift (§2.7 a5/q9).
+- Encoder and Tempo (unit or replica) shift the window or cycle the interval. Slot0Writer is latest-wins and
+  paced on transmission only (§2.7 a2): a write waits for the previous write to be sent, never for a read-back;
+  intermediate positions of a burst are skipped. The read-back runs once the burst settles.
+- Slot-0 decision (inv4 vs §2.7 a5/q9): a read-back equal to any record this session sent is fine (an
+  earlier one only means a later write is still on its way); slot 0 matching nothing the lab sent means the user
+  changed projects — the session ends quietly: nothing written, no restore over their project, the session backup
+  kept and listed. A Project-view report ends it the same way. Returning to a generated layout starts a fresh
+  session.
+- Ending (another layout loaded, leaving a preview, release, stop/SIGTERM, an engine fault) restores the session
+  backup only while slot 0 still holds a record the lab wrote (inv5, inv6). After an unplug, nothing can be sent:
+  the page names the backup to restore (A43), and the open-session marker stays so the next take offers it (a8).
+- A marker left by a session that never ended (a crash, an unplug) is a pending recovery: the lab does not take
+  slot 0 again until slot 0 is restored from that backup or the recovery is dismissed (a8).
+
+Threads: hooks and actions arrive on the host's loop and never block (they decide and hand records to the
+writer). The writer's own thread does the slot I/O. on_release runs inside the session's release and may block:
+it stops the writer, reads slot 0 and restores. `_lock` (the session state) is always taken innermost, never
+while waiting for the unit, so the writer's thread and the loop cannot deadlock.
+"""
+import hashlib
+import logging
+import threading
+import time
+from datetime import datetime
+from typing import Callable, Iterable, Iterator
+
+from _apc64_host.domain.effects import UnitView
+from _apc64_host.domain.layout import UnitPortRole
+from _apc64_host.domain.oled import OledText
+from _apc64_host.domain.unit_status import ReleaseReason
+
+from ..domain.lab_section import LabDefinition
+from ..domain.memory import (
+    EDIT_BUFFER, BackupId, OutcomeCode, OutcomeKind, Slot, WriteOutcome,
+)
+from ..domain.note_target import NOT_ROUTED_TEXT, NoteTarget
+from ..domain.records import ProjectRecord
+from ..domain.session import (
+    CUSTOM_VIEW_OFF, PRESS_CUSTOM, RESTORED_MESSAGE, EdgeHit, Ended, EndReason, Ignored, LabSession, NeedBackup,
+    Paused, SessionLayout, ShowOled, State, Unchanged, Write,
+)
+from .guarded_writer import GuardedWriter, refused
+from .ports import (
+    SET_SESSION, BackupStore, Gone, HostLink, Interrupted, LabState, LabStatePublisher, MalformedReply,
+    MemoryFault, NoReply, NotHeld, NullPublisher, StorageError, UnitControl, WrongFirmware,
+)
+from .registry import DefinitionIndex, GeneratorRegistry
+
+log = logging.getLogger(__name__)
+SETTLE = 0.03          # the burst has settled when no write came for this long: then read back
+POLL = 0.002           # how often a wait checks for a newer write (inv7)
+CUSTOM_PROMPT_AFTER = 1.0   # d21: 'Press Custom' when the unit is not in Custom view 1 s after activation
+_RELEASE_TO_END = {ReleaseReason.RELEASE: EndReason.RELEASE, ReleaseReason.STOP: EndReason.STOP,
+                   ReleaseReason.UNPLUG: EndReason.GONE, ReleaseReason.FAULT: EndReason.RELEASE}
+
+
+def _digest(record: ProjectRecord) -> str:
+    return hashlib.sha256(record.raw).hexdigest()
+
+
+def recovery_text(backup_id: str) -> str:
+    return (f"the last lab session did not end cleanly; slot 0 may still hold a generated layout: "
+            f"restore {backup_id} to slot 0, or dismiss")
+
+
+# --- the writer's thread -----------------------------------------------------------------------------------
+class Slot0Writer:
+    """Latest wins, paced on transmission, a settle read-back, background steps at the lowest priority.
+
+    Priorities on each step: a control job (start, leave) → the pending slot-0 write → the read-back (once the
+    burst settled) → one background step (a slot of the full backup). threaded=False runs nothing until drain()
+    (deterministic tests); the thread does the same steps as work arrives."""
+
+    def __init__(self, writer: GuardedWriter, on_written: Callable[[ProjectRecord], None],
+                 on_read_back: Callable[[ProjectRecord], None], on_fault: Callable[[MemoryFault], None],
+                 threaded: bool = True, settle: float = SETTLE, monotonic: Callable[[], float] = time.monotonic,
+                 allow: Callable[[], bool] | None = None):
+        self._writer = writer
+        self._allow = allow
+        self._on_written, self._on_read_back, self._on_fault = on_written, on_read_back, on_fault
+        self._settle, self._now = settle, monotonic
+        self._cond = threading.Condition()
+        self._jobs: list[Callable[[], None]] = []
+        self._pending: ProjectRecord | None = None
+        self._read_due: float | None = None
+        self._background: list[Iterator] = []
+        self._stopped = False
+        self.sent: list[ProjectRecord] = []          # every record transmitted (tests and the state)
+        self.sent_at: list[float] = []
+        self._thread = None
+        if threaded:
+            self._thread = threading.Thread(target=self._run, name="apc64-lab-slot0", daemon=True)
+            self._thread.start()
+
+    # --- what the service hands over --------------------------------------------------------------------
+    def job(self, fn: Callable[[], None]) -> None:
+        with self._cond:
+            self._jobs.append(fn)
+            self._cond.notify()
+
+    def submit(self, record: ProjectRecord) -> None:
+        """The newest record wins: an older one not yet sent is dropped (d28: intermediate positions skipped)."""
+        with self._cond:
+            self._pending = record
+            self._cond.notify()
+
+    def read_again(self, after: float | None = None) -> None:
+        with self._cond:
+            self._read_due = self._now() + (self._settle if after is None else after)
+            self._cond.notify()
+
+    def background(self, steps: Iterator) -> None:
+        with self._cond:
+            self._background.append(steps)
+            self._cond.notify()
+
+    def cancel(self, background: bool = False) -> None:
+        """Drops the pending write and the read-back (and the background work): the session is ending."""
+        with self._cond:
+            self._pending, self._read_due = None, None
+            self._jobs.clear()
+            if background:
+                self._background.clear()
+
+    def interrupt(self) -> bool:
+        """For waits on the unit: True when a newer write or a job is due, or the writer stops (inv7)."""
+        return self._pending is not None or bool(self._jobs) or self._stopped
+
+    @property
+    def idle(self) -> bool:
+        with self._cond:
+            return not (self._jobs or self._pending is not None or self._read_due is not None or self._background)
+
+    def close(self) -> None:
+        with self._cond:
+            self._stopped = True
+            self._cond.notify()
+        if self._thread is not None and self._thread is not threading.current_thread():
+            self._thread.join(timeout=2.0)
+
+    # --- the steps --------------------------------------------------------------------------------------
+    def drain(self, limit: int = 10_000) -> None:
+        """Runs every step now, a settle counting as passed (threaded=False)."""
+        for _ in range(limit):
+            if not self._step(ignore_settle=True):
+                return
+
+    def _next(self, ignore_settle: bool):
+        with self._cond:
+            if self._jobs:
+                return "job", self._jobs.pop(0)
+            if self._pending is not None:
+                record, self._pending = self._pending, None
+                return "write", record
+            if self._read_due is not None and (ignore_settle or self._now() >= self._read_due):
+                self._read_due = None
+                return "read", None
+            if self._background and self._read_due is None:
+                return "background", self._background[0]
+            return None, None
+
+    def _step(self, ignore_settle: bool = False) -> bool:
+        kind, item = self._next(ignore_settle)
+        if kind is None:
+            return False
+        try:
+            if kind == "job":
+                item()
+            elif kind == "write":
+                if not self._writer.session_write(item, self._allow):
+                    return True
+                with self._cond:
+                    self.sent.append(item)
+                    self.sent_at.append(self._now())
+                    if self._pending is None:
+                        self._read_due = self._now() + self._settle
+                self._on_written(item)
+            elif kind == "read":
+                record = self._writer.session_read(self.interrupt)
+                self._on_read_back(record)
+            else:
+                try:
+                    next(item)
+                except StopIteration:
+                    with self._cond:
+                        if self._background and self._background[0] is item:
+                            self._background.pop(0)
+        except Interrupted:
+            if kind == "read":
+                with self._cond:
+                    if self._read_due is None:
+                        self._read_due = self._now() + self._settle
+        except MemoryFault as fault:
+            self._on_fault(fault)
+        except Exception:   # a bug in a job must not stop the writer's thread
+            log.exception("lab: slot-0 writer step %s failed", kind)
+        return True
+
+    def _run(self) -> None:
+        while True:
+            with self._cond:
+                while not self._stopped:
+                    if self._jobs or self._pending is not None:
+                        break
+                    if self._read_due is not None:
+                        wait = self._read_due - self._now()
+                        if wait <= 0:
+                            break
+                        self._cond.wait(wait)
+                        continue
+                    if self._background:
+                        break
+                    self._cond.wait()
+                if self._stopped:
+                    return
+            self._step()
+
+
+# --- the service -------------------------------------------------------------------------------------------
+class SessionService:
+    def __init__(self, writer: GuardedWriter, backups: BackupStore, registry: GeneratorRegistry, link: HostLink,
+                 publisher: LabStatePublisher | None = None, control: UnitControl | None = None,
+                 held_notes: Callable[[], Iterable[int]] = tuple, index: DefinitionIndex | None = None,
+                 target: NoteTarget | None = None, wall: Callable[[], datetime] = datetime.now,
+                 threaded: bool = True, settle: float = SETTLE):
+        self._writer, self._backups, self._registry, self._link = writer, backups, registry, link
+        self._publisher = publisher or NullPublisher()
+        self._control = control
+        self._held_notes = held_notes
+        self._index = index
+        self.target = target
+        self._wall = wall
+        self._lock = threading.RLock()
+        self._session = LabSession()
+        self._layout = None                     # the engine's layout (host or generated)
+        self._wanted: SessionLayout | None = None
+        self._held = False
+        self._starting = False
+        self._ending = False
+        self._written: set[str] = set()
+        self._last_sent: ProjectRecord | None = None
+        self._earlier = 0
+        self._message: str | None = None
+        self._recovery: BackupId | None = None
+        self._last_full: dict | None = None
+        self.slot0 = Slot0Writer(writer, self._written_cb, self._read_back_cb, self._fault_cb, threaded, settle,
+                                 allow=self._may_write)
+        left = backups.open_session_left()
+        if left is not None:
+            self._recovery = left
+            self._message = recovery_text(left)
+
+    # === reading ===========================================================================================
+    @property
+    def session(self) -> LabSession:
+        return self._session
+
+    @property
+    def running(self) -> bool:
+        return self._session.state in (State.STARTING, State.ACTIVE)
+
+    @property
+    def message(self) -> str | None:
+        return self._message
+
+    @property
+    def recovery(self) -> BackupId | None:
+        return self._recovery
+
+    def transposition_of(self, layout_id) -> int | None:
+        """The window's transposition when that generated layout is the one playing (q3: push stores it)."""
+        with self._lock:
+            layout = self._session.layout
+            if self._session.active and layout is not None and layout.generated \
+                    and str(layout.layout_id) == str(layout_id):
+                return self._session.window.transposition()
+            return None
+
+    def state(self) -> LabState:
+        with self._lock:
+            listing = self._registry.listing()
+            return LabState(tuple(listing["generators"]), tuple(listing["schemes"]), self._active_json(),
+                            self._message,
+                            {"backup": self._recovery, "message": recovery_text(self._recovery)}
+                            if self._recovery else None,
+                            self._target_json(), tuple(listing["refusals"]))
+
+    def _active_json(self) -> dict | None:
+        session = self._session
+        layout = session.layout
+        if layout is None or not self.running:
+            return None
+        window = session.window
+        record = session.last_written
+        return {"layout": str(layout.layout_id), "name": layout.name, "preview": not layout.generated,
+                "interval": window.interval.label, "offset": window.count(),
+                "counts": {interval.name.lower(): n for interval, n in window.counts},
+                "transposition": window.transposition(),
+                "unit_view": str(session.view) if session.view is not None else None,
+                "session_backup": session.backup_id, "oled": list(session.oled().rows),
+                "starting": session.state is State.STARTING,
+                "definition": {"generator": layout.definition.generator, "params": layout.definition.parameters,
+                               "scheme": layout.definition.scheme} if layout.definition is not None else None,
+                "pads": [{"pad": str(pos).removeprefix("pad "), "note": pad.note, "rest": pad.rest.to_hex(), "silent": pad.silent}
+                         for pos, pad in _pads(record)] if record is not None else []}
+
+    def _target_json(self) -> dict:
+        default = self.target.text() if self.target else None
+        rule = getattr(self._layout, "routing", {}).get(UnitPortRole.CUSTOM) if self._layout is not None else None
+        if self._wanted is None and not self.running:
+            return {"default": default}
+        if rule is None:
+            return {"default": default, "routed": False, "text": NOT_ROUTED_TEXT}
+        source = "default" if self.target is not None and str(rule.device) == self.target.device else "layout"
+        port = self._layout.devices.get(rule.device)
+        text = f"{port.pattern if port else rule.device} ch {int(rule.channel)} aftertouch {rule.aftertouch}"
+        return {"default": default, "routed": True, "from": source, "text": text}
+
+    def publish(self) -> None:
+        try:
+            self._publisher.publish(self.state())
+        except Exception:
+            log.exception("lab: publishing the lab state failed")
+
+    # === the host's events (the loop; never blocking) ======================================================
+    def on_held(self, unit=None) -> None:
+        with self._lock:
+            self._held = True
+            self._ending = False
+        self._writer.resume()
+        left = self._backups.open_session_left()
+        with self._lock:
+            if left is not None and not self.running:
+                self._recovery = left
+                self._message = recovery_text(left)
+            wanted = self._wanted
+        if wanted is not None:
+            self._activate(wanted)
+        self.publish()
+
+    def on_layout_loaded(self, layout, section) -> None:
+        with self._lock:
+            self._layout = layout
+            if not isinstance(section, LabDefinition):
+                self._wanted = None
+                running = self.running
+            else:
+                running = None
+        if running is not None:
+            if running:
+                self.slot0.cancel()
+                self.slot0.job(lambda: self._finish_job(EndReason.LEFT))
+            self.publish()
+            return
+        layout_id = str(getattr(layout, "id", "") or "")
+        name = getattr(layout, "display_name", None) or layout_id
+        if self._index is not None:
+            self._index.record(layout_id, section)
+            self._index.named(layout_id, name)
+        try:
+            playing = self._session_layout(layout_id, name, section)
+        except Exception as error:   # a generator broken since compile: never written (d13)
+            self._link.warn(f"{name}: the generator failed ({error}); nothing written")
+            return
+        with self._lock:
+            previous, self._wanted = self._wanted, playing
+            same = previous is not None and previous.layout_id == playing.layout_id
+            if self._session.active and same and self._session.layout.layout_id == playing.layout_id:
+                if previous.definition != playing.definition:
+                    decision = self._session.reloaded(playing, self._held_notes())   # d9, A15: same window
+                    self._handle(decision)
+                    self.publish()
+                    return
+            elif same and previous.definition != playing.definition and not self.running:
+                self.publish()   # an edit of a layout whose session ended: no new session from a file edit
+                return
+        self._activate(playing)
+        self.publish()
+
+    def on_view(self, view: UnitView) -> None:
+        with self._lock:
+            decision = self._session.on_view(view)
+            if view is UnitView.CUSTOM and self._message in (PRESS_CUSTOM, CUSTOM_VIEW_OFF):
+                self._message = None
+        self._handle(decision)
+        self.publish()
+
+    def on_action(self, action: str, event) -> None:
+        """A ModuleAction from the encoder or Tempo (unit or replica, A37)."""
+        with self._lock:
+            decision = self._session.on_control(action, event, self._held_notes())
+        self._handle(decision)
+        if not isinstance(decision, Ignored):
+            self.publish()
+
+    def led_suppressed(self) -> bool:
+        """Pad LEDs are not drawn while a session plays in Custom view (§2.7 a4: cleanliness only)."""
+        return self._session.active and self._session.view is UnitView.CUSTOM
+
+    # === the session's release (blocking is allowed here) ==================================================
+    def end(self, reason) -> None:
+        """on_release: after DAW off, before detach. Restores or reports (inv6), then the unit is not held."""
+        end_reason = _RELEASE_TO_END.get(reason, reason) if not isinstance(reason, EndReason) else reason
+        with self._lock:
+            self._held = False
+            running = self.running
+            self._ending = True
+        self.slot0.cancel(background=True)
+        if not running:
+            return
+        self._writer.abort()                     # waits in flight end at once
+        with self._writer.exchange():
+            self._writer.resume()
+            self._finish(end_reason)
+        self.publish()
+
+    def leave(self) -> WriteOutcome:
+        """Leave the generated layout or preview (the API's 'stop'): restore slot 0 as at a layout switch."""
+        if not self.running:
+            return WriteOutcome(OutcomeKind.UNCHANGED, "no lab session is running; nothing written")
+        self.slot0.cancel()
+        with self._writer.exchange():
+            message = self._finish(EndReason.LEFT)
+        self.publish()
+        return WriteOutcome(OutcomeKind.RESTORED if message == RESTORED_MESSAGE else OutcomeKind.UNCHANGED,
+                            message or "the lab session ended", self._session.backup_id)
+
+    # === previews (q4) =====================================================================================
+    def preview(self, name: str, record: ProjectRecord) -> WriteOutcome:
+        if not self._held:
+            return refused("take control of the APC64 first; nothing read or written", OutcomeCode.NOT_HELD)
+        if self._recovery is not None:
+            return refused(recovery_text(self._recovery), OutcomeCode.SESSION)
+        self._activate(SessionLayout(f"library:{name}", name, preview=record))
+        self.publish()
+        return WriteOutcome(OutcomeKind.ACTIVATED, f"previewing {name} in slot 0; leave to restore slot 0")
+
+    # === activation from the page, CLI or agent (s2.c2) ====================================================
+    def activate(self, layout: str) -> WriteOutcome:
+        """Loads a layout through the host's single load point; a generated one starts or switches the session."""
+        found = self._index.resolve(layout) if self._index is not None else None
+        layout_id = found.layout_id if found is not None else str(layout).strip()
+        answer = self._link.load(layout_id)
+        allowed = getattr(answer, "allowed", None)
+        if allowed is not None:
+            return refused(f"no layout {layout}", OutcomeCode.NOT_FOUND, "layout",
+                           "layouts: " + ", ".join(map(str, allowed)))
+        if answer is None:
+            return refused("the host engine is not running; nothing loaded", OutcomeCode.NOT_HELD)
+        name = found.name if found is not None else layout_id
+        return WriteOutcome(OutcomeKind.ACTIVATED, f"activated {name}")
+
+    # === recovery (a8) =====================================================================================
+    def recovered(self, backup_id) -> None:
+        """Slot 0 was restored from this backup: a pending recovery for it is done."""
+        with self._lock:
+            if self._recovery is None or str(backup_id) != str(self._recovery):
+                return
+            self._recovery, self._message = None, f"slot 0 restored from {backup_id}"
+            wanted = self._wanted
+        self._backups.close_session()
+        if wanted is not None and self._held:
+            self._activate(wanted)
+        self.publish()
+
+    def dismiss_recovery(self) -> WriteOutcome:
+        with self._lock:
+            backup, self._recovery = self._recovery, None
+            if backup is None:
+                return WriteOutcome(OutcomeKind.UNCHANGED, "no recovery is pending")
+            self._message = f"recovery dismissed; {backup} stays listed"
+            wanted = self._wanted
+        self._backups.close_session()
+        if wanted is not None and self._held:
+            self._activate(wanted)
+        self.publish()
+        return WriteOutcome(OutcomeKind.UNCHANGED, self._message, backup)
+
+    # === tweaks (d10, A16) =================================================================================
+    def tweak(self, field: str, value, layout: str | None = None) -> object:
+        """One 'lab:' field of the active generated layout, or of the named one (§3.5 POST /api/lab/tweak)."""
+        if layout is not None and str(layout).strip():
+            found = self._index.resolve(layout) if self._index is not None else None
+            if found is None:
+                names = sorted(i.name for i in self._index.all()) if self._index is not None else []
+                return refused(f"no generated layout {layout}", OutcomeCode.NOT_FOUND, "layout",
+                               "generated layouts: " + (", ".join(names) or "none"))
+            layout_id = found.layout_id
+        else:
+            with self._lock:
+                wanted = self._wanted
+            if wanted is None:
+                return refused("no generated layout is active; activate one first", OutcomeCode.SESSION)
+            layout_id = wanted.layout_id
+        path = field if str(field).startswith("lab.") else f"lab.{field}"
+        return self._link.tweak(layout_id, path, value)
+
+    # === internals =========================================================================================
+    def _session_layout(self, layout_id: str, name: str, definition: LabDefinition) -> SessionLayout:
+        generators, schemes = self._registry.generators(), self._registry.schemes()
+        return SessionLayout.of_grid(layout_id, name, lambda t: definition.grid(generators, schemes, t), definition)
+
+    def _activate(self, playing: SessionLayout) -> None:
+        with self._lock:
+            if not self._held:
+                return
+            if self._recovery is not None:
+                self._message = recovery_text(self._recovery)
+                warn = True
+            else:
+                warn = False
+                decision = self._session.activate(playing, self._held_notes())
+        if warn:
+            self._link.warn(f"restore {self._recovery} to slot 0 first")
+            return
+        self._handle(decision)
+
+    def _handle(self, decision) -> None:
+        match decision:
+            case NeedBackup():
+                with self._lock:
+                    if self._starting:
+                        return
+                    self._starting = True
+                self.slot0.job(self._start_job)
+            case Write():
+                self._submit(decision)
+            case Unchanged(oled=oled) | EdgeHit(oled=oled) | ShowOled(oled=oled):
+                self._link.resting(oled)
+            case Paused(oled=oled, message=message):
+                with self._lock:
+                    self._message = message
+                self._link.resting(oled)
+            case Ended():
+                self._quiet_end(decision)
+            case _:
+                pass
+
+    def _submit(self, write: Write) -> None:
+        self._link.end_notes(write.end_notes)
+        self._link.resting(write.oled)
+        self.slot0.submit(write.record)
+        if write.full_backup:
+            self.slot0.background(self._full_backup())
+        if write.prompt_custom:
+            self._ask_for_custom()
+
+    def _ask_for_custom(self) -> None:
+        if self._control is not None:
+            try:
+                self._control.request_view(UnitView.CUSTOM)
+            except MemoryFault:
+                pass
+        self._link.call_later(CUSTOM_PROMPT_AFTER, self._custom_timeout)
+
+    def _custom_timeout(self) -> None:
+        with self._lock:
+            session = self._session
+            if not session.active or session.view is UnitView.CUSTOM:
+                return
+            self._message = PRESS_CUSTOM
+            name = session.layout.name
+        self._link.resting(OledText(name, PRESS_CUSTOM))                            # d21, A23
+        self.publish()
+
+    # --- on the writer's thread -------------------------------------------------------------------------
+    def _start_job(self) -> None:
+        """Read slot 0, keep it as the session backup, then the first write (A22)."""
+        try:
+            self._writer.check_writable()
+            record = self._writer.session_read()
+            backup_id = self._writer.save_backup(EDIT_BUFFER, record.raw)
+        except (MemoryFault, StorageError) as error:
+            self._start_failed(error)
+            return
+        self._backups.open_session(backup_id)
+        last = self._backups.last_full_backup_at()
+        with self._lock:
+            self._starting = False
+            if self._ending or self._session.state is not State.STARTING:
+                decision = None
+            else:
+                self._written, self._last_sent, self._earlier = set(), None, 0
+                decision = self._session.started(record, backup_id, last.timestamp() if last else None,
+                                                 self._wall().timestamp())
+                if self._message in (CUSTOM_VIEW_OFF,) or (self._message or "").startswith("lab session ended"):
+                    self._message = None
+        if decision is None:
+            self._backups.close_session()
+            return
+        self._handle(decision)
+        self.publish()
+
+    def _start_failed(self, error) -> None:
+        if isinstance(error, NotHeld):
+            text = "take control of the APC64 first; nothing written"
+        elif isinstance(error, WrongFirmware):
+            text = f"{error}; nothing written"
+        elif isinstance(error, MalformedReply):
+            text = f"{error.text('slot 0')}; nothing written"
+        elif isinstance(error, StorageError):
+            text = f"could not save the backup of slot 0 ({error.path}: {error.reason}); nothing written"
+        else:
+            text = "could not back up slot 0; nothing written"
+        with self._lock:
+            self._starting = False
+            ending = self._ending
+            self._session.end(EndReason.LEFT)
+            if not ending:
+                self._message = text
+        if not ending:
+            self._link.warn(text)
+        self.publish()
+
+    def _may_write(self) -> bool:
+        """Asked with the unit's memory held, right before a session write: only while the session plays."""
+        with self._lock:
+            return self._session.active and not self._ending
+
+    def _written_cb(self, record: ProjectRecord) -> None:
+        with self._lock:
+            self._written.add(_digest(record))
+            self._last_sent = record
+
+    def _read_back_cb(self, record: ProjectRecord) -> None:
+        """The settle read-back of slot 0 (the slot-0 decision above)."""
+        with self._lock:
+            if not self._session.active:
+                return
+            if record == self._last_sent:
+                self._earlier = 0
+                return
+            if _digest(record) in self._written:             # an earlier write of ours: a later one is on its way
+                self._earlier += 1
+                resend = self._last_sent if self._earlier >= 2 else None
+                if resend is not None:
+                    self._earlier = 0
+            else:
+                decision = self._session.on_slot0(record)    # the user changed projects: end quietly
+                resend = None
+        if _digest(record) in self._written:
+            if resend is not None:
+                self.slot0.submit(resend)
+            else:
+                self.slot0.read_again()
+            return
+        self._handle(decision)
+        self.publish()
+
+    def _fault_cb(self, fault: MemoryFault) -> None:
+        if isinstance(fault, (NotHeld, Gone)):
+            return   # the release follows and decides
+        log.warning("lab: slot-0 %s", fault)
+        self._link.warn(f"slot 0: {fault}")
+
+    def _finish_job(self, reason: EndReason) -> None:
+        with self._writer.exchange():
+            self._finish(reason)
+        self.publish()
+
+    def _finish(self, reason: EndReason) -> str | None:
+        """The end of a session, holding the unit's memory: restore over the lab's own record, or report."""
+        with self._lock:
+            session = self._session
+            if session.state not in (State.STARTING, State.ACTIVE):
+                return None
+            backup_id = session.backup_id
+            starting = session.state is State.STARTING
+        self._link.resting(None)
+        if reason is EndReason.GONE:
+            with self._lock:
+                decision = session.end(EndReason.GONE)
+                self._message = decision.message
+                self._recovery = decision.backup_id
+            return decision.message                                                    # A43: the marker stays
+        slot0 = None
+        if not starting:
+            try:
+                slot0 = self._writer.session_read()
+            except MemoryFault:
+                slot0 = None
+        with self._lock:
+            if starting:
+                session.end(reason)
+                return None
+            if slot0 is None:
+                session.end(EndReason.GONE)
+                self._recovery = backup_id
+                self._message = f"slot 0 could not be checked; restore {backup_id} if it still holds the lab layout"
+                return self._message
+            ours = _digest(slot0) in self._written
+            decision = session.end(reason, session.last_written if ours else slot0)
+            restore = decision.restore
+            if restore is None and ours and session.backup is not None and slot0 != session.backup:
+                restore = session.backup   # slot 0 holds an earlier record of ours, the last equals the backup
+        if restore is None:
+            self._backups.close_session()
+            with self._lock:
+                self._message = (f"lab session ended; nothing restored: slot 0 holds another project; "
+                                 f"session backup {backup_id} kept") if not ours else None
+            return self._message
+        try:
+            self._writer.session_write(restore)
+            back = self._writer.session_read()
+        except MemoryFault:
+            back = None
+        with self._lock:
+            if back == restore:
+                self._message = RESTORED_MESSAGE                                       # A42, d64
+            else:
+                self._recovery = backup_id
+                self._message = f"slot 0 could not be restored; restore {backup_id}"
+        if back == restore:
+            self._backups.close_session()
+        return self._message
+
+    def _quiet_end(self, decision: Ended) -> None:
+        """A Project-view report or a foreign slot 0: nothing written, the backup kept and listed (§2.7)."""
+        self.slot0.cancel()
+        self._backups.close_session()
+        why = decision.reason
+        with self._lock:
+            self._message = (f"lab session ended quietly ({why}); nothing restored; "
+                             f"session backup {decision.backup_id} kept")
+        self._link.resting(None)
+
+    def _full_backup(self) -> Iterator:
+        """Slots 1–24 after the session's first write (§2.7 a5/q9), one slot per step, stepping aside for writes."""
+        taken = self._wall()
+        members, missing = [], []
+        for n in range(1, 25):
+            while True:
+                try:
+                    record = self._writer.read_project(Slot(n), self.slot0.interrupt)
+                    break
+                except Interrupted:
+                    yield
+                except (NotHeld, Gone):
+                    return
+                except (NoReply, MalformedReply):
+                    record = None
+                    break
+            if record is None:
+                missing.append(n)
+            else:
+                try:
+                    members.append(self._writer.save_backup(Slot(n), record.raw))
+                except StorageError:
+                    missing.append(n)
+            yield
+        set_id = self._backups.save_set(members, SET_SESSION, taken, complete=not missing)
+        with self._lock:
+            self._last_full = {"set": str(set_id), "missing": missing}
+        if missing:
+            self._link.warn(f"full backup {set_id} is missing slots {', '.join(map(str, missing))}")
+        self.publish()
+
+    # --- tests ------------------------------------------------------------------------------------------
+    def drain(self) -> None:
+        self.slot0.drain()
+
+    def close(self) -> None:
+        self.slot0.close()
+
+
+def _pads(record: ProjectRecord):
+    from _apc64_host.domain.controls import PadPos
+    return [(PadPos.from_index(i), pad) for i, pad in enumerate(record.pads)]

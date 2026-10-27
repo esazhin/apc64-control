@@ -1,0 +1,13 @@
+# Tonnetz C: the Tonnetz on a staggered checkerboard, played in the unit's Custom view (docs/lab-guide.md).
+# Two pads right = a fifth, up-right = a major third, up-left = a minor third; the pads in between are dark.
+# The encoder shifts the window one step of the interval, Tempo cycles octave -> fifth -> third, and
+# Shift + encoder still browses layouts. Check a change with:  apc64 lab validate layouts/tonnetz-c.yaml
+name: Tonnetz C
+devices:
+  mpc: MPC Live III MIDI 1     # example: the author's MPC; use your own port (`apc64 ports`)
+lab:
+  generator: tonnetz
+  base: 48            # the note on pad r1c1: a number, or a name (C2 = 48, C3 = 60)
+  scheme: fifths      # hue around the circle of fifths, C white
+routing:
+  custom: mpc ch 1 aftertouch pass   # the pads' velocity and aftertouch, as played, to the MPC

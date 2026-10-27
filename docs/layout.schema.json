@@ -1,0 +1,529 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://apc64-host.local/layout.schema.json",
+  "title": "APC64 Host layout",
+  "description": "One layout file in layouts/ (YAML). Read docs/layout-guide.md for the phrases and worked examples; validate with 'apc64 validate <file>'.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Display name (the OLED shows 14 ASCII characters)."
+    },
+    "device": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]*$",
+      "description": "The default device for bindings without 'on <device>'."
+    },
+    "devices": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[A-Za-z][A-Za-z0-9_-]*$": {
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "The ALSA port name, or a unique part of it."
+            },
+            {
+              "type": "object",
+              "required": [
+                "port"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "port": {
+                  "type": "string"
+                },
+                "ch": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 16
+                },
+                "channel": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 16
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "pages": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^(page )?[1-8]( .+)?$": {
+          "$ref": "#/$defs/page"
+        }
+      }
+    },
+    "banks": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^(bank )?[1-6]( .+)?$": {
+          "$ref": "#/$defs/bank"
+        }
+      }
+    },
+    "routing": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "notes": {
+          "$ref": "#/$defs/route"
+        },
+        "custom": {
+          "$ref": "#/$defs/route"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "binding": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^(none|(pitchbend|program|notes|note|cc14|prog|bend|ccs|cc|pc|pb)(\\s.*)?)$",
+          "description": "A binding phrase: a message (note 36, notes from 36, cc 20, cc 20-27, cc14 20, program 5, pitchbend), then 'on <device>', 'ch <1-16>', options; 'none' unbinds."
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^(none|(pitchbend|program|notes|note|cc14|prog|bend|ccs|cc|pc|pb)(\\s.*)?)$",
+            "description": "A binding phrase: a message (note 36, notes from 36, cc 20, cc 20-27, cc14 20, program 5, pitchbend), then 'on <device>', 'ch <1-16>', options; 'none' unbinds."
+          },
+          "minItems": 1,
+          "description": "Several messages, sent in the written order."
+        },
+        {
+          "type": "object",
+          "required": [
+            "send"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "send": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "pattern": "^(none|(pitchbend|program|notes|note|cc14|prog|bend|ccs|cc|pc|pb)(\\s.*)?)$",
+                  "description": "A binding phrase: a message (note 36, notes from 36, cc 20, cc 20-27, cc14 20, program 5, pitchbend), then 'on <device>', 'ch <1-16>', options; 'none' unbinds."
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^(none|(pitchbend|program|notes|note|cc14|prog|bend|ccs|cc|pc|pb)(\\s.*)?)$",
+                    "description": "A binding phrase: a message (note 36, notes from 36, cc 20, cc 20-27, cc14 20, program 5, pitchbend), then 'on <device>', 'ch <1-16>', options; 'none' unbinds."
+                  }
+                }
+              ]
+            },
+            "label": {
+              "type": [
+                "string",
+                "integer",
+                "boolean"
+              ]
+            },
+            "colour": {
+              "type": [
+                "string",
+                "integer",
+                "boolean"
+              ]
+            },
+            "color": {
+              "type": [
+                "string",
+                "integer",
+                "boolean"
+              ]
+            },
+            "mode": {
+              "type": [
+                "string",
+                "integer",
+                "boolean"
+              ]
+            },
+            "toggle": {
+              "type": [
+                "string",
+                "integer",
+                "boolean"
+              ]
+            },
+            "velocity": {
+              "type": [
+                "string",
+                "integer",
+                "boolean"
+              ]
+            },
+            "feedback": {
+              "type": [
+                "string",
+                "integer",
+                "boolean"
+              ]
+            },
+            "off": {
+              "type": [
+                "string",
+                "integer",
+                "boolean"
+              ]
+            },
+            "touch": {
+              "type": [
+                "string",
+                "integer",
+                "boolean"
+              ]
+            },
+            "bar": {
+              "type": [
+                "string",
+                "integer",
+                "boolean"
+              ]
+            },
+            "style": {
+              "type": [
+                "string",
+                "integer",
+                "boolean"
+              ]
+            }
+          },
+          "description": "The same words as the phrase, as keys: {send: note 36, colour: red, toggle: true}."
+        }
+      ]
+    },
+    "page": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "shift": {
+          "$ref": "#/$defs/pageLayer"
+        }
+      },
+      "patternProperties": {
+        "^(pads? r[1-8]c[1-8](-r[1-8]c[1-8])?|(tracks?|trackctls?) [1-8](-[1-8])?|tempo|clear|duplicate|quantize|fixed|undo|play|rec|stop|down|up|left|right|recarm|mute|solo|clipstop|encoder\\ press|encoder)$": {
+          "$ref": "#/$defs/binding"
+        }
+      }
+    },
+    "pageLayer": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "patternProperties": {
+        "^(pads? r[1-8]c[1-8](-r[1-8]c[1-8])?|(tracks?|trackctls?) [1-8](-[1-8])?|tempo|clear|duplicate|quantize|fixed|undo|play|rec|stop|down|up|left|right|recarm|mute|solo|clipstop|encoder\\ press|encoder)$": {
+          "$ref": "#/$defs/binding"
+        }
+      }
+    },
+    "bank": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "shift": {
+          "$ref": "#/$defs/bankLayer"
+        }
+      },
+      "patternProperties": {
+        "^strips? [1-8](-[1-8])?$": {
+          "$ref": "#/$defs/binding"
+        }
+      }
+    },
+    "bankLayer": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "patternProperties": {
+        "^strips? [1-8](-[1-8])?$": {
+          "$ref": "#/$defs/binding"
+        }
+      }
+    },
+    "route": {
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "'<device> ch <n> aftertouch pass|pressure|drop transpose <n> remap <a>><b> …'"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "device": {
+              "type": [
+                "string",
+                "integer",
+                "object"
+              ]
+            },
+            "to": {
+              "type": [
+                "string",
+                "integer",
+                "object"
+              ]
+            },
+            "on": {
+              "type": [
+                "string",
+                "integer",
+                "object"
+              ]
+            },
+            "ch": {
+              "type": [
+                "string",
+                "integer",
+                "object"
+              ]
+            },
+            "channel": {
+              "type": [
+                "string",
+                "integer",
+                "object"
+              ]
+            },
+            "aftertouch": {
+              "type": [
+                "string",
+                "integer",
+                "object"
+              ]
+            },
+            "transpose": {
+              "type": [
+                "string",
+                "integer",
+                "object"
+              ]
+            },
+            "remap": {
+              "type": [
+                "string",
+                "integer",
+                "object"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  },
+  "x-apc64": {
+    "topLevelKeys": [
+      "name",
+      "device",
+      "devices",
+      "pages",
+      "banks",
+      "routing"
+    ],
+    "pageControls": [
+      "pad r1c1",
+      "pad r1c2",
+      "pad r1c3",
+      "pad r1c4",
+      "pad r1c5",
+      "pad r1c6",
+      "pad r1c7",
+      "pad r1c8",
+      "pad r2c1",
+      "pad r2c2",
+      "pad r2c3",
+      "pad r2c4",
+      "pad r2c5",
+      "pad r2c6",
+      "pad r2c7",
+      "pad r2c8",
+      "pad r3c1",
+      "pad r3c2",
+      "pad r3c3",
+      "pad r3c4",
+      "pad r3c5",
+      "pad r3c6",
+      "pad r3c7",
+      "pad r3c8",
+      "pad r4c1",
+      "pad r4c2",
+      "pad r4c3",
+      "pad r4c4",
+      "pad r4c5",
+      "pad r4c6",
+      "pad r4c7",
+      "pad r4c8",
+      "pad r5c1",
+      "pad r5c2",
+      "pad r5c3",
+      "pad r5c4",
+      "pad r5c5",
+      "pad r5c6",
+      "pad r5c7",
+      "pad r5c8",
+      "pad r6c1",
+      "pad r6c2",
+      "pad r6c3",
+      "pad r6c4",
+      "pad r6c5",
+      "pad r6c6",
+      "pad r6c7",
+      "pad r6c8",
+      "pad r7c1",
+      "pad r7c2",
+      "pad r7c3",
+      "pad r7c4",
+      "pad r7c5",
+      "pad r7c6",
+      "pad r7c7",
+      "pad r7c8",
+      "pad r8c1",
+      "pad r8c2",
+      "pad r8c3",
+      "pad r8c4",
+      "pad r8c5",
+      "pad r8c6",
+      "pad r8c7",
+      "pad r8c8",
+      "track 1",
+      "trackctl 1",
+      "track 2",
+      "trackctl 2",
+      "track 3",
+      "trackctl 3",
+      "track 4",
+      "trackctl 4",
+      "track 5",
+      "trackctl 5",
+      "track 6",
+      "trackctl 6",
+      "track 7",
+      "trackctl 7",
+      "track 8",
+      "trackctl 8",
+      "tempo",
+      "clear",
+      "duplicate",
+      "quantize",
+      "fixed",
+      "undo",
+      "play",
+      "rec",
+      "stop",
+      "down",
+      "up",
+      "left",
+      "right",
+      "recarm",
+      "mute",
+      "solo",
+      "clipstop",
+      "encoder",
+      "encoder press"
+    ],
+    "stripControls": [
+      "strip 1",
+      "strip 2",
+      "strip 3",
+      "strip 4",
+      "strip 5",
+      "strip 6",
+      "strip 7",
+      "strip 8"
+    ],
+    "rangeForms": [
+      "pads r1c1-r2c8 (reading order from the bottom-left)",
+      "tracks 1-8",
+      "trackctls 1-8",
+      "strips 1-8"
+    ],
+    "messages": [
+      "cc",
+      "cc14",
+      "none",
+      "note",
+      "notes",
+      "pitchbend",
+      "program"
+    ],
+    "options": [
+      "toggle",
+      "momentary",
+      "colour",
+      "color",
+      "velocity",
+      "vel",
+      "label",
+      "feedback",
+      "off",
+      "touch",
+      "bar",
+      "bipolar",
+      "colours",
+      "colors"
+    ],
+    "colours": {
+      "off": 0,
+      "dimwhite": 1,
+      "grey": 2,
+      "white": 3,
+      "red": 5,
+      "orange": 9,
+      "yellow": 13,
+      "lime": 17,
+      "green": 21,
+      "mint": 29,
+      "teal": 33,
+      "cyan": 37,
+      "blue": 45,
+      "purple": 49,
+      "magenta": 53,
+      "pink": 57,
+      "black": 0,
+      "dim": 1,
+      "gray": 2,
+      "violet": 49
+    },
+    "aftertouch": [
+      "drop",
+      "pass",
+      "pressure"
+    ],
+    "noteNames": "C3 = 60, so C1 = 36 and C-2 = 0 (Ableton/Akai/MPC convention)",
+    "channels": "1-16",
+    "limits": {
+      "pages": 8,
+      "banks": 6
+    }
+  }
+}

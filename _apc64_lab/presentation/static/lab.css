@@ -1,0 +1,124 @@
+/* The lab panel, in the host page's theme: it uses the page's tokens (style.css :root), so it follows dark and
+   light like the rest of the page. Lattice colours as in prototypes/tonnetz-view. This sheet loads into the whole
+   page: a rule on a class the host also uses (.oled, .view) is scoped to .lab-panel, or it restyles the replica. */
+.lab-panel {
+  --tri-major: rgba(255, 170, 60, .55); --tri-minor: rgba(90, 160, 255, .55); --trail: var(--accent);
+  --node-ink: #111;   /* the page shell alone shows or hides the panel (only while Lab is chosen) */
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .lab-panel { --tri-major: rgba(230, 140, 20, .45); --tri-minor: rgba(40, 110, 230, .40); }
+}
+.lab-panel h2 { display: flex; align-items: center; gap: 8px; }
+.lab-panel h3 { font-size: 12px; color: var(--muted); margin: 10px 0 6px; font-weight: 600; }
+.lab-panel .muted { color: var(--muted); }
+.lab-panel .small { font-size: 12px; }
+.lab-panel .bad { color: var(--bad); }
+.lab-panel .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
+.lab-part:empty { display: none; }
+.lab-part + .lab-part { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 14px; }
+
+.lab-target { font-size: 12px; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--muted); }
+.lab-target.warn { color: var(--warn); }
+.lab-message, .lab-recovery, .lab-warning, .lab-confirm {
+  border: 1px solid var(--warn); border-radius: 8px; padding: 8px 10px; margin: 6px 0;
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+}
+.lab-recovery, .lab-confirm { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.lab-recovery > div, .lab-confirm > div { flex-basis: 100%; }
+/* the last answer: two lines are always kept for it, so an answer appearing moves nothing below */
+.lab-result { border-radius: 8px; padding: 6px 10px; font-weight: 500; line-height: 1.4;
+  min-height: calc(2 * 1.4em + 12px); }
+.lab-result.idle { color: var(--faint); font-weight: 400; border: 1px dashed var(--line); }
+.lab-result.ok { background: color-mix(in srgb, var(--ok) 14%, transparent); color: var(--ok); }
+.lab-result.bad { background: color-mix(in srgb, var(--bad) 14%, transparent); color: var(--bad); }
+
+/* the active layout */
+.lab-active { display: flex; flex-direction: column; gap: 8px; }
+.active-head { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.lab-panel .oled { background: #05070a; color: #9fe6ff; font: 12px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
+  border-radius: 6px; padding: 6px 8px; min-width: 15ch; white-space: pre; border: 1px solid var(--line); }
+.active-name { font-size: 16px; font-weight: 650; }
+.window { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.window .interval { font-weight: 650; color: var(--accent); }
+.unit-hint { font-size: 12px; color: var(--info); }
+.active-controls, .active-tweaks { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+.lab-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.lab-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.lab-list li .name { font-weight: 600; }
+.lab-list li button { margin-left: auto; }
+.lab-list li.current .name { color: var(--accent); }
+.lab-list li.broken .name { text-decoration: line-through; color: var(--bad); }
+.scheme.broken { color: var(--bad); }
+
+/* harmony: every row keeps its height whatever is held (harmony_views.js chordView), so nothing below moves */
+.inputs { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 12px; margin-bottom: 8px; }
+.chord-row { display: flex; align-items: baseline; gap: 12px; flex-wrap: nowrap; height: 40px; overflow: hidden; }
+.chord { font-size: 30px; line-height: 40px; font-weight: 700; color: var(--accent); min-width: 3ch; flex: none;
+  white-space: nowrap; }
+.held-names { color: var(--muted); flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; }
+.trail-row { font-size: 13px; line-height: 1.5; display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: baseline;
+  align-content: flex-start; height: calc(2 * 1.5em + 4px); overflow: hidden; }
+.trail-chord { padding: 0 4px; border-radius: 4px; background: var(--panel-2); }
+.trail-chord.newest { background: color-mix(in srgb, var(--accent) 25%, transparent); font-weight: 650; }
+.hint-line { font-size: 13px; line-height: 1.4; margin-top: 4px; height: 1.4em; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; }
+.hint-line[data-hint="intervals"] { height: 2.8em; white-space: normal; display: -webkit-box; -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2; }
+.hint-line.idle { color: var(--faint); }
+.harmony-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 10px; }
+.lab-panel .view { margin: 0; }
+.lab-panel .view figcaption { font-size: 11px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .05em; }
+.lattice-view { margin-top: 10px; }
+.lab-panel svg { display: block; width: 100%; height: auto; }
+.lab-panel svg text { font: 600 9px system-ui, sans-serif; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.lattice .tri { fill: transparent; stroke: var(--line); stroke-width: 1; }
+.lattice .tri.major.lit { fill: var(--tri-major); }
+.lattice .tri.minor.lit { fill: var(--tri-minor); }
+.lattice .tri.neighbour { stroke: var(--accent); stroke-width: 1.6; stroke-dasharray: 3 2; }
+.lattice .tri.hint.major { fill: var(--tri-major); fill-opacity: .35; }
+.lattice .tri.hint.minor { fill: var(--tri-minor); fill-opacity: .35; }
+.lattice .tri-label { fill: var(--text); font-size: 7.5px; }
+.lattice .tri-label.lit { font-size: 9px; font-weight: 700; }
+.lattice .node circle { opacity: .3; }
+.lattice .node.held circle { opacity: 1; stroke: var(--text); stroke-width: 1.5; }
+.lattice .node-name { fill: var(--node-ink); font-size: 8px; }
+.lattice .node-degree { fill: var(--node-ink); font-size: 5.5px; font-weight: 500; }
+.lattice .trail { fill: none; stroke: var(--trail); stroke-width: 2.2; stroke-linejoin: round; opacity: .8; }
+.lattice .trail-dot { fill: var(--trail); opacity: .55; }
+.lattice .trail-dot.newest { opacity: 1; }
+.circle .ring { fill: none; stroke: var(--line); }
+.circle .joined { fill: var(--tri-major); stroke: var(--accent); stroke-width: 2; }
+.circle .fifth circle { opacity: .3; }
+.circle .fifth.held circle { opacity: 1; stroke: var(--text); stroke-width: 1.5; }
+.circle text { fill: var(--node-ink); font-size: 11px; }
+
+/* pads (the replica and a slot as read) */
+.lab-pads { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; }
+.lab-pads.small { gap: 2px; max-width: 220px; }
+.lab-pad { aspect-ratio: 1; border-radius: 4px; background: var(--pad-off, #23262c); opacity: .75; }
+.lab-pad.silent { opacity: .35; }
+.lab-pad.held { opacity: 1; box-shadow: 0 0 0 2px var(--text), 0 0 10px var(--text); transform: scale(1.06); }
+.lab-pad.approx { outline: 1px dashed var(--faint); outline-offset: -1px; }
+.legend { font-size: 11px; margin-top: 4px; }
+
+/* project memory */
+.slot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(54px, 1fr)); gap: 4px; margin: 8px 0; }
+.slot-tile { display: flex; flex-direction: column; align-items: center; padding: 3px 2px; font-size: 11px; line-height: 1.2; }
+.slot-tile .n { font-weight: 650; font-size: 13px; }
+.slot-tile .when { color: var(--muted); font-size: 10px; }
+.slot-tile.unbacked .when { color: var(--faint); }
+.slot-tile.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.slot-actions { border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
+.slot-record { margin-top: 8px; }
+.file-pick input { max-width: 180px; }
+.backups code { font-size: 11px; }
+
+/* global settings */
+table.globals { border-collapse: collapse; width: 100%; font-size: 13px; }
+table.globals th { text-align: left; font-weight: 500; color: var(--muted); padding: 2px 6px 2px 0; white-space: nowrap; }
+table.globals td { padding: 2px 4px; }
+table.globals td.shown { color: var(--text); }
+table.globals input[type="number"] { width: 5.5em; }
+.hazard { color: var(--warn); }

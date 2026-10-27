@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tonnetz View</title>
+<style>
+  :root {
+    --bg: #101216; --panel: #181b21; --line: #2a2f38; --text: #e6e8ec; --muted: #8b93a1;
+    --accent: #ffd166; --held: #ffffff; --tri-major: rgba(255, 170, 60, .55); --tri-minor: rgba(90, 160, 255, .55);
+    --trail: #ffd166;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #f4f5f7; --panel: #ffffff; --line: #d8dce3; --text: #1b1e24; --muted: #5d6573;
+      --accent: #b7791f; --held: #111; --tri-major: rgba(230, 140, 20, .45); --tri-minor: rgba(40, 110, 230, .40);
+      --trail: #b7791f;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, sans-serif; }
+  header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 16px; margin: 0 8px 0 0; }
+  select, button { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; font: inherit; }
+  #status { color: var(--muted); }
+  #chord { font-size: 28px; font-weight: 700; color: var(--accent); min-width: 6ch; }
+  #notes { color: var(--muted); }
+  main { display: grid; grid-template-columns: minmax(260px, 380px) 1fr; gap: 16px; padding: 16px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  .panel h2 { font-size: 13px; margin: 0 0 8px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+  #grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+  .pad { aspect-ratio: 1; border-radius: 5px; display: flex; align-items: center; justify-content: center;
+         font-size: 11px; font-weight: 600; color: #000; opacity: .55; cursor: pointer; user-select: none;
+         transition: opacity .06s, transform .06s, box-shadow .06s; }
+  .pad.off { background: var(--line); opacity: .35; cursor: default; }
+  .pad.on { opacity: 1; transform: scale(1.06); box-shadow: 0 0 0 2px var(--held), 0 0 14px var(--held); }
+  #left { display: flex; flex-direction: column; gap: 16px; }
+  svg text { font: 600 12px system-ui, sans-serif; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 8px; }
+  @media (max-width: 760px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Tonnetz View</h1>
+  <label>MIDI in <select id="port"></select></label>
+  <button id="clear">Clear trail</button>
+  <span>
+    <button data-shift="-12" title="PageDown">Oct −</button><button data-shift="12" title="PageUp">Oct +</button>
+    <button data-shift="-7" title="←">← 5th</button><button data-shift="7" title="→">5th →</button>
+    <button data-shift="-4" title="↓">↓ 3rd</button><button data-shift="4" title="↑">3rd ↑</button>
+    <span id="baseLabel"></span>
+  </span>
+  <span id="status">starting…</span>
+  <span style="flex:1"></span>
+  <span id="chord">—</span>
+  <span id="notes"></span>
+</header>
+<main>
+  <div id="left">
+    <section class="panel">
+      <h2>APC64 grid (→→ fifth · ↗ major third · ↖ minor third down)</h2>
+      <div id="grid"></div>
+      <div class="hint">Click a pad to sound it visually (no MIDI out). Bottom row = the row nearest you.</div>
+    </section>
+    <section class="panel">
+      <h2>Circle of fifths</h2>
+      <svg id="circle" viewBox="-112 -112 224 224" style="display:block;width:100%;max-height:min(260px,32vh)"></svg>
+    </section>
+  </div>
+  <section class="panel">
+    <h2>Tonnetz (→ fifths · ↗ major thirds · ↖ minor thirds) — ▲ major · ▼ minor</h2>
+    <svg id="tonnetz" width="100%"></svg>
+  </section>
+</main>
+<script>
+// Layout written to the APC64 (must match the generator): staggered checkerboard, row 0 = nearest you.
+// Pad (x, row) is active when x + row is even; it holds BASE + 7·(x − row)/2 + 4·row, so
+// two pads right = fifth, up-right = major third, up-left = minor third down. Odd pads are dark/silent.
+let base = 48;                    // note on the bottom-left pad (C3); shifted by the window buttons
+const DX = 7, DY = 4;
+const padNote = (x, row) => {
+  if ((x + row) % 2) return null;
+  const n = base + DX * (x - row) / 2 + DY * row;
+  return n < 0 || n > 127 ? null : n;
+};
+const NAMES = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+const mod = (n, m) => ((n % m) + m) % m;
+const name = n => NAMES[mod(n, 12)] + (Math.floor(n / 12) - 1);
+const fifthsIndex = pc => mod(pc * 7, 12);
+const pcColour = pc => pc === 0 ? '#ffffff' : `hsl(${fifthsIndex(pc) * 30}, 100%, 55%)`;
+
+const held = new Map();          // midi note -> velocity
+let trail = [];                  // [{x, y, label}]
+
+// ---------- grid ----------
+const gridEl = document.getElementById('grid');
+let padNotes = [];
+function buildGrid() {
+  gridEl.replaceChildren();
+  padNotes = [];
+  for (let row = 7; row >= 0; row--) {
+    for (let x = 0; x < 8; x++) {
+      const note = padNote(x, row);
+      const el = document.createElement('div');
+      if (note === null) {               // inactive pad
+        el.className = 'pad off';
+        gridEl.appendChild(el);
+        continue;
+      }
+      el.className = 'pad';
+      el.style.background = pcColour(mod(note, 12));
+      el.textContent = name(note);
+      el.dataset.note = note;
+      el.addEventListener('pointerdown', () => noteOn(note, 100));
+      el.addEventListener('pointerup', () => noteOff(note));
+      el.addEventListener('pointerleave', () => held.has(note) && noteOff(note));
+      gridEl.appendChild(el);
+      padNotes.push(el);
+    }
+  }
+  document.getElementById('baseLabel').textContent = 'bottom-left ' + name(base);
+}
+buildGrid();
+
+// ---------- tonnetz lattice ----------
+const W = 36, H = W * Math.sqrt(3) / 2;
+const I0 = -11, I1 = 11, J0 = -6, J1 = 6;            // lattice extent around C
+const tz = document.getElementById('tonnetz');
+const pos = (i, j) => ({ x: i * W + j * W / 2, y: -j * H });
+const pcAt = (i, j) => mod(DX * i + DY * j, 12);
+const view = { x0: (I0 + 3) * W, x1: (I1 - 3) * W + 0, y0: -J1 * H - 30, y1: -J0 * H + 30 };
+tz.setAttribute('viewBox', `${view.x0} ${view.y0} ${view.x1 - view.x0} ${view.y1 - view.y0}`);
+const NS = 'http://www.w3.org/2000/svg';
+const mk = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; };
+const triLayer = mk('g', {}, tz), hintLayer = mk('g', {}, tz), trailLayer = mk('g', {}, tz), nodeLayer = mk('g', {}, tz);
+const triangles = [];   // {pcs:Set, kind, root, pts, el, c:{x,y}}
+for (let i = I0; i < I1; i++) for (let j = J0; j < J1; j++) {
+  const a = pos(i, j), b = pos(i + 1, j), c = pos(i, j + 1), d = pos(i + 1, j + 1);
+  // ▲ (i,j),(i+1,j),(i,j+1) = n, n+7, n+4 → major on n;  ▼ (i+1,j),(i,j+1),(i+1,j+1) = minor on n+4
+  const up = { kind: 'maj', root: pcAt(i, j), pcs: new Set([pcAt(i, j), pcAt(i + 1, j), pcAt(i, j + 1)]), pts: [a, b, c] };
+  const dn = { kind: 'min', root: pcAt(i, j + 1), pcs: new Set([pcAt(i + 1, j), pcAt(i, j + 1), pcAt(i + 1, j + 1)]), pts: [b, d, c] };
+  for (const t of [up, dn]) {
+    t.c = { x: (t.pts[0].x + t.pts[1].x + t.pts[2].x) / 3, y: (t.pts[0].y + t.pts[1].y + t.pts[2].y) / 3 };
+    t.el = mk('polygon', { points: t.pts.map(p => `${p.x},${p.y}`).join(' '), fill: 'transparent',
+                           stroke: 'var(--line)', 'stroke-width': 1 }, triLayer);
+    triangles.push(t);
+  }
+}
+const nodes = [];
+for (let i = I0; i <= I1; i++) for (let j = J0; j <= J1; j++) {
+  const p = pos(i, j), pc = pcAt(i, j);
+  if (p.x < view.x0 - W || p.x > view.x1 + W) continue;
+  const g = mk('g', {}, nodeLayer);
+  const circle = mk('circle', { cx: p.x, cy: p.y, r: 10.5, fill: pcColour(pc), opacity: .35 }, g);
+  const label = mk('text', { x: p.x, y: p.y, fill: '#000', 'font-size': 9 }, g); label.textContent = NAMES[pc];
+  const degree = mk('text', { x: p.x, y: p.y + 4.5, fill: '#000', 'font-size': 5.5, 'font-weight': 500 }, g);
+  nodes.push({ pc, circle, label, degree, y: p.y });
+}
+
+// ---------- circle of fifths ----------
+const cf = document.getElementById('circle');
+const cfPos = pc => { const a = (fifthsIndex(pc) * 30 - 90) * Math.PI / 180; return { x: 92 * Math.cos(a), y: 92 * Math.sin(a) }; };
+mk('circle', { cx: 0, cy: 0, r: 92, fill: 'none', stroke: 'var(--line)' }, cf);
+const cfPoly = mk('polygon', { points: '', fill: 'var(--tri-major)', stroke: 'var(--accent)', 'stroke-width': 2 }, cf);
+const cfNodes = [];
+for (let pc = 0; pc < 12; pc++) {
+  const p = cfPos(pc);
+  const c = mk('circle', { cx: p.x, cy: p.y, r: 14, fill: pcColour(pc), opacity: .35 }, cf);
+  const t = mk('text', { x: p.x, y: p.y, fill: '#000' }, cf); t.textContent = NAMES[pc];
+  cfNodes[pc] = c;
+}
+
+// ---------- chord naming ----------
+const TEMPLATES = [
+  ['', [0,4,7]], ['m', [0,3,7]], ['dim', [0,3,6]], ['aug', [0,4,8]], ['sus2', [0,2,7]], ['sus4', [0,5,7]],
+  ['7', [0,4,7,10]], ['maj7', [0,4,7,11]], ['m7', [0,3,7,10]], ['m7b5', [0,3,6,10]], ['dim7', [0,3,6,9]],
+  ['mMaj7', [0,3,7,11]], ['6', [0,4,7,9]], ['m6', [0,3,7,9]], ['add9', [0,2,4,7]], ['5', [0,7]],
+];
+function chordName(notes) {
+  const pcs = [...new Set(notes.map(n => mod(n, 12)))];
+  if (pcs.length === 0) return null;
+  if (pcs.length === 1) return { label: NAMES[pcs[0]], root: pcs[0] };
+  const bass = mod(Math.min(...notes), 12);
+  for (const root of [bass, ...pcs.filter(p => p !== bass)]) {
+    const iv = pcs.map(p => mod(p - root, 12)).sort((a, b) => a - b).join(',');
+    for (const [suffix, t] of TEMPLATES) {
+      if (t.join(',') === iv) {
+        return { label: NAMES[root] + suffix + (root !== bass ? '/' + NAMES[bass] : ''), root, suffix };
+      }
+    }
+  }
+  return { label: pcs.map(p => NAMES[p]).join(' '), root: null };
+}
+
+// ---------- render ----------
+const DEGREES = ['1', 'b2', '2', 'b3', '3', '4', 'b5', '5', 'b6', '6', 'b7', '7'];
+
+function render() {
+  const notes = [...held.keys()];
+  const pcs = new Set(notes.map(n => mod(n, 12)));
+  // One pitch class held → show intervals from it and the six triads that contain it.
+  const single = pcs.size === 1 ? [...pcs][0] : null;
+  const degree = pc => single === null ? '' : DEGREES[mod(pc - single, 12)];
+  for (const el of padNotes) {
+    const n = +el.dataset.note;
+    el.classList.toggle('on', held.has(n));
+    el.innerHTML = single === null ? name(n)
+      : `<span style="text-align:center;line-height:1">${NAMES[mod(n, 12)]}<br><small style="font-size:8px;font-weight:500;opacity:.75">${degree(mod(n, 12))}</small></span>`;
+  }
+  for (const n of nodes) {
+    n.circle.setAttribute('opacity', pcs.has(n.pc) ? 1 : .3);
+    const d = degree(n.pc);
+    n.label.setAttribute('y', d ? n.y - 2.5 : n.y);
+    n.degree.textContent = d;
+  }
+  hintLayer.replaceChildren();
+  if (single !== null) {
+    for (const t of triangles) {
+      if (!t.pcs.has(single)) continue;
+      t.el.setAttribute('fill', t.kind === 'maj' ? 'var(--tri-major)' : 'var(--tri-minor)');
+      t.el.setAttribute('fill-opacity', .35);
+      const txt = mk('text', { x: t.c.x, y: t.c.y, fill: 'var(--text)', 'font-size': 7.5 }, hintLayer);
+      txt.textContent = NAMES[t.root] + (t.kind === 'min' ? 'm' : '');
+    }
+  }
+  for (let pc = 0; pc < 12; pc++) cfNodes[pc].setAttribute('opacity', pcs.has(pc) ? 1 : .3);
+  const ring = [...pcs].sort((a, b) => fifthsIndex(a) - fifthsIndex(b)).map(cfPos);
+  cfPoly.setAttribute('points', ring.length > 1 ? ring.map(p => `${p.x},${p.y}`).join(' ') : '');
+  if (single === null) {
+    for (const t of triangles) {
+      const full = [...t.pcs].every(p => pcs.has(p));
+      t.el.setAttribute('fill', full ? (t.kind === 'maj' ? 'var(--tri-major)' : 'var(--tri-minor)') : 'transparent');
+      t.el.setAttribute('fill-opacity', 1);
+    }
+  }
+  const ch = chordName(notes);
+  document.getElementById('chord').textContent = ch ? ch.label : '—';
+  document.getElementById('notes').textContent = notes.sort((a, b) => a - b).map(name).join(' ');
+  drawTrail();
+}
+
+function recordTriad() {
+  const pcs = new Set([...held.keys()].map(n => mod(n, 12)));
+  if (pcs.size < 3) return;
+  const matches = triangles.filter(t => [...t.pcs].every(p => pcs.has(p)));
+  if (!matches.length) return;
+  const last = trail.length ? trail[trail.length - 1] : { x: 0, y: 0 };
+  matches.sort((a, b) => Math.hypot(a.c.x - last.x, a.c.y - last.y) - Math.hypot(b.c.x - last.x, b.c.y - last.y));
+  const t = matches[0];
+  if (trail.length && Math.hypot(t.c.x - last.x, t.c.y - last.y) < 1) return;   // same chord again
+  trail.push({ x: t.c.x, y: t.c.y, label: chordName([...held.keys()]).label });
+  trail = trail.slice(-8);
+}
+
+function drawTrail() {
+  trailLayer.replaceChildren();
+  if (!trail.length) return;
+  if (trail.length > 1) mk('polyline', { points: trail.map(p => `${p.x},${p.y}`).join(' '), fill: 'none',
+    stroke: 'var(--trail)', 'stroke-width': 2.2, 'stroke-linejoin': 'round', opacity: .8 }, trailLayer);
+  trail.forEach((p, k) => {
+    const a = (k + 1) / trail.length;
+    mk('circle', { cx: p.x, cy: p.y, r: 3.5 + 2.5 * a, fill: 'var(--trail)', opacity: .3 + .7 * a }, trailLayer);
+  });
+}
+
+function noteOn(n, v) { held.set(n, v); recordTriad(); render(); }
+function noteOff(n) { held.delete(n); render(); }
+
+document.getElementById('clear').onclick = () => { trail = []; render(); };
+
+// ---------- writing the layout to the unit (live edit buffer, slot 0 only) ----------
+// Protocol: PROTOCOL-SPEC §8.1. Read F0 47 00 53 13 00 01 00 F7 → 0x14 dump; write the same 0x14.
+// Only pad notes, colours and routing are changed; strips and unknown bytes are kept as read.
+let dawOut = null, dawIn = null, deviceRaw = null, pendingRead = null;
+function unpack7(p) {
+  const out = [];
+  for (let g = 0; g < p.length; g += 8)
+    for (let i = 0; i < 7 && g + 1 + i < p.length; i++) out.push(p[g + 1 + i] | ((p[g] >> i) & 1 ? 0x80 : 0));
+  return out;
+}
+function pack7(raw) {
+  const out = [];
+  for (let g = 0; g < raw.length; g += 7) {
+    const chunk = raw.slice(g, g + 7);
+    out.push(chunk.reduce((hi, b, i) => hi | (b & 0x80 ? 1 << i : 0), 0), ...chunk.map(b => b & 0x7F));
+  }
+  return out;
+}
+function hsv(h) {                         // full saturation and value, h in [0,1)
+  const i = Math.floor(h * 6), f = h * 6 - i, q = 1 - f;
+  const [r, g, b] = [[1, f, 0], [q, 1, 0], [0, 1, f], [0, q, 1], [f, 0, 1], [1, 0, q]][i % 6];
+  return [r, g, b].map(v => Math.round(v * 255));
+}
+function onDawMessage(e) {
+  const d = e.data;
+  if (pendingRead && d[0] === 0xF0 && d[4] === 0x14 && d[7] === 0) { const r = pendingRead; pendingRead = null; r(Array.from(d)); }
+}
+function readSlot0() {
+  return new Promise((resolve, reject) => {
+    pendingRead = resolve;
+    dawOut.send([0xF0, 0x47, 0x00, 0x53, 0x13, 0x00, 0x01, 0x00, 0xF7]);
+    setTimeout(() => { if (pendingRead === resolve) { pendingRead = null; reject(new Error('no reply from APC64')); } }, 1500);
+  });
+}
+async function writeLayout() {
+  if (!dawOut || !dawIn) throw new Error('APC64 DAW port not available (SysEx permission?)');
+  if (!deviceRaw) {
+    const raw = unpack7((await readSlot0()).slice(8, -1));
+    if (raw.length !== 880) throw new Error('unexpected dump size ' + raw.length);
+    deviceRaw = raw;
+  }
+  const raw = deviceRaw.slice();
+  for (let i = 0; i < 64; i++) {
+    const o = i * 12, n = padNote(i % 8, Math.floor(i / 8));
+    if (n === null) { raw.fill(0, o + 4, o + 10); raw[o + 10] = 0; continue; }   // dark and silent
+    const pc = mod(n, 12);
+    raw[o] = pc; raw[o + 2] = 1; raw[o + 3] = Math.floor(n / 12); raw[o + 10] = 7;
+    raw.splice(o + 4, 3, ...(pc === 0 ? [255, 255, 255] : hsv(fifthsIndex(pc) / 12)));
+    raw.splice(o + 7, 3, ...(pc === 0 ? [255, 0, 0] : [255, 255, 255]));
+  }
+  const body = [0, ...pack7(raw)];
+  dawOut.send([0xF0, 0x47, 0x00, 0x53, 0x14, body.length >> 7, body.length & 0x7F, ...body, 0xF7]);
+  deviceRaw = raw;
+}
+function shift(d) {
+  const next = base + d;
+  if (next < 0 || next > 100) return;
+  base = next; held.clear(); buildGrid(); render();
+  writeLayout().then(() => status.textContent = 'layout written: bottom-left ' + name(base),
+                     err => status.textContent = 'write failed: ' + err.message);
+}
+document.querySelectorAll('[data-shift]').forEach(b => b.onclick = () => shift(+b.dataset.shift));
+document.addEventListener('keydown', e => {
+  const d = { ArrowLeft: -7, ArrowRight: 7, ArrowDown: -4, ArrowUp: 4, PageDown: -12, PageUp: 12 }[e.key];
+  if (d) { e.preventDefault(); shift(d); }
+});
+
+// ---------- Web MIDI ----------
+const portSel = document.getElementById('port'), status = document.getElementById('status');
+let midi = null, current = null;
+function onMessage(e) {
+  const [s, d1, d2] = e.data, t = s & 0xF0;
+  if (t === 0x90 && d2 > 0) noteOn(d1, d2);
+  else if (t === 0x80 || (t === 0x90 && d2 === 0)) noteOff(d1);
+}
+function listPorts() {
+  const inputs = [...midi.inputs.values()];
+  portSel.replaceChildren(...inputs.map(p => new Option(p.name, p.id)));
+  const pick = inputs.find(p => /custom/i.test(p.name) && /apc64/i.test(p.name)) || inputs.find(p => /apc64/i.test(p.name));
+  if (pick && (!current || !inputs.includes(current))) portSel.value = pick.id;
+  const isDaw = p => /apc64/i.test(p.name) && /daw/i.test(p.name);
+  dawOut = [...midi.outputs.values()].find(isDaw) || null;
+  const newDawIn = inputs.find(isDaw) || null;
+  if (newDawIn !== dawIn) { if (dawIn) dawIn.onmidimessage = null; dawIn = newDawIn; if (dawIn) dawIn.onmidimessage = onDawMessage; }
+  connect();
+}
+function connect() {
+  if (current) current.onmidimessage = null;
+  current = midi.inputs.get(portSel.value) || null;
+  if (current) { current.onmidimessage = onMessage; status.textContent = 'listening: ' + current.name; }
+  else status.textContent = 'no MIDI input';
+  held.clear(); render();
+}
+portSel.onchange = connect;
+if (navigator.requestMIDIAccess) {
+  navigator.requestMIDIAccess({ sysex: true }).then(m => { midi = m; m.onstatechange = listPorts; listPorts(); },
+    err => { status.textContent = 'Web MIDI refused: ' + err.message; });
+} else status.textContent = 'This browser has no Web MIDI (use Chrome or Edge)';
+render();
+</script>
+</body>
+</html>

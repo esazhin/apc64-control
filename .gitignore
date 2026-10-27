@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+.pytest_cache/
+# machine-specific settings (see config.local.example)
+config.local
+# the lab's unit-memory backups and layout library: your unit's data (APC64_LAB_BACKUPS_DIR, APC64_LAB_LIBRARY_DIR)
+backups/
+library/

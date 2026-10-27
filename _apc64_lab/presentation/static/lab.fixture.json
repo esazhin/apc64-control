@@ -1,0 +1,1163 @@
+{
+ "backups": {
+  "backups": [
+   {
+    "id": "slot0-2026-10-24T20-15",
+    "sha256": "e35e47deca39de2d32d3a0078dc0b7a430132f7834abb375c678d111390183f5",
+    "size": 880,
+    "taken_at": "2026-10-24T20:15:00",
+    "target": "slot0"
+   },
+   {
+    "id": "slot1-2026-10-24T20-15",
+    "sha256": "57a8ec48bf6953425b83e7f16e886fe7fc3cf44622a1155ad43b308be3d4a2b1",
+    "size": 880,
+    "taken_at": "2026-10-24T20:15:00",
+    "target": "slot1"
+   },
+   {
+    "id": "slot2-2026-10-24T20-15",
+    "sha256": "57a8ec48bf6953425b83e7f16e886fe7fc3cf44622a1155ad43b308be3d4a2b1",
+    "size": 880,
+    "taken_at": "2026-10-24T20:15:00",
+    "target": "slot2"
+   },
+   {
+    "id": "slot3-2026-10-24T20-15",
+    "sha256": "57a8ec48bf6953425b83e7f16e886fe7fc3cf44622a1155ad43b308be3d4a2b1",
+    "size": 880,
+    "taken_at": "2026-10-24T20:15:00",
+    "target": "slot3"
+   },
+   {
+    "id": "slot4-2026-10-24T20-15",
+    "sha256": "57a8ec48bf6953425b83e7f16e886fe7fc3cf44622a1155ad43b308be3d4a2b1",
+    "size": 880,
+    "taken_at": "2026-10-24T20:15:00",
+    "target": "slot4"
+   },
+   {
+    "id": "slot5-2026-10-24T20-15",
+    "sha256": "57a8ec48bf6953425b83e7f16e886fe7fc3cf44622a1155ad43b308be3d4a2b1",
+    "size": 880,
+    "taken_at": "2026-10-24T20:15:00",
+    "target": "slot5"
+   },
+   {
+    "id": "slot6-2026-10-24T20-15",
+    "sha256": "57a8ec48bf6953425b83e7f16e886fe7fc3cf44622a1155ad43b308be3d4a2b1",
+    "size": 880,
+    "taken_at": "2026-10-24T20:15:00",
+    "target": "slot6"
+   },
+   {
+    "id": "slot7-2026-10-24T20-15",
+    "sha256": "430b3940ee0e7cd631b4ddf87a663fc429c560ba801d872b1300e12b4a55d426",
+    "size": 880,
+    "taken_at": "2026-10-24T20:15:00",
+    "target": "slot7"
+   },
+   {
+    "id": "slot8-2026-10-24T20-15",
+    "sha256": "57a8ec48bf6953425b83e7f16e886fe7fc3cf44622a1155ad43b308be3d4a2b1",
+    "size": 880,
+    "taken_at": "2026-10-24T20:15:00",
+    "target": "slot8"
+   },
+   {
+    "id": "slot9-2026-10-24T20-15",
+    "sha256": "57a8ec48bf6953425b83e7f16e886fe7fc3cf44622a1155ad43b308be3d4a2b1",
+    "size": 880,
+    "taken_at": "2026-10-24T20:15:00",
+    "target": "slot9"
+   },
+   {
+    "id": "slot10-2026-10-24T20-15",
+    "sha256": "57a8ec48bf6953425b83e7f16e886fe7fc3cf44622a1155ad43b308be3d4a2b1",
+    "size": 880,
+    "taken_at": "2026-10-24T20:15:00",
+    "target": "slot10"
+   },
+   {
+    "id": "slot11-2026-10-24T20-15",
+    "sha256": "57a8ec48bf6953425b83e7f16e886fe7fc3cf44622a1155ad43b308be3d4a2b1",
+    "size": 880,
+    "taken_at": "2026-10-24T20:15:00",
+    "target": "slot11"
+   },
+   {
+    "id": "slot12-2026-10-24T20-15",
+    "sha256": "57a8ec48bf6953425b83e7f16e886fe7fc3cf44622a1155ad43b308be3d4a2b1",
+    "size": 880,
+    "taken_at": "2026-10-24T20:15:00",
+    "target": "slot12"
+   },
+   {
+    "id": "slot13-2026-10-24T20-15",
+    "sha256": "57a8ec48bf6953425b83e7f16e886fe7fc3cf44622a1155ad43b308be3d4a2b1",
+    "size": 880,
+    "taken_at": "2026-10-24T20:15:00",
+    "target": "slot13"
+   },
+   {
+    "id": "slot14-2026-10-24T20-15",
+    "sha256": "57a8ec48bf6953425b83e7f16e886fe7fc3cf44622a1155ad43b308be3d4a2b1",
+    "size": 880,
+    "taken_at": "2026-10-24T20:15:00",
+    "target": "slot14"
+   },
+   {
+    "id": "slot15-2026-10-24T20-15",
+    "sha256": "57a8ec48bf6953425b83e7f16e886fe7fc3cf44622a1155ad43b308be3d4a2b1",
+    "size": 880,
+    "taken_at": "2026-10-24T20:15:00",
+    "target": "slot15"
+   },
+   {
+    "id": "slot16-2026-10-24T20-15",
+    "sha256": "57a8ec48bf6953425b83e7f16e886fe7fc3cf44622a1155ad43b308be3d4a2b1",
+    "size": 880,
+    "taken_at": "2026-10-24T20:15:00",
+    "target": "slot16"
+   },
+   {
+    "id": "slot17-2026-10-24T20-15",
+    "sha256": "57a8ec48bf6953425b83e7f16e886fe7fc3cf44622a1155ad43b308be3d4a2b1",
+    "size": 880,
+    "taken_at": "2026-10-24T20:15:00",
+    "target": "slot17"
+   },
+   {
+    "id": "slot18-2026-10-24T20-15",
+    "sha256": "57a8ec48bf6953425b83e7f16e886fe7fc3cf44622a1155ad43b308be3d4a2b1",
+    "size": 880,
+    "taken_at": "2026-10-24T20:15:00",
+    "target": "slot18"
+   },
+   {
+    "id": "slot19-2026-10-24T20-15",
+    "sha256": "57a8ec48bf6953425b83e7f16e886fe7fc3cf44622a1155ad43b308be3d4a2b1",
+    "size": 880,
+    "taken_at": "2026-10-24T20:15:00",
+    "target": "slot19"
+   },
+   {
+    "id": "slot20-2026-10-24T20-15",
+    "sha256": "57a8ec48bf6953425b83e7f16e886fe7fc3cf44622a1155ad43b308be3d4a2b1",
+    "size": 880,
+    "taken_at": "2026-10-24T20:15:00",
+    "target": "slot20"
+   },
+   {
+    "id": "slot21-2026-10-24T20-15",
+    "sha256": "57a8ec48bf6953425b83e7f16e886fe7fc3cf44622a1155ad43b308be3d4a2b1",
+    "size": 880,
+    "taken_at": "2026-10-24T20:15:00",
+    "target": "slot21"
+   },
+   {
+    "id": "slot22-2026-10-24T20-15",
+    "sha256": "57a8ec48bf6953425b83e7f16e886fe7fc3cf44622a1155ad43b308be3d4a2b1",
+    "size": 880,
+    "taken_at": "2026-10-24T20:15:00",
+    "target": "slot22"
+   },
+   {
+    "id": "slot23-2026-10-24T20-15",
+    "sha256": "57a8ec48bf6953425b83e7f16e886fe7fc3cf44622a1155ad43b308be3d4a2b1",
+    "size": 880,
+    "taken_at": "2026-10-24T20:15:00",
+    "target": "slot23"
+   },
+   {
+    "id": "slot24-2026-10-24T20-15",
+    "sha256": "d43a5cb95d2d279e3a98be72cb421b053772e028ae8e6db0aa4a01a22505863e",
+    "size": 880,
+    "taken_at": "2026-10-24T20:15:00",
+    "target": "slot24"
+   }
+  ],
+  "sets": [
+   {
+    "complete": true,
+    "id": "set-2026-10-24T20-15",
+    "kind": "session",
+    "members": {
+     "slot1": "slot1-2026-10-24T20-15",
+     "slot10": "slot10-2026-10-24T20-15",
+     "slot11": "slot11-2026-10-24T20-15",
+     "slot12": "slot12-2026-10-24T20-15",
+     "slot13": "slot13-2026-10-24T20-15",
+     "slot14": "slot14-2026-10-24T20-15",
+     "slot15": "slot15-2026-10-24T20-15",
+     "slot16": "slot16-2026-10-24T20-15",
+     "slot17": "slot17-2026-10-24T20-15",
+     "slot18": "slot18-2026-10-24T20-15",
+     "slot19": "slot19-2026-10-24T20-15",
+     "slot2": "slot2-2026-10-24T20-15",
+     "slot20": "slot20-2026-10-24T20-15",
+     "slot21": "slot21-2026-10-24T20-15",
+     "slot22": "slot22-2026-10-24T20-15",
+     "slot23": "slot23-2026-10-24T20-15",
+     "slot24": "slot24-2026-10-24T20-15",
+     "slot3": "slot3-2026-10-24T20-15",
+     "slot4": "slot4-2026-10-24T20-15",
+     "slot5": "slot5-2026-10-24T20-15",
+     "slot6": "slot6-2026-10-24T20-15",
+     "slot7": "slot7-2026-10-24T20-15",
+     "slot8": "slot8-2026-10-24T20-15",
+     "slot9": "slot9-2026-10-24T20-15"
+    },
+    "taken_at": "2026-10-24T20:15:00"
+   }
+  ]
+ },
+ "globals": {
+  "fields": [
+   {
+    "field": "device_mode",
+    "hazard": true,
+    "label": "Device mode",
+    "options": [
+     [
+      0,
+      "Ableton Live"
+     ],
+     [
+      1,
+      "Standalone"
+     ]
+    ],
+    "text": "Ableton Live",
+    "value": 0
+   },
+   {
+    "field": "standalone_sync",
+    "hazard": true,
+    "label": "Standalone sync",
+    "options": [
+     [
+      0,
+      "Internal"
+     ],
+     [
+      1,
+      "USB"
+     ],
+     [
+      2,
+      "MIDI DIN"
+     ]
+    ],
+    "text": "Internal",
+    "value": 0
+   },
+   {
+    "field": "sync_out",
+    "hazard": true,
+    "label": "Sync out",
+    "options": [
+     [
+      0,
+      "off"
+     ],
+     [
+      1,
+      "USB"
+     ],
+     [
+      2,
+      "MIDI"
+     ],
+     [
+      3,
+      "USB + MIDI"
+     ]
+    ],
+    "text": "off",
+    "value": 0
+   },
+   {
+    "field": "cv1_source",
+    "hazard": false,
+    "label": "CV1 source",
+    "max": 15,
+    "min": 0,
+    "text": "0 Pitch-Last [TBD]",
+    "value": 0
+   },
+   {
+    "field": "cv2_source",
+    "hazard": false,
+    "label": "CV2 source",
+    "max": 15,
+    "min": 0,
+    "text": "0 Pitch-Last [TBD]",
+    "value": 0
+   },
+   {
+    "field": "cv3_source",
+    "hazard": false,
+    "label": "CV3 source",
+    "max": 15,
+    "min": 0,
+    "text": "0 Pitch-Last [TBD]",
+    "value": 0
+   },
+   {
+    "field": "cv4_source",
+    "hazard": false,
+    "label": "CV4 source",
+    "max": 15,
+    "min": 0,
+    "text": "0 Pitch-Last [TBD]",
+    "value": 0
+   },
+   {
+    "field": "cv5_source",
+    "hazard": false,
+    "label": "CV5 source",
+    "max": 15,
+    "min": 0,
+    "text": "0 Pitch-Last [TBD]",
+    "value": 0
+   },
+   {
+    "field": "cv6_source",
+    "hazard": false,
+    "label": "CV6 source",
+    "max": 15,
+    "min": 0,
+    "text": "0 Pitch-Last [TBD]",
+    "value": 0
+   },
+   {
+    "field": "cv7_source",
+    "hazard": false,
+    "label": "CV7 source",
+    "max": 15,
+    "min": 0,
+    "text": "0 Pitch-Last [TBD]",
+    "value": 0
+   },
+   {
+    "field": "cv8_source",
+    "hazard": false,
+    "label": "CV8 source",
+    "max": 15,
+    "min": 0,
+    "text": "0 Pitch-Last [TBD]",
+    "value": 0
+   },
+   {
+    "field": "cv1_channel",
+    "hazard": false,
+    "label": "CV1 channel",
+    "max": 16,
+    "min": 1,
+    "text": "1",
+    "value": 1
+   },
+   {
+    "field": "cv2_channel",
+    "hazard": false,
+    "label": "CV2 channel",
+    "max": 16,
+    "min": 1,
+    "text": "1",
+    "value": 1
+   },
+   {
+    "field": "cv3_channel",
+    "hazard": false,
+    "label": "CV3 channel",
+    "max": 16,
+    "min": 1,
+    "text": "1",
+    "value": 1
+   },
+   {
+    "field": "cv4_channel",
+    "hazard": false,
+    "label": "CV4 channel",
+    "max": 16,
+    "min": 1,
+    "text": "1",
+    "value": 1
+   },
+   {
+    "field": "cv5_channel",
+    "hazard": false,
+    "label": "CV5 channel",
+    "max": 16,
+    "min": 1,
+    "text": "1",
+    "value": 1
+   },
+   {
+    "field": "cv6_channel",
+    "hazard": false,
+    "label": "CV6 channel",
+    "max": 16,
+    "min": 1,
+    "text": "1",
+    "value": 1
+   },
+   {
+    "field": "cv7_channel",
+    "hazard": false,
+    "label": "CV7 channel",
+    "max": 16,
+    "min": 1,
+    "text": "1",
+    "value": 1
+   },
+   {
+    "field": "cv8_channel",
+    "hazard": false,
+    "label": "CV8 channel",
+    "max": 16,
+    "min": 1,
+    "text": "1",
+    "value": 1
+   },
+   {
+    "field": "drum1_note",
+    "hazard": false,
+    "label": "Drum 1 note",
+    "max": 127,
+    "min": 0,
+    "text": "36",
+    "value": 36
+   },
+   {
+    "field": "drum2_note",
+    "hazard": false,
+    "label": "Drum 2 note",
+    "max": 127,
+    "min": 0,
+    "text": "37",
+    "value": 37
+   },
+   {
+    "field": "drum3_note",
+    "hazard": false,
+    "label": "Drum 3 note",
+    "max": 127,
+    "min": 0,
+    "text": "38",
+    "value": 38
+   },
+   {
+    "field": "drum4_note",
+    "hazard": false,
+    "label": "Drum 4 note",
+    "max": 127,
+    "min": 0,
+    "text": "39",
+    "value": 39
+   },
+   {
+    "field": "drum5_note",
+    "hazard": false,
+    "label": "Drum 5 note",
+    "max": 127,
+    "min": 0,
+    "text": "40",
+    "value": 40
+   },
+   {
+    "field": "drum6_note",
+    "hazard": false,
+    "label": "Drum 6 note",
+    "max": 127,
+    "min": 0,
+    "text": "41",
+    "value": 41
+   },
+   {
+    "field": "drum7_note",
+    "hazard": false,
+    "label": "Drum 7 note",
+    "max": 127,
+    "min": 0,
+    "text": "42",
+    "value": 42
+   },
+   {
+    "field": "drum8_note",
+    "hazard": false,
+    "label": "Drum 8 note",
+    "max": 127,
+    "min": 0,
+    "text": "43",
+    "value": 43
+   },
+   {
+    "field": "drum9_note",
+    "hazard": false,
+    "label": "Drum 9 note",
+    "max": 127,
+    "min": 0,
+    "text": "44",
+    "value": 44
+   },
+   {
+    "field": "drum10_note",
+    "hazard": false,
+    "label": "Drum 10 note",
+    "max": 127,
+    "min": 0,
+    "text": "45",
+    "value": 45
+   },
+   {
+    "field": "drum11_note",
+    "hazard": false,
+    "label": "Drum 11 note",
+    "max": 127,
+    "min": 0,
+    "text": "46",
+    "value": 46
+   },
+   {
+    "field": "drum12_note",
+    "hazard": false,
+    "label": "Drum 12 note",
+    "max": 127,
+    "min": 0,
+    "text": "47",
+    "value": 47
+   },
+   {
+    "field": "drum13_note",
+    "hazard": false,
+    "label": "Drum 13 note",
+    "max": 127,
+    "min": 0,
+    "text": "48",
+    "value": 48
+   },
+   {
+    "field": "drum14_note",
+    "hazard": false,
+    "label": "Drum 14 note",
+    "max": 127,
+    "min": 0,
+    "text": "49",
+    "value": 49
+   },
+   {
+    "field": "drum15_note",
+    "hazard": false,
+    "label": "Drum 15 note",
+    "max": 127,
+    "min": 0,
+    "text": "50",
+    "value": 50
+   },
+   {
+    "field": "drum16_note",
+    "hazard": false,
+    "label": "Drum 16 note",
+    "max": 127,
+    "min": 0,
+    "text": "51",
+    "value": 51
+   },
+   {
+    "field": "led_level",
+    "hazard": false,
+    "label": "LED level",
+    "options": [
+     [
+      25,
+      "25%"
+     ],
+     [
+      50,
+      "50%"
+     ],
+     [
+      75,
+      "75%"
+     ],
+     [
+      100,
+      "100%"
+     ]
+    ],
+    "text": "75%",
+    "value": 2
+   }
+  ],
+  "raw": "01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 0a 00 00 00 00 00 00 00 00 00 00 00 01 01 01 01 01 01 01 01 24 25 26 27 28 29 2a 2b 2c 2d 2e 2f 30 31 32 33 02"
+ },
+ "harmony": {
+  "chord": "C",
+  "circle": [
+   "C",
+   "G",
+   "E"
+  ],
+  "degrees": {},
+  "held": [
+   {
+    "name": "C2",
+    "note": 48,
+    "pc": 0
+   },
+   {
+    "name": "E2",
+    "note": 52,
+    "pc": 4
+   },
+   {
+    "name": "G2",
+    "note": 55,
+    "pc": 7
+   }
+  ],
+  "hints": [],
+  "kind": "harmony",
+  "neighbours": [
+   {
+    "label": "Cm",
+    "quality": "minor",
+    "root": 0
+   },
+   {
+    "label": "Am",
+    "quality": "minor",
+    "root": 9
+   },
+   {
+    "label": "Em",
+    "quality": "minor",
+    "root": 4
+   }
+  ],
+  "trail": [
+   "C"
+  ],
+  "trail_triads": [
+   {
+    "label": "C",
+    "quality": "major",
+    "root": 0
+   }
+  ],
+  "triads": [
+   {
+    "label": "C",
+    "quality": "major",
+    "root": 0
+   }
+  ]
+ },
+ "lab": {
+  "active": {
+   "counts": {
+    "fifth": 0,
+    "octave": 0,
+    "third": 0
+   },
+   "definition": {
+    "generator": "tonnetz",
+    "params": {
+     "base": 48,
+     "channel": 1
+    },
+    "scheme": "fifths"
+   },
+   "interval": "Oct",
+   "layout": "tonnetz-c",
+   "name": "Tonnetz C",
+   "offset": 0,
+   "oled": [
+    "Tonnetz C",
+    "Oct +0"
+   ],
+   "pads": [
+    {
+     "note": 48,
+     "pad": "r1c1",
+     "rest": "#FFFFFF",
+     "silent": false
+    },
+    {
+     "note": 25,
+     "pad": "r1c2",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 55,
+     "pad": "r1c3",
+     "rest": "#FF8000",
+     "silent": false
+    },
+    {
+     "note": 27,
+     "pad": "r1c4",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 62,
+     "pad": "r1c5",
+     "rest": "#FFFF00",
+     "silent": false
+    },
+    {
+     "note": 29,
+     "pad": "r1c6",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 69,
+     "pad": "r1c7",
+     "rest": "#80FF00",
+     "silent": false
+    },
+    {
+     "note": 31,
+     "pad": "r1c8",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 32,
+     "pad": "r2c1",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 52,
+     "pad": "r2c2",
+     "rest": "#00FF00",
+     "silent": false
+    },
+    {
+     "note": 34,
+     "pad": "r2c3",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 59,
+     "pad": "r2c4",
+     "rest": "#00FF80",
+     "silent": false
+    },
+    {
+     "note": 36,
+     "pad": "r2c5",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 66,
+     "pad": "r2c6",
+     "rest": "#00FFFF",
+     "silent": false
+    },
+    {
+     "note": 38,
+     "pad": "r2c7",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 73,
+     "pad": "r2c8",
+     "rest": "#0080FF",
+     "silent": false
+    },
+    {
+     "note": 49,
+     "pad": "r3c1",
+     "rest": "#0080FF",
+     "silent": false
+    },
+    {
+     "note": 41,
+     "pad": "r3c2",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 56,
+     "pad": "r3c3",
+     "rest": "#0000FF",
+     "silent": false
+    },
+    {
+     "note": 43,
+     "pad": "r3c4",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 63,
+     "pad": "r3c5",
+     "rest": "#8000FF",
+     "silent": false
+    },
+    {
+     "note": 45,
+     "pad": "r3c6",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 70,
+     "pad": "r3c7",
+     "rest": "#FF00FF",
+     "silent": false
+    },
+    {
+     "note": 47,
+     "pad": "r3c8",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 48,
+     "pad": "r4c1",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 53,
+     "pad": "r4c2",
+     "rest": "#FF0080",
+     "silent": false
+    },
+    {
+     "note": 50,
+     "pad": "r4c3",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 60,
+     "pad": "r4c4",
+     "rest": "#FFFFFF",
+     "silent": false
+    },
+    {
+     "note": 52,
+     "pad": "r4c5",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 67,
+     "pad": "r4c6",
+     "rest": "#FF8000",
+     "silent": false
+    },
+    {
+     "note": 54,
+     "pad": "r4c7",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 74,
+     "pad": "r4c8",
+     "rest": "#FFFF00",
+     "silent": false
+    },
+    {
+     "note": 50,
+     "pad": "r5c1",
+     "rest": "#FFFF00",
+     "silent": false
+    },
+    {
+     "note": 57,
+     "pad": "r5c2",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 57,
+     "pad": "r5c3",
+     "rest": "#80FF00",
+     "silent": false
+    },
+    {
+     "note": 59,
+     "pad": "r5c4",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 64,
+     "pad": "r5c5",
+     "rest": "#00FF00",
+     "silent": false
+    },
+    {
+     "note": 61,
+     "pad": "r5c6",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 71,
+     "pad": "r5c7",
+     "rest": "#00FF80",
+     "silent": false
+    },
+    {
+     "note": 63,
+     "pad": "r5c8",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 64,
+     "pad": "r6c1",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 54,
+     "pad": "r6c2",
+     "rest": "#00FFFF",
+     "silent": false
+    },
+    {
+     "note": 66,
+     "pad": "r6c3",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 61,
+     "pad": "r6c4",
+     "rest": "#0080FF",
+     "silent": false
+    },
+    {
+     "note": 68,
+     "pad": "r6c5",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 68,
+     "pad": "r6c6",
+     "rest": "#0000FF",
+     "silent": false
+    },
+    {
+     "note": 70,
+     "pad": "r6c7",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 75,
+     "pad": "r6c8",
+     "rest": "#8000FF",
+     "silent": false
+    },
+    {
+     "note": 51,
+     "pad": "r7c1",
+     "rest": "#8000FF",
+     "silent": false
+    },
+    {
+     "note": 73,
+     "pad": "r7c2",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 58,
+     "pad": "r7c3",
+     "rest": "#FF00FF",
+     "silent": false
+    },
+    {
+     "note": 75,
+     "pad": "r7c4",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 65,
+     "pad": "r7c5",
+     "rest": "#FF0080",
+     "silent": false
+    },
+    {
+     "note": 77,
+     "pad": "r7c6",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 72,
+     "pad": "r7c7",
+     "rest": "#FFFFFF",
+     "silent": false
+    },
+    {
+     "note": 79,
+     "pad": "r7c8",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 80,
+     "pad": "r8c1",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 55,
+     "pad": "r8c2",
+     "rest": "#FF8000",
+     "silent": false
+    },
+    {
+     "note": 82,
+     "pad": "r8c3",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 62,
+     "pad": "r8c4",
+     "rest": "#FFFF00",
+     "silent": false
+    },
+    {
+     "note": 84,
+     "pad": "r8c5",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 69,
+     "pad": "r8c6",
+     "rest": "#80FF00",
+     "silent": false
+    },
+    {
+     "note": 86,
+     "pad": "r8c7",
+     "rest": "#000000",
+     "silent": true
+    },
+    {
+     "note": 76,
+     "pad": "r8c8",
+     "rest": "#00FF00",
+     "silent": false
+    }
+   ],
+   "preview": false,
+   "session_backup": "slot0-2026-10-24T20-15",
+   "starting": false,
+   "transposition": 0,
+   "unit_view": "custom"
+  },
+  "generators": [
+   {
+    "file": "_apc64_lab/domain/generators.py",
+    "name": "tonnetz",
+    "params": [
+     {
+      "default": 48,
+      "doc": "note on pad r1c1 (C3 = 60)",
+      "kind": "note",
+      "max": 127,
+      "min": 0,
+      "name": "base"
+     },
+     {
+      "default": 1,
+      "doc": "MIDI channel the unit sends the pads on (q8)",
+      "kind": "channel",
+      "max": 16,
+      "min": 1,
+      "name": "channel"
+     }
+    ]
+   },
+   {
+    "file": "_apc64_lab/domain/generators.py",
+    "name": "isomorphic",
+    "params": [
+     {
+      "default": 36,
+      "doc": "note on pad r1c1 (C3 = 60)",
+      "kind": "note",
+      "max": 127,
+      "min": 0,
+      "name": "base"
+     },
+     {
+      "default": 1,
+      "doc": "semitones per column to the right",
+      "kind": "int",
+      "max": 12,
+      "min": -12,
+      "name": "column"
+     },
+     {
+      "default": 5,
+      "doc": "semitones per row upwards",
+      "kind": "int",
+      "max": 12,
+      "min": -12,
+      "name": "row"
+     },
+     {
+      "default": 1,
+      "doc": "MIDI channel the unit sends the pads on (q8)",
+      "kind": "channel",
+      "max": 16,
+      "min": 1,
+      "name": "channel"
+     }
+    ]
+   }
+  ],
+  "kind": "lab",
+  "message": null,
+  "recovery": null,
+  "schemes": [
+   {
+    "file": "_apc64_lab/domain/generators.py",
+    "name": "fifths"
+   },
+   {
+    "file": "_apc64_lab/generators/root_highlight.py",
+    "name": "root-highlight"
+   }
+  ],
+  "target": {
+   "default": null,
+   "routed": false,
+   "text": "notes are only shown: no default target and no layout target"
+  },
+  "warnings": []
+ },
+ "library": [
+  {
+   "generator": "tonnetz",
+   "kind": "definition",
+   "layout": "tonnetz-c",
+   "name": "Tonnetz C"
+  }
+ ]
+}

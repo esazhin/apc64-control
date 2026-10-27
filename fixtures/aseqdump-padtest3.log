@@ -1,0 +1,14 @@
+Waiting for data. Press Ctrl+C to end.
+Source  Event                  Ch  Data
+ 32:3   Note on                 1, note 25, velocity 45
+ 32:3   Note off                1, note 25, velocity 0
+ 32:3   Note on                 0, note 26, velocity 33
+ 32:3   Note off                0, note 26, velocity 0
+ 32:3   Note on                 0, note 27, velocity 45
+ 32:3   Note off                0, note 27, velocity 0
+ 32:3   Note on                 0, note 29, velocity 66
+ 32:3   Note off                0, note 29, velocity 0
+ 32:3   Note on                 0, note 30, velocity 55
+ 32:3   Note off                0, note 30, velocity 0
+ 32:3   Note on                 0, note 31, velocity 57
+ 32:3   Note off                0, note 31, velocity 0

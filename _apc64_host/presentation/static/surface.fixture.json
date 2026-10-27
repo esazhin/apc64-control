@@ -1,0 +1,2552 @@
+{
+ "controls": [
+  {
+   "id": "pad r1c1",
+   "name": "pad r1c1",
+   "role": "bindable",
+   "display": "Pad r1c1",
+   "geometry": {
+    "x": 9.5,
+    "y": 8,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r1c2",
+   "name": "pad r1c2",
+   "role": "bindable",
+   "display": "Pad r1c2",
+   "geometry": {
+    "x": 10.5,
+    "y": 8,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r1c3",
+   "name": "pad r1c3",
+   "role": "bindable",
+   "display": "Pad r1c3",
+   "geometry": {
+    "x": 11.5,
+    "y": 8,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r1c4",
+   "name": "pad r1c4",
+   "role": "bindable",
+   "display": "Pad r1c4",
+   "geometry": {
+    "x": 12.5,
+    "y": 8,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r1c5",
+   "name": "pad r1c5",
+   "role": "bindable",
+   "display": "Pad r1c5",
+   "geometry": {
+    "x": 13.5,
+    "y": 8,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r1c6",
+   "name": "pad r1c6",
+   "role": "bindable",
+   "display": "Pad r1c6",
+   "geometry": {
+    "x": 14.5,
+    "y": 8,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r1c7",
+   "name": "pad r1c7",
+   "role": "bindable",
+   "display": "Pad r1c7",
+   "geometry": {
+    "x": 15.5,
+    "y": 8,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r1c8",
+   "name": "pad r1c8",
+   "role": "bindable",
+   "display": "Pad r1c8",
+   "geometry": {
+    "x": 16.5,
+    "y": 8,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r2c1",
+   "name": "pad r2c1",
+   "role": "bindable",
+   "display": "Pad r2c1",
+   "geometry": {
+    "x": 9.5,
+    "y": 7,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r2c2",
+   "name": "pad r2c2",
+   "role": "bindable",
+   "display": "Pad r2c2",
+   "geometry": {
+    "x": 10.5,
+    "y": 7,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r2c3",
+   "name": "pad r2c3",
+   "role": "bindable",
+   "display": "Pad r2c3",
+   "geometry": {
+    "x": 11.5,
+    "y": 7,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r2c4",
+   "name": "pad r2c4",
+   "role": "bindable",
+   "display": "Pad r2c4",
+   "geometry": {
+    "x": 12.5,
+    "y": 7,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r2c5",
+   "name": "pad r2c5",
+   "role": "bindable",
+   "display": "Pad r2c5",
+   "geometry": {
+    "x": 13.5,
+    "y": 7,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r2c6",
+   "name": "pad r2c6",
+   "role": "bindable",
+   "display": "Pad r2c6",
+   "geometry": {
+    "x": 14.5,
+    "y": 7,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r2c7",
+   "name": "pad r2c7",
+   "role": "bindable",
+   "display": "Pad r2c7",
+   "geometry": {
+    "x": 15.5,
+    "y": 7,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r2c8",
+   "name": "pad r2c8",
+   "role": "bindable",
+   "display": "Pad r2c8",
+   "geometry": {
+    "x": 16.5,
+    "y": 7,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r3c1",
+   "name": "pad r3c1",
+   "role": "bindable",
+   "display": "Pad r3c1",
+   "geometry": {
+    "x": 9.5,
+    "y": 6,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r3c2",
+   "name": "pad r3c2",
+   "role": "bindable",
+   "display": "Pad r3c2",
+   "geometry": {
+    "x": 10.5,
+    "y": 6,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r3c3",
+   "name": "pad r3c3",
+   "role": "bindable",
+   "display": "Pad r3c3",
+   "geometry": {
+    "x": 11.5,
+    "y": 6,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r3c4",
+   "name": "pad r3c4",
+   "role": "bindable",
+   "display": "Pad r3c4",
+   "geometry": {
+    "x": 12.5,
+    "y": 6,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r3c5",
+   "name": "pad r3c5",
+   "role": "bindable",
+   "display": "Pad r3c5",
+   "geometry": {
+    "x": 13.5,
+    "y": 6,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r3c6",
+   "name": "pad r3c6",
+   "role": "bindable",
+   "display": "Pad r3c6",
+   "geometry": {
+    "x": 14.5,
+    "y": 6,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r3c7",
+   "name": "pad r3c7",
+   "role": "bindable",
+   "display": "Pad r3c7",
+   "geometry": {
+    "x": 15.5,
+    "y": 6,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r3c8",
+   "name": "pad r3c8",
+   "role": "bindable",
+   "display": "Pad r3c8",
+   "geometry": {
+    "x": 16.5,
+    "y": 6,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r4c1",
+   "name": "pad r4c1",
+   "role": "bindable",
+   "display": "Pad r4c1",
+   "geometry": {
+    "x": 9.5,
+    "y": 5,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r4c2",
+   "name": "pad r4c2",
+   "role": "bindable",
+   "display": "Pad r4c2",
+   "geometry": {
+    "x": 10.5,
+    "y": 5,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r4c3",
+   "name": "pad r4c3",
+   "role": "bindable",
+   "display": "Pad r4c3",
+   "geometry": {
+    "x": 11.5,
+    "y": 5,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r4c4",
+   "name": "pad r4c4",
+   "role": "bindable",
+   "display": "Pad r4c4",
+   "geometry": {
+    "x": 12.5,
+    "y": 5,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r4c5",
+   "name": "pad r4c5",
+   "role": "bindable",
+   "display": "Pad r4c5",
+   "geometry": {
+    "x": 13.5,
+    "y": 5,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r4c6",
+   "name": "pad r4c6",
+   "role": "bindable",
+   "display": "Pad r4c6",
+   "geometry": {
+    "x": 14.5,
+    "y": 5,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r4c7",
+   "name": "pad r4c7",
+   "role": "bindable",
+   "display": "Pad r4c7",
+   "geometry": {
+    "x": 15.5,
+    "y": 5,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r4c8",
+   "name": "pad r4c8",
+   "role": "bindable",
+   "display": "Pad r4c8",
+   "geometry": {
+    "x": 16.5,
+    "y": 5,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r5c1",
+   "name": "pad r5c1",
+   "role": "bindable",
+   "display": "Pad r5c1",
+   "geometry": {
+    "x": 9.5,
+    "y": 4,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r5c2",
+   "name": "pad r5c2",
+   "role": "bindable",
+   "display": "Pad r5c2",
+   "geometry": {
+    "x": 10.5,
+    "y": 4,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r5c3",
+   "name": "pad r5c3",
+   "role": "bindable",
+   "display": "Pad r5c3",
+   "geometry": {
+    "x": 11.5,
+    "y": 4,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r5c4",
+   "name": "pad r5c4",
+   "role": "bindable",
+   "display": "Pad r5c4",
+   "geometry": {
+    "x": 12.5,
+    "y": 4,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r5c5",
+   "name": "pad r5c5",
+   "role": "bindable",
+   "display": "Pad r5c5",
+   "geometry": {
+    "x": 13.5,
+    "y": 4,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r5c6",
+   "name": "pad r5c6",
+   "role": "bindable",
+   "display": "Pad r5c6",
+   "geometry": {
+    "x": 14.5,
+    "y": 4,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r5c7",
+   "name": "pad r5c7",
+   "role": "bindable",
+   "display": "Pad r5c7",
+   "geometry": {
+    "x": 15.5,
+    "y": 4,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r5c8",
+   "name": "pad r5c8",
+   "role": "bindable",
+   "display": "Pad r5c8",
+   "geometry": {
+    "x": 16.5,
+    "y": 4,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r6c1",
+   "name": "pad r6c1",
+   "role": "bindable",
+   "display": "Pad r6c1",
+   "geometry": {
+    "x": 9.5,
+    "y": 3,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r6c2",
+   "name": "pad r6c2",
+   "role": "bindable",
+   "display": "Pad r6c2",
+   "geometry": {
+    "x": 10.5,
+    "y": 3,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r6c3",
+   "name": "pad r6c3",
+   "role": "bindable",
+   "display": "Pad r6c3",
+   "geometry": {
+    "x": 11.5,
+    "y": 3,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r6c4",
+   "name": "pad r6c4",
+   "role": "bindable",
+   "display": "Pad r6c4",
+   "geometry": {
+    "x": 12.5,
+    "y": 3,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r6c5",
+   "name": "pad r6c5",
+   "role": "bindable",
+   "display": "Pad r6c5",
+   "geometry": {
+    "x": 13.5,
+    "y": 3,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r6c6",
+   "name": "pad r6c6",
+   "role": "bindable",
+   "display": "Pad r6c6",
+   "geometry": {
+    "x": 14.5,
+    "y": 3,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r6c7",
+   "name": "pad r6c7",
+   "role": "bindable",
+   "display": "Pad r6c7",
+   "geometry": {
+    "x": 15.5,
+    "y": 3,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r6c8",
+   "name": "pad r6c8",
+   "role": "bindable",
+   "display": "Pad r6c8",
+   "geometry": {
+    "x": 16.5,
+    "y": 3,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r7c1",
+   "name": "pad r7c1",
+   "role": "bindable",
+   "display": "Pad r7c1",
+   "geometry": {
+    "x": 9.5,
+    "y": 2,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r7c2",
+   "name": "pad r7c2",
+   "role": "bindable",
+   "display": "Pad r7c2",
+   "geometry": {
+    "x": 10.5,
+    "y": 2,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r7c3",
+   "name": "pad r7c3",
+   "role": "bindable",
+   "display": "Pad r7c3",
+   "geometry": {
+    "x": 11.5,
+    "y": 2,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r7c4",
+   "name": "pad r7c4",
+   "role": "bindable",
+   "display": "Pad r7c4",
+   "geometry": {
+    "x": 12.5,
+    "y": 2,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r7c5",
+   "name": "pad r7c5",
+   "role": "bindable",
+   "display": "Pad r7c5",
+   "geometry": {
+    "x": 13.5,
+    "y": 2,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r7c6",
+   "name": "pad r7c6",
+   "role": "bindable",
+   "display": "Pad r7c6",
+   "geometry": {
+    "x": 14.5,
+    "y": 2,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r7c7",
+   "name": "pad r7c7",
+   "role": "bindable",
+   "display": "Pad r7c7",
+   "geometry": {
+    "x": 15.5,
+    "y": 2,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r7c8",
+   "name": "pad r7c8",
+   "role": "bindable",
+   "display": "Pad r7c8",
+   "geometry": {
+    "x": 16.5,
+    "y": 2,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r8c1",
+   "name": "pad r8c1",
+   "role": "bindable",
+   "display": "Pad r8c1",
+   "geometry": {
+    "x": 9.5,
+    "y": 1,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r8c2",
+   "name": "pad r8c2",
+   "role": "bindable",
+   "display": "Pad r8c2",
+   "geometry": {
+    "x": 10.5,
+    "y": 1,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r8c3",
+   "name": "pad r8c3",
+   "role": "bindable",
+   "display": "Pad r8c3",
+   "geometry": {
+    "x": 11.5,
+    "y": 1,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r8c4",
+   "name": "pad r8c4",
+   "role": "bindable",
+   "display": "Pad r8c4",
+   "geometry": {
+    "x": 12.5,
+    "y": 1,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r8c5",
+   "name": "pad r8c5",
+   "role": "bindable",
+   "display": "Pad r8c5",
+   "geometry": {
+    "x": 13.5,
+    "y": 1,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r8c6",
+   "name": "pad r8c6",
+   "role": "bindable",
+   "display": "Pad r8c6",
+   "geometry": {
+    "x": 14.5,
+    "y": 1,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r8c7",
+   "name": "pad r8c7",
+   "role": "bindable",
+   "display": "Pad r8c7",
+   "geometry": {
+    "x": 15.5,
+    "y": 1,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "pad r8c8",
+   "name": "pad r8c8",
+   "role": "bindable",
+   "display": "Pad r8c8",
+   "geometry": {
+    "x": 16.5,
+    "y": 1,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "scene 1",
+   "name": "scene 1",
+   "role": "navigation",
+   "display": "Scene 1",
+   "geometry": {
+    "x": 17.75,
+    "y": 1,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "track 1",
+   "name": "track 1",
+   "role": "bindable",
+   "display": "Track 1",
+   "geometry": {
+    "x": 9.5,
+    "y": 9.25,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "trackctl 1",
+   "name": "trackctl 1",
+   "role": "bindable",
+   "display": "Track control 1",
+   "geometry": {
+    "x": 9.5,
+    "y": 10.25,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "strip 1",
+   "name": "strip 1",
+   "role": "bindable",
+   "display": "Strip 1",
+   "geometry": {
+    "x": 0,
+    "y": 1,
+    "w": 0.8,
+    "h": 4.5
+   },
+   "led": "bar",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "strip 1 touch",
+   "name": "strip 1 touch",
+   "role": "bindable",
+   "display": "Strip 1 touch",
+   "geometry": {
+    "x": 0,
+    "y": 1,
+    "w": 0.8,
+    "h": 4.5
+   },
+   "led": "none",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "scene 2",
+   "name": "scene 2",
+   "role": "navigation",
+   "display": "Scene 2",
+   "geometry": {
+    "x": 17.75,
+    "y": 2,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "track 2",
+   "name": "track 2",
+   "role": "bindable",
+   "display": "Track 2",
+   "geometry": {
+    "x": 10.5,
+    "y": 9.25,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "trackctl 2",
+   "name": "trackctl 2",
+   "role": "bindable",
+   "display": "Track control 2",
+   "geometry": {
+    "x": 10.5,
+    "y": 10.25,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "strip 2",
+   "name": "strip 2",
+   "role": "bindable",
+   "display": "Strip 2",
+   "geometry": {
+    "x": 1,
+    "y": 1,
+    "w": 0.8,
+    "h": 4.5
+   },
+   "led": "bar",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "strip 2 touch",
+   "name": "strip 2 touch",
+   "role": "bindable",
+   "display": "Strip 2 touch",
+   "geometry": {
+    "x": 1,
+    "y": 1,
+    "w": 0.8,
+    "h": 4.5
+   },
+   "led": "none",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "scene 3",
+   "name": "scene 3",
+   "role": "navigation",
+   "display": "Scene 3",
+   "geometry": {
+    "x": 17.75,
+    "y": 3,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "track 3",
+   "name": "track 3",
+   "role": "bindable",
+   "display": "Track 3",
+   "geometry": {
+    "x": 11.5,
+    "y": 9.25,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "trackctl 3",
+   "name": "trackctl 3",
+   "role": "bindable",
+   "display": "Track control 3",
+   "geometry": {
+    "x": 11.5,
+    "y": 10.25,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "strip 3",
+   "name": "strip 3",
+   "role": "bindable",
+   "display": "Strip 3",
+   "geometry": {
+    "x": 2,
+    "y": 1,
+    "w": 0.8,
+    "h": 4.5
+   },
+   "led": "bar",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "strip 3 touch",
+   "name": "strip 3 touch",
+   "role": "bindable",
+   "display": "Strip 3 touch",
+   "geometry": {
+    "x": 2,
+    "y": 1,
+    "w": 0.8,
+    "h": 4.5
+   },
+   "led": "none",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "scene 4",
+   "name": "scene 4",
+   "role": "navigation",
+   "display": "Scene 4",
+   "geometry": {
+    "x": 17.75,
+    "y": 4,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "track 4",
+   "name": "track 4",
+   "role": "bindable",
+   "display": "Track 4",
+   "geometry": {
+    "x": 12.5,
+    "y": 9.25,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "trackctl 4",
+   "name": "trackctl 4",
+   "role": "bindable",
+   "display": "Track control 4",
+   "geometry": {
+    "x": 12.5,
+    "y": 10.25,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "strip 4",
+   "name": "strip 4",
+   "role": "bindable",
+   "display": "Strip 4",
+   "geometry": {
+    "x": 3,
+    "y": 1,
+    "w": 0.8,
+    "h": 4.5
+   },
+   "led": "bar",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "strip 4 touch",
+   "name": "strip 4 touch",
+   "role": "bindable",
+   "display": "Strip 4 touch",
+   "geometry": {
+    "x": 3,
+    "y": 1,
+    "w": 0.8,
+    "h": 4.5
+   },
+   "led": "none",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "scene 5",
+   "name": "scene 5",
+   "role": "navigation",
+   "display": "Scene 5",
+   "geometry": {
+    "x": 17.75,
+    "y": 5,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "track 5",
+   "name": "track 5",
+   "role": "bindable",
+   "display": "Track 5",
+   "geometry": {
+    "x": 13.5,
+    "y": 9.25,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "trackctl 5",
+   "name": "trackctl 5",
+   "role": "bindable",
+   "display": "Track control 5",
+   "geometry": {
+    "x": 13.5,
+    "y": 10.25,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "strip 5",
+   "name": "strip 5",
+   "role": "bindable",
+   "display": "Strip 5",
+   "geometry": {
+    "x": 4,
+    "y": 1,
+    "w": 0.8,
+    "h": 4.5
+   },
+   "led": "bar",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "strip 5 touch",
+   "name": "strip 5 touch",
+   "role": "bindable",
+   "display": "Strip 5 touch",
+   "geometry": {
+    "x": 4,
+    "y": 1,
+    "w": 0.8,
+    "h": 4.5
+   },
+   "led": "none",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "scene 6",
+   "name": "scene 6",
+   "role": "navigation",
+   "display": "Scene 6",
+   "geometry": {
+    "x": 17.75,
+    "y": 6,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "track 6",
+   "name": "track 6",
+   "role": "bindable",
+   "display": "Track 6",
+   "geometry": {
+    "x": 14.5,
+    "y": 9.25,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "trackctl 6",
+   "name": "trackctl 6",
+   "role": "bindable",
+   "display": "Track control 6",
+   "geometry": {
+    "x": 14.5,
+    "y": 10.25,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "strip 6",
+   "name": "strip 6",
+   "role": "bindable",
+   "display": "Strip 6",
+   "geometry": {
+    "x": 5,
+    "y": 1,
+    "w": 0.8,
+    "h": 4.5
+   },
+   "led": "bar",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "strip 6 touch",
+   "name": "strip 6 touch",
+   "role": "bindable",
+   "display": "Strip 6 touch",
+   "geometry": {
+    "x": 5,
+    "y": 1,
+    "w": 0.8,
+    "h": 4.5
+   },
+   "led": "none",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "scene 7",
+   "name": "scene 7",
+   "role": "navigation",
+   "display": "Scene 7",
+   "geometry": {
+    "x": 17.75,
+    "y": 7,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "track 7",
+   "name": "track 7",
+   "role": "bindable",
+   "display": "Track 7",
+   "geometry": {
+    "x": 15.5,
+    "y": 9.25,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "trackctl 7",
+   "name": "trackctl 7",
+   "role": "bindable",
+   "display": "Track control 7",
+   "geometry": {
+    "x": 15.5,
+    "y": 10.25,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "strip 7",
+   "name": "strip 7",
+   "role": "bindable",
+   "display": "Strip 7",
+   "geometry": {
+    "x": 6,
+    "y": 1,
+    "w": 0.8,
+    "h": 4.5
+   },
+   "led": "bar",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "strip 7 touch",
+   "name": "strip 7 touch",
+   "role": "bindable",
+   "display": "Strip 7 touch",
+   "geometry": {
+    "x": 6,
+    "y": 1,
+    "w": 0.8,
+    "h": 4.5
+   },
+   "led": "none",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "scene 8",
+   "name": "scene 8",
+   "role": "navigation",
+   "display": "Scene 8",
+   "geometry": {
+    "x": 17.75,
+    "y": 8,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "track 8",
+   "name": "track 8",
+   "role": "bindable",
+   "display": "Track 8",
+   "geometry": {
+    "x": 16.5,
+    "y": 9.25,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "trackctl 8",
+   "name": "trackctl 8",
+   "role": "bindable",
+   "display": "Track control 8",
+   "geometry": {
+    "x": 16.5,
+    "y": 10.25,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "rgb",
+   "shift_reach": "unverified: live check pending"
+  },
+  {
+   "id": "strip 8",
+   "name": "strip 8",
+   "role": "bindable",
+   "display": "Strip 8",
+   "geometry": {
+    "x": 7,
+    "y": 1,
+    "w": 0.8,
+    "h": 4.5
+   },
+   "led": "bar",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "strip 8 touch",
+   "name": "strip 8 touch",
+   "role": "bindable",
+   "display": "Strip 8 touch",
+   "geometry": {
+    "x": 7,
+    "y": 1,
+    "w": 0.8,
+    "h": 4.5
+   },
+   "led": "none",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "stripmode 1",
+   "name": "stripmode 1",
+   "role": "navigation",
+   "display": "Device",
+   "geometry": {
+    "x": 0,
+    "y": 6,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "stripmode 2",
+   "name": "stripmode 2",
+   "role": "navigation",
+   "display": "Volume",
+   "geometry": {
+    "x": 1,
+    "y": 6,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "stripmode 3",
+   "name": "stripmode 3",
+   "role": "navigation",
+   "display": "Pan",
+   "geometry": {
+    "x": 2,
+    "y": 6,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "stripmode 4",
+   "name": "stripmode 4",
+   "role": "navigation",
+   "display": "Sends",
+   "geometry": {
+    "x": 3,
+    "y": 6,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "stripmode 5",
+   "name": "stripmode 5",
+   "role": "navigation",
+   "display": "Channel",
+   "geometry": {
+    "x": 4,
+    "y": 6,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "stripmode 6",
+   "name": "stripmode 6",
+   "role": "navigation",
+   "display": "Off",
+   "geometry": {
+    "x": 5,
+    "y": 6,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "tempo",
+   "name": "tempo",
+   "role": "bindable",
+   "display": "Tempo",
+   "geometry": {
+    "x": 0,
+    "y": 7,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "clear",
+   "name": "clear",
+   "role": "bindable",
+   "display": "Clear",
+   "geometry": {
+    "x": 1,
+    "y": 7,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "duplicate",
+   "name": "duplicate",
+   "role": "bindable",
+   "display": "Duplicate",
+   "geometry": {
+    "x": 2,
+    "y": 7,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "quantize",
+   "name": "quantize",
+   "role": "bindable",
+   "display": "Quantize",
+   "geometry": {
+    "x": 3,
+    "y": 7,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "fixed",
+   "name": "fixed",
+   "role": "bindable",
+   "display": "Fixed",
+   "geometry": {
+    "x": 4,
+    "y": 7,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "undo",
+   "name": "undo",
+   "role": "bindable",
+   "display": "Undo",
+   "geometry": {
+    "x": 5,
+    "y": 7,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "play",
+   "name": "play",
+   "role": "bindable",
+   "display": "Play",
+   "geometry": {
+    "x": 0,
+    "y": 9.25,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "rec",
+   "name": "rec",
+   "role": "bindable",
+   "display": "Rec",
+   "geometry": {
+    "x": 1,
+    "y": 9.25,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "stop",
+   "name": "stop",
+   "role": "bindable",
+   "display": "Stop",
+   "geometry": {
+    "x": 2,
+    "y": 9.25,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "down",
+   "name": "down",
+   "role": "bindable",
+   "display": "Down",
+   "geometry": {
+    "x": 4,
+    "y": 9.25,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "up",
+   "name": "up",
+   "role": "bindable",
+   "display": "Up",
+   "geometry": {
+    "x": 5,
+    "y": 9.25,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "left",
+   "name": "left",
+   "role": "bindable",
+   "display": "Left",
+   "geometry": {
+    "x": 6,
+    "y": 9.25,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "right",
+   "name": "right",
+   "role": "bindable",
+   "display": "Right",
+   "geometry": {
+    "x": 7,
+    "y": 9.25,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "recarm",
+   "name": "recarm",
+   "role": "bindable",
+   "display": "Rec Arm",
+   "geometry": {
+    "x": 0,
+    "y": 10.25,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "mute",
+   "name": "mute",
+   "role": "bindable",
+   "display": "Mute",
+   "geometry": {
+    "x": 1,
+    "y": 10.25,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "solo",
+   "name": "solo",
+   "role": "bindable",
+   "display": "Solo",
+   "geometry": {
+    "x": 2,
+    "y": 10.25,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "clipstop",
+   "name": "clipstop",
+   "role": "bindable",
+   "display": "Stop",
+   "geometry": {
+    "x": 3,
+    "y": 10.25,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "shift",
+   "name": "shift",
+   "role": "modifier",
+   "display": "Shift",
+   "geometry": {
+    "x": 7,
+    "y": 10.25,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "encoder",
+   "name": "encoder",
+   "role": "bindable",
+   "display": "Encoder",
+   "geometry": {
+    "x": 7,
+    "y": 0,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "none",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "encoder press",
+   "name": "encoder press",
+   "role": "bindable",
+   "display": "Encoder press",
+   "geometry": {
+    "x": 7,
+    "y": 0,
+    "w": 1.0,
+    "h": 1.0
+   },
+   "led": "single",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "view session",
+   "name": "view session",
+   "role": "device_local",
+   "display": "Session",
+   "geometry": {
+    "x": 17.75,
+    "y": 9.25,
+    "w": 1,
+    "h": 0.5
+   },
+   "led": "none",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "view note",
+   "name": "view note",
+   "role": "device_local",
+   "display": "Note",
+   "geometry": {
+    "x": 17.75,
+    "y": 9.75,
+    "w": 1,
+    "h": 0.5
+   },
+   "led": "none",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "view chord",
+   "name": "view chord",
+   "role": "device_local",
+   "display": "Chord",
+   "geometry": {
+    "x": 17.75,
+    "y": 10.25,
+    "w": 1,
+    "h": 0.5
+   },
+   "led": "none",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "view step",
+   "name": "view step",
+   "role": "device_local",
+   "display": "Step",
+   "geometry": {
+    "x": 17.75,
+    "y": 10.75,
+    "w": 1,
+    "h": 0.5
+   },
+   "led": "none",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "view project",
+   "name": "view project",
+   "role": "device_local",
+   "display": "Project",
+   "geometry": {
+    "x": 17.75,
+    "y": 11.25,
+    "w": 1,
+    "h": 0.5
+   },
+   "led": "none",
+   "shift_reach": "verified"
+  },
+  {
+   "id": "view custom",
+   "name": "view custom",
+   "role": "device_local",
+   "display": "Custom",
+   "geometry": {
+    "x": 17.75,
+    "y": 11.75,
+    "w": 1,
+    "h": 0.5
+   },
+   "led": "none",
+   "shift_reach": "verified"
+  }
+ ],
+ "palette": [
+  {
+   "index": 0,
+   "name": "off",
+   "rgb": "#000000"
+  },
+  {
+   "index": 1,
+   "name": "dimwhite",
+   "rgb": "#1e1e1e"
+  },
+  {
+   "index": 2,
+   "name": "grey",
+   "rgb": "#7f7f7f"
+  },
+  {
+   "index": 3,
+   "name": "white",
+   "rgb": "#ffffff"
+  },
+  {
+   "index": 4,
+   "name": null,
+   "rgb": "#ff4c4c"
+  },
+  {
+   "index": 5,
+   "name": "red",
+   "rgb": "#ff0000"
+  },
+  {
+   "index": 6,
+   "name": null,
+   "rgb": "#590000"
+  },
+  {
+   "index": 7,
+   "name": null,
+   "rgb": "#190000"
+  },
+  {
+   "index": 8,
+   "name": null,
+   "rgb": "#ffbd6c"
+  },
+  {
+   "index": 9,
+   "name": "orange",
+   "rgb": "#ff5400"
+  },
+  {
+   "index": 10,
+   "name": null,
+   "rgb": "#591d00"
+  },
+  {
+   "index": 11,
+   "name": null,
+   "rgb": "#271b00"
+  },
+  {
+   "index": 12,
+   "name": null,
+   "rgb": "#ffff4c"
+  },
+  {
+   "index": 13,
+   "name": "yellow",
+   "rgb": "#ffff00"
+  },
+  {
+   "index": 14,
+   "name": null,
+   "rgb": "#595900"
+  },
+  {
+   "index": 15,
+   "name": null,
+   "rgb": "#191900"
+  },
+  {
+   "index": 16,
+   "name": null,
+   "rgb": "#88ff4c"
+  },
+  {
+   "index": 17,
+   "name": "lime",
+   "rgb": "#54ff00"
+  },
+  {
+   "index": 18,
+   "name": null,
+   "rgb": "#1d5900"
+  },
+  {
+   "index": 19,
+   "name": null,
+   "rgb": "#142b00"
+  },
+  {
+   "index": 20,
+   "name": null,
+   "rgb": "#4cff4c"
+  },
+  {
+   "index": 21,
+   "name": "green",
+   "rgb": "#00ff00"
+  },
+  {
+   "index": 22,
+   "name": null,
+   "rgb": "#005900"
+  },
+  {
+   "index": 23,
+   "name": null,
+   "rgb": "#001900"
+  },
+  {
+   "index": 24,
+   "name": null,
+   "rgb": "#4cff5e"
+  },
+  {
+   "index": 25,
+   "name": null,
+   "rgb": "#00ff19"
+  },
+  {
+   "index": 26,
+   "name": null,
+   "rgb": "#00590d"
+  },
+  {
+   "index": 27,
+   "name": null,
+   "rgb": "#001902"
+  },
+  {
+   "index": 28,
+   "name": null,
+   "rgb": "#4cff88"
+  },
+  {
+   "index": 29,
+   "name": "mint",
+   "rgb": "#00ff55"
+  },
+  {
+   "index": 30,
+   "name": null,
+   "rgb": "#00591d"
+  },
+  {
+   "index": 31,
+   "name": null,
+   "rgb": "#001f12"
+  },
+  {
+   "index": 32,
+   "name": null,
+   "rgb": "#4cffb7"
+  },
+  {
+   "index": 33,
+   "name": "teal",
+   "rgb": "#00ff99"
+  },
+  {
+   "index": 34,
+   "name": null,
+   "rgb": "#005935"
+  },
+  {
+   "index": 35,
+   "name": null,
+   "rgb": "#001912"
+  },
+  {
+   "index": 36,
+   "name": null,
+   "rgb": "#4cc3ff"
+  },
+  {
+   "index": 37,
+   "name": "cyan",
+   "rgb": "#00a9ff"
+  },
+  {
+   "index": 38,
+   "name": null,
+   "rgb": "#004152"
+  },
+  {
+   "index": 39,
+   "name": null,
+   "rgb": "#001019"
+  },
+  {
+   "index": 40,
+   "name": null,
+   "rgb": "#4c88ff"
+  },
+  {
+   "index": 41,
+   "name": null,
+   "rgb": "#0055ff"
+  },
+  {
+   "index": 42,
+   "name": null,
+   "rgb": "#001d59"
+  },
+  {
+   "index": 43,
+   "name": null,
+   "rgb": "#000819"
+  },
+  {
+   "index": 44,
+   "name": null,
+   "rgb": "#4c4cff"
+  },
+  {
+   "index": 45,
+   "name": "blue",
+   "rgb": "#0000ff"
+  },
+  {
+   "index": 46,
+   "name": null,
+   "rgb": "#000059"
+  },
+  {
+   "index": 47,
+   "name": null,
+   "rgb": "#000019"
+  },
+  {
+   "index": 48,
+   "name": null,
+   "rgb": "#874cff"
+  },
+  {
+   "index": 49,
+   "name": "purple",
+   "rgb": "#5400ff"
+  },
+  {
+   "index": 50,
+   "name": null,
+   "rgb": "#190064"
+  },
+  {
+   "index": 51,
+   "name": null,
+   "rgb": "#0f0030"
+  },
+  {
+   "index": 52,
+   "name": null,
+   "rgb": "#ff4cff"
+  },
+  {
+   "index": 53,
+   "name": "magenta",
+   "rgb": "#ff00ff"
+  },
+  {
+   "index": 54,
+   "name": null,
+   "rgb": "#590059"
+  },
+  {
+   "index": 55,
+   "name": null,
+   "rgb": "#190019"
+  },
+  {
+   "index": 56,
+   "name": null,
+   "rgb": "#ff4c87"
+  },
+  {
+   "index": 57,
+   "name": "pink",
+   "rgb": "#ff0054"
+  },
+  {
+   "index": 58,
+   "name": null,
+   "rgb": "#59001d"
+  },
+  {
+   "index": 59,
+   "name": null,
+   "rgb": "#220013"
+  },
+  {
+   "index": 60,
+   "name": null,
+   "rgb": "#ff1500"
+  },
+  {
+   "index": 61,
+   "name": null,
+   "rgb": "#993500"
+  },
+  {
+   "index": 62,
+   "name": null,
+   "rgb": "#795100"
+  },
+  {
+   "index": 63,
+   "name": null,
+   "rgb": "#436400"
+  },
+  {
+   "index": 64,
+   "name": null,
+   "rgb": "#033900"
+  },
+  {
+   "index": 65,
+   "name": null,
+   "rgb": "#005735"
+  },
+  {
+   "index": 66,
+   "name": null,
+   "rgb": "#00547f"
+  },
+  {
+   "index": 67,
+   "name": null,
+   "rgb": "#0000ff"
+  },
+  {
+   "index": 68,
+   "name": null,
+   "rgb": "#00454f"
+  },
+  {
+   "index": 69,
+   "name": null,
+   "rgb": "#2500cc"
+  },
+  {
+   "index": 70,
+   "name": null,
+   "rgb": "#7f7f7f"
+  },
+  {
+   "index": 71,
+   "name": null,
+   "rgb": "#202020"
+  },
+  {
+   "index": 72,
+   "name": null,
+   "rgb": "#ff0000"
+  },
+  {
+   "index": 73,
+   "name": null,
+   "rgb": "#bdff2d"
+  },
+  {
+   "index": 74,
+   "name": null,
+   "rgb": "#afed06"
+  },
+  {
+   "index": 75,
+   "name": null,
+   "rgb": "#64ff09"
+  },
+  {
+   "index": 76,
+   "name": null,
+   "rgb": "#108b00"
+  },
+  {
+   "index": 77,
+   "name": null,
+   "rgb": "#00ff87"
+  },
+  {
+   "index": 78,
+   "name": null,
+   "rgb": "#00a9ff"
+  },
+  {
+   "index": 79,
+   "name": null,
+   "rgb": "#002aff"
+  },
+  {
+   "index": 80,
+   "name": null,
+   "rgb": "#3f00ff"
+  },
+  {
+   "index": 81,
+   "name": null,
+   "rgb": "#7a00ff"
+  },
+  {
+   "index": 82,
+   "name": null,
+   "rgb": "#b21a7d"
+  },
+  {
+   "index": 83,
+   "name": null,
+   "rgb": "#402100"
+  },
+  {
+   "index": 84,
+   "name": null,
+   "rgb": "#ff4a00"
+  },
+  {
+   "index": 85,
+   "name": null,
+   "rgb": "#88e106"
+  },
+  {
+   "index": 86,
+   "name": null,
+   "rgb": "#72ff15"
+  },
+  {
+   "index": 87,
+   "name": null,
+   "rgb": "#00ff00"
+  },
+  {
+   "index": 88,
+   "name": null,
+   "rgb": "#3bff26"
+  },
+  {
+   "index": 89,
+   "name": null,
+   "rgb": "#59ff71"
+  },
+  {
+   "index": 90,
+   "name": null,
+   "rgb": "#38ffcc"
+  },
+  {
+   "index": 91,
+   "name": null,
+   "rgb": "#5b8aff"
+  },
+  {
+   "index": 92,
+   "name": null,
+   "rgb": "#3151c6"
+  },
+  {
+   "index": 93,
+   "name": null,
+   "rgb": "#877fe9"
+  },
+  {
+   "index": 94,
+   "name": null,
+   "rgb": "#d31dff"
+  },
+  {
+   "index": 95,
+   "name": null,
+   "rgb": "#ff005d"
+  },
+  {
+   "index": 96,
+   "name": null,
+   "rgb": "#ff7f00"
+  },
+  {
+   "index": 97,
+   "name": null,
+   "rgb": "#b9b000"
+  },
+  {
+   "index": 98,
+   "name": null,
+   "rgb": "#90ff00"
+  },
+  {
+   "index": 99,
+   "name": null,
+   "rgb": "#835d07"
+  },
+  {
+   "index": 100,
+   "name": null,
+   "rgb": "#392b00"
+  },
+  {
+   "index": 101,
+   "name": null,
+   "rgb": "#144c10"
+  },
+  {
+   "index": 102,
+   "name": null,
+   "rgb": "#0d5038"
+  },
+  {
+   "index": 103,
+   "name": null,
+   "rgb": "#15152a"
+  },
+  {
+   "index": 104,
+   "name": null,
+   "rgb": "#16205a"
+  },
+  {
+   "index": 105,
+   "name": null,
+   "rgb": "#693c1c"
+  },
+  {
+   "index": 106,
+   "name": null,
+   "rgb": "#a8000a"
+  },
+  {
+   "index": 107,
+   "name": null,
+   "rgb": "#de513d"
+  },
+  {
+   "index": 108,
+   "name": null,
+   "rgb": "#d86a1c"
+  },
+  {
+   "index": 109,
+   "name": null,
+   "rgb": "#ffe126"
+  },
+  {
+   "index": 110,
+   "name": null,
+   "rgb": "#9ee12f"
+  },
+  {
+   "index": 111,
+   "name": null,
+   "rgb": "#67b50f"
+  },
+  {
+   "index": 112,
+   "name": null,
+   "rgb": "#1e1e30"
+  },
+  {
+   "index": 113,
+   "name": null,
+   "rgb": "#dcff6b"
+  },
+  {
+   "index": 114,
+   "name": null,
+   "rgb": "#80ffbd"
+  },
+  {
+   "index": 115,
+   "name": null,
+   "rgb": "#9a99ff"
+  },
+  {
+   "index": 116,
+   "name": null,
+   "rgb": "#8e66ff"
+  },
+  {
+   "index": 117,
+   "name": null,
+   "rgb": "#404040"
+  },
+  {
+   "index": 118,
+   "name": null,
+   "rgb": "#757575"
+  },
+  {
+   "index": 119,
+   "name": null,
+   "rgb": "#e0ffff"
+  },
+  {
+   "index": 120,
+   "name": null,
+   "rgb": "#a00000"
+  },
+  {
+   "index": 121,
+   "name": null,
+   "rgb": "#350000"
+  },
+  {
+   "index": 122,
+   "name": null,
+   "rgb": "#1ad000"
+  },
+  {
+   "index": 123,
+   "name": null,
+   "rgb": "#074200"
+  },
+  {
+   "index": 124,
+   "name": null,
+   "rgb": "#b9b000"
+  },
+  {
+   "index": 125,
+   "name": null,
+   "rgb": "#3f3100"
+  },
+  {
+   "index": 126,
+   "name": null,
+   "rgb": "#b35f00"
+  },
+  {
+   "index": 127,
+   "name": null,
+   "rgb": "#4b1502"
+  }
+ ],
+ "palette_note": "approximate colours (Ableton palette); the APC64's exact RGB is not known",
+ "approximate": true
+}

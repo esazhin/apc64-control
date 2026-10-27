@@ -1,0 +1,16 @@
+Waiting for data. Press Ctrl+C to end.
+Source  Event                  Ch  Data
+ 32:3   Note on                 0, note 24, velocity 27
+ 32:3   Polyphonic aftertouch   0, note 24, value 127
+ 32:3   Polyphonic aftertouch   0, note 24, value 45
+ 32:3   Polyphonic aftertouch   0, note 24, value 0
+ 32:3   Note off                0, note 24, velocity 0
+ 32:3   Note on                 0, note 87, velocity 34
+ 32:3   Note off                0, note 87, velocity 0
+ 32:3   Note on                 0, note 24, velocity 69
+ 32:3   Polyphonic aftertouch   0, note 24, value 127
+ 32:3   Polyphonic aftertouch   0, note 24, value 22
+ 32:3   Polyphonic aftertouch   0, note 24, value 0
+ 32:3   Note off                0, note 24, velocity 0
+ 32:3   Note on                 0, note 80, velocity 24
+ 32:3   Note off                0, note 80, velocity 0

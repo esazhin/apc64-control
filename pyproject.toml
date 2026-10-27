@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "apc64-host"
+version = "0.1.0"
+description = "Linux DAW-mode host for the Akai APC64: data-mapped controls, live LAN replica, agent CLI"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+requires-python = ">=3.14"
+dependencies = ["fastapi", "uvicorn", "websockets", "ruamel.yaml", "alsa-midi"]
+
+[project.optional-dependencies]
+dev = ["pytest", "httpx"]
+
+[project.scripts]
+apc64 = "_apc64_host.presentation.cli:main"
+
+# contract 2: the apc64 command mounts module subcommands found here (the layout lab's `apc64 lab …`)
+[project.entry-points."apc64.cli"]
+lab = "_apc64_lab.composition:lab_cli"
+
+[tool.setuptools.packages.find]
+include = ["_apc64_host*", "_apc64_lab*"]
+
+[tool.setuptools.package-data]
+"_apc64_host" = ["presentation/static/*"]
+"_apc64_lab" = ["presentation/static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["_apc64_host", "_apc64_lab"]
+markers = ["live: needs the real APC64 (APC64_LIVE=1)"]
+addopts = "-m 'not live'"
+# fastapi's TestClient still uses httpx; starlette 1.x warns about it (test-only, harmless)
+filterwarnings = ["ignore:Using `httpx` with `starlette.testclient` is deprecated"]

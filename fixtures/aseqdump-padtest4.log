@@ -1,0 +1,30 @@
+Waiting for data. Press Ctrl+C to end.
+Source  Event                  Ch  Data
+ 32:3   Note on                 0, note 32, velocity 34
+ 32:3   Note off                0, note 32, velocity 0
+ 32:3   Note on                 0, note 33, velocity 44
+ 32:3   Note off                0, note 33, velocity 0
+ 32:3   Note on                 0, note 34, velocity 83
+ 32:3   Note off                0, note 34, velocity 0
+ 32:3   Note on                 0, note 35, velocity 57
+ 32:3   Note off                0, note 35, velocity 0
+ 32:3   Note on                 0, note 36, velocity 49
+ 32:3   Note off                0, note 36, velocity 0
+ 32:3   Note on                 0, note 37, velocity 34
+ 32:3   Note off                0, note 37, velocity 0
+ 32:3   Note on                 0, note 38, velocity 69
+ 32:3   Note off                0, note 38, velocity 0
+ 32:3   Note on                 0, note 39, velocity 35
+ 32:3   Note off                0, note 39, velocity 0
+ 32:3   Note on                 0, note 40, velocity 30
+ 32:3   Note off                0, note 40, velocity 0
+ 32:3   Note on                 0, note 41, velocity 25
+ 32:3   Note off                0, note 41, velocity 0
+ 32:3   Note on                 0, note 40, velocity 49
+ 32:3   Note off                0, note 40, velocity 0
+ 32:3   Note on                 0, note 36, velocity 38
+ 32:3   Note off                0, note 36, velocity 0
+ 32:3   Note on                 0, note 44, velocity 21
+ 32:3   Note off                0, note 44, velocity 0
+ 32:3   Note on                 0, note 52, velocity 30
+ 32:3   Note off                0, note 52, velocity 0

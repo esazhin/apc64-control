@@ -1,0 +1,302 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://apc64-host.local/lab.schema.json",
+  "title": "APC64 Lab generated layout",
+  "description": "One layout file in layouts/ (YAML) with a 'lab:' section. Read docs/lab-guide.md for worked examples; validate with 'apc64 lab validate <file>'. The host keys are as in layout.schema.json; 'routing: custom:' overrides the lab's default note target.",
+  "type": "object",
+  "required": [
+    "name",
+    "lab"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Display name (the OLED shows 14 characters)."
+    },
+    "lab": {
+      "$ref": "#/$defs/lab"
+    },
+    "device": {
+      "$ref": "layout.schema.json#/properties/device"
+    },
+    "devices": {
+      "$ref": "layout.schema.json#/properties/devices"
+    },
+    "pages": {
+      "$ref": "layout.schema.json#/properties/pages"
+    },
+    "banks": {
+      "$ref": "layout.schema.json#/properties/banks"
+    },
+    "routing": {
+      "$ref": "layout.schema.json#/properties/routing"
+    }
+  },
+  "$defs": {
+    "lab": {
+      "type": "object",
+      "required": [
+        "generator"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "generator": {
+          "type": "string",
+          "enum": [
+            "tonnetz",
+            "isomorphic"
+          ],
+          "description": "Required: which generator fills the 64 pads."
+        },
+        "scheme": {
+          "type": "string",
+          "enum": [
+            "fifths",
+            "root-highlight"
+          ],
+          "default": "fifths",
+          "description": "The colour scheme (any scheme works with any generator)."
+        },
+        "colours": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[A-Ga-g](♯|#|♭|b|𝄪|𝄫)*$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/colour"
+          },
+          "description": "Rest colours by pitch class, over the scheme's: C: [255, 255, 255]."
+        },
+        "strips": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^(strips? )?[1-8](-[1-8])?$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/strip"
+          },
+          "description": "Optional (§2.7 q6): strips 1-8 by number or range. Without it the unit's strips are written back exactly as read."
+        },
+        "base": {
+          "description": "A generator parameter (see the tonnetz branch)."
+        },
+        "channel": {
+          "description": "A generator parameter (see the tonnetz branch)."
+        },
+        "column": {
+          "description": "A generator parameter (see the isomorphic branch)."
+        },
+        "row": {
+          "description": "A generator parameter (see the isomorphic branch)."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "generator": {
+                "const": "tonnetz"
+              }
+            },
+            "required": [
+              "generator"
+            ]
+          },
+          "then": {
+            "properties": {
+              "base": {
+                "oneOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 127
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^[A-Ga-g][#b]?-?\\d+$"
+                  }
+                ],
+                "default": 48,
+                "description": "note on pad r1c1 (C3 = 60): a note number 0–127 or a note name such as C2 (48) or F#3 (66)."
+              },
+              "channel": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 16,
+                "default": 1,
+                "description": "MIDI channel the unit sends the pads on (q8) (1–16)."
+              }
+            },
+            "propertyNames": {
+              "enum": [
+                "generator",
+                "scheme",
+                "colours",
+                "strips",
+                "base",
+                "channel"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "generator": {
+                "const": "isomorphic"
+              }
+            },
+            "required": [
+              "generator"
+            ]
+          },
+          "then": {
+            "properties": {
+              "base": {
+                "oneOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 127
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^[A-Ga-g][#b]?-?\\d+$"
+                  }
+                ],
+                "default": 36,
+                "description": "note on pad r1c1 (C3 = 60): a note number 0–127 or a note name such as C2 (48) or F#3 (66)."
+              },
+              "column": {
+                "type": "integer",
+                "minimum": -12,
+                "maximum": 12,
+                "default": 1,
+                "description": "semitones per column to the right (-12–12)."
+              },
+              "row": {
+                "type": "integer",
+                "minimum": -12,
+                "maximum": 12,
+                "default": 5,
+                "description": "semitones per row upwards (-12–12)."
+              },
+              "channel": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 16,
+                "default": 1,
+                "description": "MIDI channel the unit sends the pads on (q8) (1–16)."
+              }
+            },
+            "propertyNames": {
+              "enum": [
+                "generator",
+                "scheme",
+                "colours",
+                "strips",
+                "base",
+                "column",
+                "row",
+                "channel"
+              ]
+            }
+          }
+        }
+      ],
+      "description": "A generated layout. Its encoder shifts the window one step of the interval (right +1, left -1) and Tempo cycles octave → fifth → third; Shift + encoder still browses layouts. Do not bind encoder or tempo on a page of a lab layout."
+    },
+    "colour": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "[red, green, blue], each 0–255."
+        },
+        {
+          "type": "string",
+          "pattern": "^#?[0-9A-Fa-f]{6}$",
+          "description": "#RRGGBB."
+        },
+        {
+          "type": "string",
+          "enum": [
+            "black",
+            "blue",
+            "cyan",
+            "green",
+            "magenta",
+            "off",
+            "orange",
+            "pink",
+            "purple",
+            "red",
+            "white",
+            "yellow"
+          ],
+          "description": "A colour name."
+        }
+      ]
+    },
+    "strip": {
+      "type": "object",
+      "required": [
+        "cc"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "cc": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 127,
+          "description": "The controller (over a range 1-8 it rises by one per strip)."
+        },
+        "lsb": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 127,
+          "description": "With lsb the strip sends 14-bit MSB/LSB pairs; it rises by one per strip too."
+        },
+        "channel": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16,
+          "default": 1
+        },
+        "ch": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16,
+          "description": "Same as channel."
+        },
+        "bar": {
+          "$ref": "#/$defs/colour",
+          "description": "Bar colour (default red)."
+        },
+        "indicator": {
+          "$ref": "#/$defs/colour",
+          "description": "Indicator colour (default white)."
+        },
+        "bipolar": {
+          "type": "boolean",
+          "default": false,
+          "description": "Bipolar bar display."
+        },
+        "outputs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 7,
+          "default": 7,
+          "description": "Output bitmask: 7 = all outputs (factory), 0 = silent; the single bits are [TBD]."
+        }
+      }
+    }
+  }
+}

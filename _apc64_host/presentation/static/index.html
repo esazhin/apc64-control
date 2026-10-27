@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark light">
+  <title>APC64 Host</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <div class="screen">
+    <header class="top">
+      <div class="brand"><span class="logo" aria-hidden="true"></span><h1>APC64</h1></div>
+      <div id="unit" class="unit-status" aria-live="polite"></div>
+      <div id="conn" class="conn" title="Live connection to the host"></div>
+    </header>
+
+    <section id="banners" class="banners" aria-live="polite"></section>
+
+    <nav id="nav" class="nav" aria-label="Layout, page and bank"></nav>
+
+    <main class="page-main">
+      <section class="panel replica-panel" aria-label="APC64 replica">
+        <div id="toolbar" class="toolbar"></div>
+        <div id="replica" class="replica"></div>
+        <div id="played" class="played" aria-label="Played notes"></div>
+      </section>
+
+      <aside class="side" aria-label="Beside the surface">
+        <section id="overview" class="panel overview" aria-label="Every page and bank"></section>
+        <div class="cardcol">
+          <section id="card" class="panel card" aria-label="Control detail">
+            <div id="card-info"></div>
+            <div id="card-learn"></div>
+            <div id="card-tweak"></div>
+          </section>
+          <section id="activity" class="panel activity" aria-label="Activity"></section>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <div id="help" class="help" hidden></div>
+
+  <footer class="foot">
+    <span id="palette-note">Colours are approximate (Ableton palette); the APC64's exact colours are not known.</span>
+    <span>Agents: <code>apc64 --help</code> · API: <code>docs/api.md</code></span>
+  </footer>
+</body>
+</html>
