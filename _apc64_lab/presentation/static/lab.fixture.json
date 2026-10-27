@@ -593,8 +593,860 @@
   ],
   "raw": "01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 0a 00 00 00 00 00 00 00 00 00 00 00 01 01 01 01 01 01 01 01 24 25 26 27 28 29 2a 2b 2c 2d 2e 2f 30 31 32 33 02"
  },
+ "guitar": {
+  "harmony": {
+   "chord": "A E G",
+   "chord_root": null,
+   "chord_tones": [],
+   "circle": [
+    "G",
+    "A",
+    "E"
+   ],
+   "degrees": {},
+   "held": [
+    {
+     "name": "A1",
+     "note": 45,
+     "pc": 9
+    },
+    {
+     "name": "G2",
+     "note": 55,
+     "pc": 7
+    },
+    {
+     "name": "E3",
+     "note": 64,
+     "pc": 4
+    }
+   ],
+   "hints": [],
+   "kind": "harmony",
+   "names": {
+    "0": "C",
+    "1": "C♯",
+    "10": "B♭",
+    "11": "B",
+    "2": "D",
+    "3": "E♭",
+    "4": "E",
+    "5": "F",
+    "6": "F♯",
+    "7": "G",
+    "8": "G♯",
+    "9": "A"
+   },
+   "neighbours": [],
+   "played": [
+    {
+     "channel": 6,
+     "note": 45,
+     "source": "custom"
+    },
+    {
+     "channel": null,
+     "note": 55,
+     "source": "input"
+    },
+    {
+     "channel": 1,
+     "note": 64,
+     "source": "custom"
+    }
+   ],
+   "trail": [],
+   "trail_triads": [],
+   "triads": []
+  },
+  "lab": {
+   "active": {
+    "counts": {},
+    "definition": {
+     "generator": "guitar",
+     "params": {
+      "fret_marks": "on",
+      "frets": 24,
+      "tuning": "e-standard"
+     },
+     "scheme": "fifths",
+     "scheme_params": {}
+    },
+    "interval": "Fret",
+    "layout": "guitar",
+    "name": "Guitar",
+    "neck": {
+     "first": 3,
+     "frets": 24,
+     "shown": 8,
+     "strings": [
+      {
+       "channel": 1,
+       "name": "E",
+       "open": 64,
+       "string": 1
+      },
+      {
+       "channel": 2,
+       "name": "B",
+       "open": 59,
+       "string": 2
+      },
+      {
+       "channel": 3,
+       "name": "G",
+       "open": 55,
+       "string": 3
+      },
+      {
+       "channel": 4,
+       "name": "D",
+       "open": 50,
+       "string": 4
+      },
+      {
+       "channel": 5,
+       "name": "A",
+       "open": 45,
+       "string": 5
+      },
+      {
+       "channel": 6,
+       "name": "E",
+       "open": 40,
+       "string": 6
+      }
+     ]
+    },
+    "offset": 3,
+    "oled": [
+     "Guitar",
+     "Frets 3-10"
+    ],
+    "pads": [
+     {
+      "name": null,
+      "note": 24,
+      "pad": "r1c1",
+      "rest": "#000000",
+      "silent": true
+     },
+     {
+      "name": null,
+      "note": 25,
+      "pad": "r1c2",
+      "rest": "#000000",
+      "silent": true
+     },
+     {
+      "name": null,
+      "note": 26,
+      "pad": "r1c3",
+      "rest": "#000000",
+      "silent": true
+     },
+     {
+      "name": null,
+      "note": 27,
+      "pad": "r1c4",
+      "rest": "#000000",
+      "silent": true
+     },
+     {
+      "name": null,
+      "note": 28,
+      "pad": "r1c5",
+      "rest": "#000000",
+      "silent": true
+     },
+     {
+      "name": null,
+      "note": 29,
+      "pad": "r1c6",
+      "rest": "#000000",
+      "silent": true
+     },
+     {
+      "name": null,
+      "note": 30,
+      "pad": "r1c7",
+      "rest": "#000000",
+      "silent": true
+     },
+     {
+      "name": null,
+      "note": 31,
+      "pad": "r1c8",
+      "rest": "#000000",
+      "silent": true
+     },
+     {
+      "name": "G",
+      "note": 43,
+      "pad": "r2c1",
+      "rest": "#FF8000",
+      "silent": false
+     },
+     {
+      "name": "A♭",
+      "note": 44,
+      "pad": "r2c2",
+      "rest": "#000073",
+      "silent": false
+     },
+     {
+      "name": "A",
+      "note": 45,
+      "pad": "r2c3",
+      "rest": "#80FF00",
+      "silent": false
+     },
+     {
+      "name": "B♭",
+      "note": 46,
+      "pad": "r2c4",
+      "rest": "#730073",
+      "silent": false
+     },
+     {
+      "name": "B",
+      "note": 47,
+      "pad": "r2c5",
+      "rest": "#00FF80",
+      "silent": false
+     },
+     {
+      "name": "C",
+      "note": 48,
+      "pad": "r2c6",
+      "rest": "#737373",
+      "silent": false
+     },
+     {
+      "name": "C♯",
+      "note": 49,
+      "pad": "r2c7",
+      "rest": "#0080FF",
+      "silent": false
+     },
+     {
+      "name": "D",
+      "note": 50,
+      "pad": "r2c8",
+      "rest": "#737300",
+      "silent": false
+     },
+     {
+      "name": "C",
+      "note": 48,
+      "pad": "r3c1",
+      "rest": "#FFFFFF",
+      "silent": false
+     },
+     {
+      "name": "C♯",
+      "note": 49,
+      "pad": "r3c2",
+      "rest": "#003A73",
+      "silent": false
+     },
+     {
+      "name": "D",
+      "note": 50,
+      "pad": "r3c3",
+      "rest": "#FFFF00",
+      "silent": false
+     },
+     {
+      "name": "E♭",
+      "note": 51,
+      "pad": "r3c4",
+      "rest": "#3A0073",
+      "silent": false
+     },
+     {
+      "name": "E",
+      "note": 52,
+      "pad": "r3c5",
+      "rest": "#00FF00",
+      "silent": false
+     },
+     {
+      "name": "F",
+      "note": 53,
+      "pad": "r3c6",
+      "rest": "#73003A",
+      "silent": false
+     },
+     {
+      "name": "F♯",
+      "note": 54,
+      "pad": "r3c7",
+      "rest": "#00FFFF",
+      "silent": false
+     },
+     {
+      "name": "G",
+      "note": 55,
+      "pad": "r3c8",
+      "rest": "#733A00",
+      "silent": false
+     },
+     {
+      "name": "F",
+      "note": 53,
+      "pad": "r4c1",
+      "rest": "#FF0080",
+      "silent": false
+     },
+     {
+      "name": "F♯",
+      "note": 54,
+      "pad": "r4c2",
+      "rest": "#007373",
+      "silent": false
+     },
+     {
+      "name": "G",
+      "note": 55,
+      "pad": "r4c3",
+      "rest": "#FF8000",
+      "silent": false
+     },
+     {
+      "name": "A♭",
+      "note": 56,
+      "pad": "r4c4",
+      "rest": "#000073",
+      "silent": false
+     },
+     {
+      "name": "A",
+      "note": 57,
+      "pad": "r4c5",
+      "rest": "#80FF00",
+      "silent": false
+     },
+     {
+      "name": "B♭",
+      "note": 58,
+      "pad": "r4c6",
+      "rest": "#730073",
+      "silent": false
+     },
+     {
+      "name": "B",
+      "note": 59,
+      "pad": "r4c7",
+      "rest": "#00FF80",
+      "silent": false
+     },
+     {
+      "name": "C",
+      "note": 60,
+      "pad": "r4c8",
+      "rest": "#737373",
+      "silent": false
+     },
+     {
+      "name": "B♭",
+      "note": 58,
+      "pad": "r5c1",
+      "rest": "#FF00FF",
+      "silent": false
+     },
+     {
+      "name": "B",
+      "note": 59,
+      "pad": "r5c2",
+      "rest": "#00733A",
+      "silent": false
+     },
+     {
+      "name": "C",
+      "note": 60,
+      "pad": "r5c3",
+      "rest": "#FFFFFF",
+      "silent": false
+     },
+     {
+      "name": "C♯",
+      "note": 61,
+      "pad": "r5c4",
+      "rest": "#003A73",
+      "silent": false
+     },
+     {
+      "name": "D",
+      "note": 62,
+      "pad": "r5c5",
+      "rest": "#FFFF00",
+      "silent": false
+     },
+     {
+      "name": "E♭",
+      "note": 63,
+      "pad": "r5c6",
+      "rest": "#3A0073",
+      "silent": false
+     },
+     {
+      "name": "E",
+      "note": 64,
+      "pad": "r5c7",
+      "rest": "#00FF00",
+      "silent": false
+     },
+     {
+      "name": "F",
+      "note": 65,
+      "pad": "r5c8",
+      "rest": "#73003A",
+      "silent": false
+     },
+     {
+      "name": "D",
+      "note": 62,
+      "pad": "r6c1",
+      "rest": "#FFFF00",
+      "silent": false
+     },
+     {
+      "name": "E♭",
+      "note": 63,
+      "pad": "r6c2",
+      "rest": "#3A0073",
+      "silent": false
+     },
+     {
+      "name": "E",
+      "note": 64,
+      "pad": "r6c3",
+      "rest": "#00FF00",
+      "silent": false
+     },
+     {
+      "name": "F",
+      "note": 65,
+      "pad": "r6c4",
+      "rest": "#73003A",
+      "silent": false
+     },
+     {
+      "name": "F♯",
+      "note": 66,
+      "pad": "r6c5",
+      "rest": "#00FFFF",
+      "silent": false
+     },
+     {
+      "name": "G",
+      "note": 67,
+      "pad": "r6c6",
+      "rest": "#733A00",
+      "silent": false
+     },
+     {
+      "name": "A♭",
+      "note": 68,
+      "pad": "r6c7",
+      "rest": "#0000FF",
+      "silent": false
+     },
+     {
+      "name": "A",
+      "note": 69,
+      "pad": "r6c8",
+      "rest": "#3A7300",
+      "silent": false
+     },
+     {
+      "name": "G",
+      "note": 67,
+      "pad": "r7c1",
+      "rest": "#FF8000",
+      "silent": false
+     },
+     {
+      "name": "A♭",
+      "note": 68,
+      "pad": "r7c2",
+      "rest": "#000073",
+      "silent": false
+     },
+     {
+      "name": "A",
+      "note": 69,
+      "pad": "r7c3",
+      "rest": "#80FF00",
+      "silent": false
+     },
+     {
+      "name": "B♭",
+      "note": 70,
+      "pad": "r7c4",
+      "rest": "#730073",
+      "silent": false
+     },
+     {
+      "name": "B",
+      "note": 71,
+      "pad": "r7c5",
+      "rest": "#00FF80",
+      "silent": false
+     },
+     {
+      "name": "C",
+      "note": 72,
+      "pad": "r7c6",
+      "rest": "#737373",
+      "silent": false
+     },
+     {
+      "name": "C♯",
+      "note": 73,
+      "pad": "r7c7",
+      "rest": "#0080FF",
+      "silent": false
+     },
+     {
+      "name": "D",
+      "note": 74,
+      "pad": "r7c8",
+      "rest": "#737300",
+      "silent": false
+     },
+     {
+      "name": null,
+      "note": 80,
+      "pad": "r8c1",
+      "rest": "#000000",
+      "silent": true
+     },
+     {
+      "name": null,
+      "note": 81,
+      "pad": "r8c2",
+      "rest": "#000000",
+      "silent": true
+     },
+     {
+      "name": null,
+      "note": 82,
+      "pad": "r8c3",
+      "rest": "#000000",
+      "silent": true
+     },
+     {
+      "name": null,
+      "note": 83,
+      "pad": "r8c4",
+      "rest": "#000000",
+      "silent": true
+     },
+     {
+      "name": null,
+      "note": 84,
+      "pad": "r8c5",
+      "rest": "#000000",
+      "silent": true
+     },
+     {
+      "name": null,
+      "note": 85,
+      "pad": "r8c6",
+      "rest": "#000000",
+      "silent": true
+     },
+     {
+      "name": null,
+      "note": 86,
+      "pad": "r8c7",
+      "rest": "#000000",
+      "silent": true
+     },
+     {
+      "name": null,
+      "note": 87,
+      "pad": "r8c8",
+      "rest": "#000000",
+      "silent": true
+     }
+    ],
+    "preview": false,
+    "rows": [
+     "",
+     "6 E",
+     "5 A",
+     "4 D",
+     "3 G",
+     "2 B",
+     "1 E",
+     ""
+    ],
+    "scale": null,
+    "session_backup": "slot0-2026-10-24T20-15",
+    "starting": false,
+    "transposition": 3,
+    "unit_view": "custom",
+    "window": {
+     "highest": 17,
+     "label": "Fret 3-10",
+     "lowest": 0,
+     "pages": [
+      0,
+      8,
+      16,
+      17
+     ],
+     "position": 3,
+     "shown": 8,
+     "step": "Fret",
+     "steps": [
+      "Fret",
+      "Page"
+     ],
+     "unit": "Frets"
+    }
+   },
+   "generators": [
+    {
+     "file": "_apc64_lab/domain/generators.py",
+     "name": "tonnetz",
+     "params": [
+      {
+       "default": 48,
+       "doc": "note on pad r1c1 (C3 = 60)",
+       "kind": "note",
+       "max": 127,
+       "min": 0,
+       "name": "base"
+      },
+      {
+       "default": 1,
+       "doc": "MIDI channel the unit sends the pads on (q8)",
+       "kind": "channel",
+       "max": 16,
+       "min": 1,
+       "name": "channel"
+      }
+     ]
+    },
+    {
+     "file": "_apc64_lab/domain/generators.py",
+     "name": "isomorphic",
+     "params": [
+      {
+       "default": 36,
+       "doc": "note on pad r1c1 (C3 = 60)",
+       "kind": "note",
+       "max": 127,
+       "min": 0,
+       "name": "base"
+      },
+      {
+       "default": 1,
+       "doc": "semitones per column to the right",
+       "kind": "int",
+       "max": 12,
+       "min": -12,
+       "name": "column"
+      },
+      {
+       "default": 5,
+       "doc": "semitones per row upwards",
+       "kind": "int",
+       "max": 12,
+       "min": -12,
+       "name": "row"
+      },
+      {
+       "default": 1,
+       "doc": "MIDI channel the unit sends the pads on (q8)",
+       "kind": "channel",
+       "max": 16,
+       "min": 1,
+       "name": "channel"
+      }
+     ]
+    },
+    {
+     "file": "_apc64_lab/generators/guitar.py",
+     "name": "guitar",
+     "params": [
+      {
+       "choices": [
+        "e-standard",
+        "drop-d",
+        "eb-standard",
+        "d-standard",
+        "drop-c",
+        "dadgad",
+        "open-g",
+        "open-d",
+        "b-standard-7",
+        "drop-a-7",
+        "fs-standard-8",
+        "drop-e-8",
+        "bass-4",
+        "bass-5"
+       ],
+       "default": "e-standard",
+       "doc": "a preset, or the open strings low to high (4–8 notes, C3 = 60: the low E is E1, 40)",
+       "kind": "notes",
+       "max": 8,
+       "min": 4,
+       "name": "tuning"
+      },
+      {
+       "default": 24,
+       "doc": "the neck's length in frets",
+       "kind": "int",
+       "max": 36,
+       "min": 12,
+       "name": "frets"
+      },
+      {
+       "choices": [
+        "on",
+        "off"
+       ],
+       "default": "on",
+       "doc": "the inlay frets marked on the pads (on or off)",
+       "kind": "choice",
+       "max": 0,
+       "min": 0,
+       "name": "fret_marks"
+      }
+     ]
+    },
+    {
+     "file": "_apc64_lab/generators/modes.py",
+     "name": "modes",
+     "params": [
+      {
+       "default": 48,
+       "doc": "the root: the note on pad r1c1 and every row's first pad",
+       "kind": "note",
+       "max": 115,
+       "min": 0,
+       "name": "base"
+      },
+      {
+       "default": 1,
+       "doc": "MIDI channel the unit sends the pads on (q8)",
+       "kind": "channel",
+       "max": 16,
+       "min": 1,
+       "name": "channel"
+      }
+     ]
+    }
+   ],
+   "kind": "lab",
+   "layouts": [
+    {
+     "generator": "guitar",
+     "layout": "guitar",
+     "name": "Guitar",
+     "valid": true
+    },
+    {
+     "generator": "tonnetz",
+     "layout": "tonnetz-c",
+     "name": "Tonnetz C",
+     "valid": true
+    }
+   ],
+   "message": null,
+   "recovery": null,
+   "schemes": [
+    {
+     "file": "_apc64_lab/domain/generators.py",
+     "name": "fifths"
+    },
+    {
+     "file": "_apc64_lab/generators/root_highlight.py",
+     "name": "root-highlight"
+    },
+    {
+     "file": "_apc64_lab/generators/scale.py",
+     "name": "scale",
+     "params": [
+      {
+       "choices": [
+        "chromatic",
+        "major",
+        "melodic-minor",
+        "harmonic-minor",
+        "major-pentatonic",
+        "minor-pentatonic",
+        "dorian",
+        "phrygian",
+        "lydian",
+        "mixolydian",
+        "aeolian",
+        "locrian",
+        "blues",
+        "whole-tone",
+        "flamenco",
+        "hungarian-minor",
+        "hungarian-major",
+        "harmonic-major",
+        "double-harmonic",
+        "neapolitan-major",
+        "neapolitan-minor",
+        "dorian-b2",
+        "lydian-augmented",
+        "lydian-dominant",
+        "mixolydian-b6",
+        "locrian-natural2",
+        "altered",
+        "phrygian-dominant",
+        "octatonic-half-whole",
+        "octatonic-whole-half",
+        "bebop-dominant",
+        "bebop-major",
+        "hirajoshi",
+        "in",
+        "iwato",
+        "prometheus",
+        "enigmatic"
+       ],
+       "default": "major",
+       "doc": "the scale lit (the harmony core's library)",
+       "kind": "choice",
+       "max": 0,
+       "min": 0,
+       "name": "scale"
+      },
+      {
+       "default": null,
+       "doc": "the scale's root, a note name without octave (default: the layout's root)",
+       "kind": "pitch-class",
+       "max": 11,
+       "min": 0,
+       "name": "root"
+      }
+     ]
+    }
+   ],
+   "target": {
+    "default": null,
+    "routed": false,
+    "text": "notes are only shown: no default target and no layout target"
+   },
+   "warnings": []
+  }
+ },
  "harmony": {
   "chord": "C",
+  "chord_root": 0,
+  "chord_tones": [
+   0,
+   4,
+   7
+  ],
   "circle": [
    "C",
    "G",
@@ -620,28 +1472,47 @@
   ],
   "hints": [],
   "kind": "harmony",
+  "names": {
+   "0": "C",
+   "1": "D♭",
+   "10": "B♭",
+   "11": "B",
+   "2": "D",
+   "3": "E♭",
+   "4": "E",
+   "5": "F",
+   "6": "G♭",
+   "7": "G",
+   "8": "A♭",
+   "9": "A"
+  },
   "neighbours": [
    {
+    "display": "Cm",
     "label": "Cm",
     "quality": "minor",
     "root": 0
    },
    {
+    "display": "Am",
     "label": "Am",
     "quality": "minor",
     "root": 9
    },
    {
+    "display": "Em",
     "label": "Em",
     "quality": "minor",
     "root": 4
    }
   ],
+  "played": [],
   "trail": [
    "C"
   ],
   "trail_triads": [
    {
+    "display": "C",
     "label": "C",
     "quality": "major",
     "root": 0
@@ -649,6 +1520,7 @@
   ],
   "triads": [
    {
+    "display": "C",
     "label": "C",
     "quality": "major",
     "root": 0
@@ -668,11 +1540,13 @@
      "base": 48,
      "channel": 1
     },
-    "scheme": "fifths"
+    "scheme": "fifths",
+    "scheme_params": {}
    },
    "interval": "Oct",
    "layout": "tonnetz-c",
    "name": "Tonnetz C",
+   "neck": null,
    "offset": 0,
    "oled": [
     "Tonnetz C",
@@ -680,384 +1554,448 @@
    ],
    "pads": [
     {
+     "name": "C",
      "note": 48,
      "pad": "r1c1",
      "rest": "#FFFFFF",
      "silent": false
     },
     {
+     "name": null,
      "note": 25,
      "pad": "r1c2",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": "G",
      "note": 55,
      "pad": "r1c3",
      "rest": "#FF8000",
      "silent": false
     },
     {
+     "name": null,
      "note": 27,
      "pad": "r1c4",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": "D",
      "note": 62,
      "pad": "r1c5",
      "rest": "#FFFF00",
      "silent": false
     },
     {
+     "name": null,
      "note": 29,
      "pad": "r1c6",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": "A",
      "note": 69,
      "pad": "r1c7",
      "rest": "#80FF00",
      "silent": false
     },
     {
+     "name": null,
      "note": 31,
      "pad": "r1c8",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": null,
      "note": 32,
      "pad": "r2c1",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": "E",
      "note": 52,
      "pad": "r2c2",
      "rest": "#00FF00",
      "silent": false
     },
     {
+     "name": null,
      "note": 34,
      "pad": "r2c3",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": "B",
      "note": 59,
      "pad": "r2c4",
      "rest": "#00FF80",
      "silent": false
     },
     {
+     "name": null,
      "note": 36,
      "pad": "r2c5",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": "F♯",
      "note": 66,
      "pad": "r2c6",
      "rest": "#00FFFF",
      "silent": false
     },
     {
+     "name": null,
      "note": 38,
      "pad": "r2c7",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": "C♯",
      "note": 73,
      "pad": "r2c8",
      "rest": "#0080FF",
      "silent": false
     },
     {
+     "name": "C♯",
      "note": 49,
      "pad": "r3c1",
      "rest": "#0080FF",
      "silent": false
     },
     {
+     "name": null,
      "note": 41,
      "pad": "r3c2",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": "A♭",
      "note": 56,
      "pad": "r3c3",
      "rest": "#0000FF",
      "silent": false
     },
     {
+     "name": null,
      "note": 43,
      "pad": "r3c4",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": "E♭",
      "note": 63,
      "pad": "r3c5",
      "rest": "#8000FF",
      "silent": false
     },
     {
+     "name": null,
      "note": 45,
      "pad": "r3c6",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": "B♭",
      "note": 70,
      "pad": "r3c7",
      "rest": "#FF00FF",
      "silent": false
     },
     {
+     "name": null,
      "note": 47,
      "pad": "r3c8",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": null,
      "note": 48,
      "pad": "r4c1",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": "F",
      "note": 53,
      "pad": "r4c2",
      "rest": "#FF0080",
      "silent": false
     },
     {
+     "name": null,
      "note": 50,
      "pad": "r4c3",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": "C",
      "note": 60,
      "pad": "r4c4",
      "rest": "#FFFFFF",
      "silent": false
     },
     {
+     "name": null,
      "note": 52,
      "pad": "r4c5",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": "G",
      "note": 67,
      "pad": "r4c6",
      "rest": "#FF8000",
      "silent": false
     },
     {
+     "name": null,
      "note": 54,
      "pad": "r4c7",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": "D",
      "note": 74,
      "pad": "r4c8",
      "rest": "#FFFF00",
      "silent": false
     },
     {
+     "name": "D",
      "note": 50,
      "pad": "r5c1",
      "rest": "#FFFF00",
      "silent": false
     },
     {
+     "name": null,
      "note": 57,
      "pad": "r5c2",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": "A",
      "note": 57,
      "pad": "r5c3",
      "rest": "#80FF00",
      "silent": false
     },
     {
+     "name": null,
      "note": 59,
      "pad": "r5c4",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": "E",
      "note": 64,
      "pad": "r5c5",
      "rest": "#00FF00",
      "silent": false
     },
     {
+     "name": null,
      "note": 61,
      "pad": "r5c6",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": "B",
      "note": 71,
      "pad": "r5c7",
      "rest": "#00FF80",
      "silent": false
     },
     {
+     "name": null,
      "note": 63,
      "pad": "r5c8",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": null,
      "note": 64,
      "pad": "r6c1",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": "F♯",
      "note": 54,
      "pad": "r6c2",
      "rest": "#00FFFF",
      "silent": false
     },
     {
+     "name": null,
      "note": 66,
      "pad": "r6c3",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": "C♯",
      "note": 61,
      "pad": "r6c4",
      "rest": "#0080FF",
      "silent": false
     },
     {
+     "name": null,
      "note": 68,
      "pad": "r6c5",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": "A♭",
      "note": 68,
      "pad": "r6c6",
      "rest": "#0000FF",
      "silent": false
     },
     {
+     "name": null,
      "note": 70,
      "pad": "r6c7",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": "E♭",
      "note": 75,
      "pad": "r6c8",
      "rest": "#8000FF",
      "silent": false
     },
     {
+     "name": "E♭",
      "note": 51,
      "pad": "r7c1",
      "rest": "#8000FF",
      "silent": false
     },
     {
+     "name": null,
      "note": 73,
      "pad": "r7c2",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": "B♭",
      "note": 58,
      "pad": "r7c3",
      "rest": "#FF00FF",
      "silent": false
     },
     {
+     "name": null,
      "note": 75,
      "pad": "r7c4",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": "F",
      "note": 65,
      "pad": "r7c5",
      "rest": "#FF0080",
      "silent": false
     },
     {
+     "name": null,
      "note": 77,
      "pad": "r7c6",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": "C",
      "note": 72,
      "pad": "r7c7",
      "rest": "#FFFFFF",
      "silent": false
     },
     {
+     "name": null,
      "note": 79,
      "pad": "r7c8",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": null,
      "note": 80,
      "pad": "r8c1",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": "G",
      "note": 55,
      "pad": "r8c2",
      "rest": "#FF8000",
      "silent": false
     },
     {
+     "name": null,
      "note": 82,
      "pad": "r8c3",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": "D",
      "note": 62,
      "pad": "r8c4",
      "rest": "#FFFF00",
      "silent": false
     },
     {
+     "name": null,
      "note": 84,
      "pad": "r8c5",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": "A",
      "note": 69,
      "pad": "r8c6",
      "rest": "#80FF00",
      "silent": false
     },
     {
+     "name": null,
      "note": 86,
      "pad": "r8c7",
      "rest": "#000000",
      "silent": true
     },
     {
+     "name": "E",
      "note": 76,
      "pad": "r8c8",
      "rest": "#00FF00",
@@ -1065,10 +2003,21 @@
     }
    ],
    "preview": false,
+   "rows": null,
+   "scale": null,
    "session_backup": "slot0-2026-10-24T20-15",
    "starting": false,
    "transposition": 0,
-   "unit_view": "custom"
+   "unit_view": "custom",
+   "window": {
+    "label": "Oct +0",
+    "step": "Oct",
+    "steps": [
+     "Oct",
+     "5th",
+     "3rd"
+    ]
+   }
   },
   "generators": [
    {
@@ -1130,9 +2079,89 @@
       "name": "channel"
      }
     ]
+   },
+   {
+    "file": "_apc64_lab/generators/guitar.py",
+    "name": "guitar",
+    "params": [
+     {
+      "choices": [
+       "e-standard",
+       "drop-d",
+       "eb-standard",
+       "d-standard",
+       "drop-c",
+       "dadgad",
+       "open-g",
+       "open-d",
+       "b-standard-7",
+       "drop-a-7",
+       "fs-standard-8",
+       "drop-e-8",
+       "bass-4",
+       "bass-5"
+      ],
+      "default": "e-standard",
+      "doc": "a preset, or the open strings low to high (4–8 notes, C3 = 60: the low E is E1, 40)",
+      "kind": "notes",
+      "max": 8,
+      "min": 4,
+      "name": "tuning"
+     },
+     {
+      "default": 24,
+      "doc": "the neck's length in frets",
+      "kind": "int",
+      "max": 36,
+      "min": 12,
+      "name": "frets"
+     },
+     {
+      "choices": [
+       "on",
+       "off"
+      ],
+      "default": "on",
+      "doc": "the inlay frets marked on the pads (on or off)",
+      "kind": "choice",
+      "max": 0,
+      "min": 0,
+      "name": "fret_marks"
+     }
+    ]
+   },
+   {
+    "file": "_apc64_lab/generators/modes.py",
+    "name": "modes",
+    "params": [
+     {
+      "default": 48,
+      "doc": "the root: the note on pad r1c1 and every row's first pad",
+      "kind": "note",
+      "max": 115,
+      "min": 0,
+      "name": "base"
+     },
+     {
+      "default": 1,
+      "doc": "MIDI channel the unit sends the pads on (q8)",
+      "kind": "channel",
+      "max": 16,
+      "min": 1,
+      "name": "channel"
+     }
+    ]
    }
   ],
   "kind": "lab",
+  "layouts": [
+   {
+    "generator": "tonnetz",
+    "layout": "tonnetz-c",
+    "name": "Tonnetz C",
+    "valid": true
+   }
+  ],
   "message": null,
   "recovery": null,
   "schemes": [
@@ -1143,6 +2172,67 @@
    {
     "file": "_apc64_lab/generators/root_highlight.py",
     "name": "root-highlight"
+   },
+   {
+    "file": "_apc64_lab/generators/scale.py",
+    "name": "scale",
+    "params": [
+     {
+      "choices": [
+       "chromatic",
+       "major",
+       "melodic-minor",
+       "harmonic-minor",
+       "major-pentatonic",
+       "minor-pentatonic",
+       "dorian",
+       "phrygian",
+       "lydian",
+       "mixolydian",
+       "aeolian",
+       "locrian",
+       "blues",
+       "whole-tone",
+       "flamenco",
+       "hungarian-minor",
+       "hungarian-major",
+       "harmonic-major",
+       "double-harmonic",
+       "neapolitan-major",
+       "neapolitan-minor",
+       "dorian-b2",
+       "lydian-augmented",
+       "lydian-dominant",
+       "mixolydian-b6",
+       "locrian-natural2",
+       "altered",
+       "phrygian-dominant",
+       "octatonic-half-whole",
+       "octatonic-whole-half",
+       "bebop-dominant",
+       "bebop-major",
+       "hirajoshi",
+       "in",
+       "iwato",
+       "prometheus",
+       "enigmatic"
+      ],
+      "default": "major",
+      "doc": "the scale lit (the harmony core's library)",
+      "kind": "choice",
+      "max": 0,
+      "min": 0,
+      "name": "scale"
+     },
+     {
+      "default": null,
+      "doc": "the scale's root, a note name without octave (default: the layout's root)",
+      "kind": "pitch-class",
+      "max": 11,
+      "min": 0,
+      "name": "root"
+     }
+    ]
    }
   ],
   "target": {

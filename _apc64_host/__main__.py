@@ -211,7 +211,7 @@ def compose(config: Config, adapters: Adapters, modules=(), *, local_names=None)
     if collection.hooks:
         collection.hooks.bind(HostPorts(display=engine, notes=engine, loader=engine, tweaks=tweaks,
                                         sysex=session.sysex_tap, gate=gate, stream=stream, topics=hub, clock=a.clock,
-                                        dispatch=a.dispatch, inputs=a.midi))
+                                        dispatch=a.dispatch, inputs=a.midi, views=engine))
     for part in parts:
         naming = getattr(part, "name_layouts", None)
         if callable(naming):

@@ -1,7 +1,9 @@
 // s30 collaboration: the reducer over a fake socket's snapshot, diffs, activity, a drop and a new snapshot (T34).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ACTIVITY_LIMIT, createStore, initialModel, labelOf, layerOf, ownedByUnit, reduce, unitPill, unitView } from './state.js';
+import {
+  ACTIVITY_LIMIT, createStore, initialModel, labelOf, layerOf, ownedByUnit, reduce, unitPill, unitView, viewOfAddress,
+} from './state.js';
 import { snapshot } from './page_fixtures.js';
 
 function fakeSocket(store) {
@@ -111,4 +113,30 @@ test('the folded bar and the hidden column are page state', () => {
   model = reduce(model, { type: 'side', panel: 'card' });
   assert.deepEqual([model.ui.navCollapsed, model.ui.side], [true, 'card']);
   assert.equal(reduce(model, { type: 'side', panel: 'bogus' }).ui.side, 'overview');
+});
+
+// --- a module's view alone across the page (?view=harmony; the harmony full view) -----------------------------
+test('the address names a module view: ?view=harmony, bookmarkable; anything else is no view', () => {
+  assert.equal(viewOfAddress('?view=harmony'), 'harmony');
+  assert.equal(viewOfAddress('?x=1&view=Harmony'), 'harmony');
+  assert.equal(viewOfAddress(''), null);
+  assert.equal(viewOfAddress('?view='), null);
+  assert.equal(viewOfAddress('?view=../api'), null);
+  assert.equal(viewOfAddress(undefined), null);
+});
+
+test('a view opened by a button can be left; the address\'s view is pinned; full screen is page state', () => {
+  let model = initialModel();
+  assert.deepEqual([model.ui.view, model.ui.fullscreen], [null, false]);
+  model = reduce(model, { type: 'view', name: 'harmony' });
+  assert.deepEqual(model.ui.view, { name: 'harmony', pinned: false });
+  model = reduce(model, { type: 'view', name: null });
+  assert.equal(model.ui.view, null);
+  assert.equal(reduce(model, { type: 'view', name: 'Bad name' }).ui.view, null);
+  model = reduce(model, { type: 'view', name: 'harmony', pinned: true });
+  assert.equal(reduce(model, { type: 'view', name: null }).ui.view.pinned, true);   // the tab shows only it
+  assert.equal(reduce(model, { type: 'view', name: 'harmony' }).ui.view.pinned, true);
+  model = reduce(model, { type: 'fullscreen', on: true });
+  assert.equal(model.ui.fullscreen, true);
+  assert.equal(reduce(model, { type: 'fullscreen', on: false }).ui.fullscreen, false);
 });

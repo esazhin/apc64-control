@@ -24,6 +24,28 @@ def _value(text: str):
     return int(stripped) if stripped.lstrip("-").isdigit() else stripped
 
 
+def param_text(p: dict) -> str:
+    """'base 0–127 (default 36)', 'scale: major, dorian, … (default major)', 'root a note name (default: the root)'."""
+    if p.get("kind") == "notes":
+        return (f"{p['name']}: {', '.join(p['choices'])}, or a list of {p['min']}–{p['max']} notes "
+                f"(default {p['default']})")
+    if p.get("choices"):
+        return f"{p['name']}: {', '.join(p['choices'])} (default {p['default']})"
+    if p.get("kind") == "pitch-class":
+        return f"{p['name']} a note name such as D or F# (default: " + (p["default"] if p.get("default") is not None
+                                                                     else "the layout's root") + ")"
+    return f"{p['name']} {p['min']}–{p['max']} (default {p['default']})"
+
+
+def unit_hint(active: dict) -> str:
+    """What the encoder and Tempo do on the active layout: its own steps (the guitar's Fret and Page), else the
+    interval."""
+    window = active.get("window") or {}
+    if window.get("steps") and "octave" not in (active.get("counts") or {}):
+        return f"encoder: one {str(window.get('step', '')).lower()} · Tempo: {' ↔ '.join(window['steps'])}"
+    return "encoder: shift · Tempo: interval"
+
+
 def _pairs(items) -> dict:
     changes = {}
     for item in items:
@@ -84,6 +106,8 @@ class LabCli:
         add("globals", "read the global settings, or change them: FIELD=VALUE … (device mode and sync need --confirm)",
             ("changes", {"nargs": "*", "metavar": "FIELD=VALUE"}), ("--confirm", {"action": "store_true"}))
         add("harmony", "what is held now: chord, triads, hints, neighbours, trail, circle of fifths")
+        add("trail", "the chord trail (the last 8 chords held); 'clear' empties it",
+            ("action", {"nargs": "?", "choices": ["clear"], "help": "clear: empty the trail"}))
         add("inputs", "the MIDI inputs the harmony views follow besides the APC64; give ports to set them",
             ("ports", {"nargs": "*", "metavar": "PORT"}), ("--none", {"action": "store_true",
                                                                         "help": "follow the APC64 only"}))
@@ -154,16 +178,17 @@ class _Run:
                 if g.get("broken"):
                     yield f"  {g['name']}  broken: {g['error']}  ({g['file']})"
                     continue
-                params = ", ".join(f"{p['name']} {p['min']}–{p['max']} (default {p['default']})"
-                                   for p in g.get("params", []))
-                yield f"  {g['name']}  {params}"
+                yield f"  {g['name']}  {', '.join(param_text(p) for p in g.get('params', []))}"
             yield "colour schemes: " + ", ".join(
                 s["name"] + (f" (broken: {s['error']})" if s.get("broken") else "") for s in d["schemes"])
+            for s in d["schemes"]:
+                if s.get("params") and not s.get("broken"):
+                    yield f"  {s['name']}  {', '.join(param_text(p) for p in s['params'])}"
             active = d.get("active")
             if active:
                 kind = "preview" if active.get("preview") else "active"
                 yield (f"{kind}: {active['name']}  {active['oled'][1] if active.get('oled') else ''}"
-                       f"  (encoder: shift · Tempo: interval)")
+                       f"  ({unit_hint(active)})")
                 yield f"  session backup: {active.get('session_backup') or 'not yet'}"
             else:
                 yield "active: no generated layout"
@@ -295,17 +320,23 @@ class _Run:
             yield f"chord: {d['chord']}"
             yield "held: " + (" ".join(n["name"] for n in d["held"]) or "nothing")
             if d["triads"]:
-                yield "triads: " + ", ".join(t["label"] for t in d["triads"])
+                yield "triads: " + ", ".join(t.get("display", t["label"]) for t in d["triads"])
             if d["neighbours"]:
-                yield "neighbours: " + ", ".join(t["label"] for t in d["neighbours"])
+                yield "neighbours: " + ", ".join(t.get("display", t["label"]) for t in d["neighbours"])
             if d["hints"]:
-                yield "hints: " + ", ".join(t["label"] for t in d["hints"])
+                yield "hints: " + ", ".join(t.get("display", t["label"]) for t in d["hints"])
             if d["degrees"]:
                 yield "degrees: " + " ".join(f"{pc} {label}" for pc, label in d["degrees"].items())
             yield "trail: " + (" → ".join(d["trail"]) or "empty")
             if d["circle"]:
                 yield "circle of fifths: " + " – ".join(d["circle"])
         return self.simple("GET", "/api/lab/harmony", None, lambda d: list(lines(d)))
+
+    def c_trail(self):
+        if self.a.action == "clear":
+            return self.simple("POST", "/api/lab/harmony/trail/clear", {})
+        return self.simple("GET", "/api/lab/harmony", None,
+                           lambda d: ["trail: " + (" → ".join(d["trail"]) or "empty")])
 
     def c_inputs(self):
         def lines(d):

@@ -48,12 +48,18 @@ slots takes 26 reads.
                  "params": [{"name": "base", "kind": "note", "default": 48, "min": 0, "max": 127, "doc": "note on pad r1c1 (C3 = 60)"},
                             {"name": "channel", "kind": "channel", "default": 1, "min": 1, "max": 16, "doc": "…"}]},
                 {"name": "spiral", "file": "_apc64_lab/generators/spiral.py", "broken": true, "error": "division by zero"}],
- "schemes": [{"name": "fifths", "file": "…"}, {"name": "root-highlight", "file": "_apc64_lab/generators/root_highlight.py"}],
+ "schemes": [{"name": "fifths", "file": "…"}, {"name": "root-highlight", "file": "_apc64_lab/generators/root_highlight.py"},
+             {"name": "scale", "file": "_apc64_lab/generators/scale.py",
+              "params": [{"name": "scale", "kind": "choice", "default": "major", "choices": ["chromatic", "major", "…"], …},
+                         {"name": "root", "kind": "pitch-class", "default": null, …}]}],
  "active": {"layout": "tonnetz-c", "name": "Tonnetz C", "preview": false, "interval": "5th", "offset": 2,
             "counts": {"octave": 0, "fifth": 2, "third": 0}, "transposition": 14, "unit_view": "custom",
             "session_backup": "slot0-2026-10-24T20-15", "oled": ["Tonnetz C", "5th +2"], "starting": false,
-            "definition": {"generator": "tonnetz", "params": {"base": 48, "channel": 1}, "scheme": "fifths"},
-            "pads": [{"pad": "r1c1", "note": 62, "rest": "#FF0000", "silent": false}, "… 64 in all"]},
+            "definition": {"generator": "tonnetz", "params": {"base": 48, "channel": 1}, "scheme": "fifths",
+                           "scheme_params": {}},
+            "pads": [{"pad": "r1c1", "note": 62, "rest": "#FF0000", "silent": false, "name": "D"}, "… 64 in all"],
+            "rows": null, "scale": null, "neck": null,
+            "window": {"steps": ["Oct", "5th", "3rd"], "step": "5th", "label": "5th +2"}},
  "message": null, "recovery": null,
  "target": {"default": "MPC Live III MIDI 1 ch 2 aftertouch pass", "routed": true, "from": "layout",
             "text": "MPC Live III MIDI 1 ch 1 aftertouch pass"},
@@ -61,9 +67,36 @@ slots takes 26 reads.
 ```
 
 - `active` is null when no generated layout or preview plays.
-- `pads[].rest` is the RGB written to the unit. It is exact, not a palette approximation.
-- `message` carries texts such as `Press Custom`, `Custom view off` and
+- `pads[].rest` is the RGB written to the unit. It is exact, not a palette approximation. `pads[].name` is the
+  note's spelling for the page's pad grid: the generator's own (each `modes` row in its mode), else the scale
+  overlay's where the note is in the scale, else the fixed table.
+- `rows` is the generator's 8 row names, bottom first, or null: the `modes` explorer gives
+  `["Locrian", "Phrygian", "Aeolian", "Dorian", "Mixolydian", "Ionian", "Lydian", "Chromatic"]`.
+- `scale` is the `scale` scheme's overlay, or null:
+  `{"key": "dorian", "name": "Dorian", "root": 2, "root_name": "D", "pcs": [0, 2, 4, 5, 7, 9, 11], "names": {"2": "D", …}}`.
+- `window` is the window as the page shows it: the step kinds Tempo cycles, the current one and row 2's text. A
+  generator with its own window (the guitar) has no `counts` (`{}`), `interval` is its step kind and `offset` and
+  `transposition` its position, and `window` adds the range and the page stops:
+  `{"steps": ["Fret", "Page"], "step": "Fret", "position": 3, "label": "Fret 3-10", "lowest": 0, "highest": 17,
+  "pages": [0, 8, 16, 17], "shown": 8, "unit": "Frets"}`. `label` is the page's window line (the step kind);
+  with a `unit`, the OLED's row 2 (`oled`) reads `Frets 3-10` instead, the kind and the neck's end flashing there
+  for about a second (`Step: Page`, `Neck end`).
+- `neck` is a guitar layout's fretboard, or null: the strings highest first, each with its open note, letter and the
+  channel it sends on, the number of frets, how many are on the pads, and `first`, the fret in column 1 (the window):
+  `{"strings": [{"string": 1, "open": 64, "name": "E", "channel": 1}, …, {"string": 6, "open": 40, "name": "E",
+  "channel": 6}], "frets": 24, "shown": 8, "first": 3}`.
+- A generator parameter of kind `notes` (the guitar's `tuning`) takes one of its `choices` (presets) or a list of
+  `min`–`max` notes; `definition.params` holds the preset's name or the list.
+- `definition.scheme_params` holds the scheme's parameters as written (`{"scale": "dorian"}`); a scheme lists its
+  `params` under `schemes` when it has any.
+- `message` carries texts such as `Press Custom` (only when the request for Custom view could not be sent),
+  `Custom view off` (the unit is in another view: its own button, or a view button on the page) and
   `lab session ended quietly (project view); nothing restored; session backup slot0-… kept`.
+- `layouts` lists the generated layouts: `{layout, name, generator, valid: true}`, or `{layout, name, valid: false,
+  error}` for a layout file whose `lab:` section does not compile (an unknown generator, a bad parameter), with
+  its first error. Pushed again whenever the layout files change.
+- Every activation asks the unit for Custom view while it is in another one, a switch within a running session
+  included. The unit obeys and does not report it, so `unit_view` is `custom` as soon as the request was sent.
 - `recovery` is `{backup, message}` when a session never ended cleanly. Restore that backup to slot 0, or dismiss
   it.
 - `target.text` is `notes are only shown: no default target and no layout target` when nothing routes the notes.
@@ -102,7 +135,7 @@ the lab wrote.
 ### `POST /api/lab/tweak {layout?, field, value}`
 
 Changes one `lab:` field of the active generated layout, or of the named one. Fields: `base`, `scheme`, a
-generator parameter, or `colours.C`. The file changes by one spliced line and hot-reloads at the same window.
+generator or scheme parameter (`scale`, `root`, the guitar's `tuning` preset or `frets`), or `colours.C`. The file changes by one spliced line and hot-reloads at the same window.
 
 - `200 {"result": "saved", "message": "saved lab.base = D2; the layout reloads"}`
 - `409 {"problem": "layout changed, reload"}`
@@ -122,19 +155,53 @@ The encoder and Tempo are the host's routes: `POST /api/control/encoder/move {"v
 
 ```json
 {"kind": "harmony", "held": [{"note": 48, "name": "C2", "pc": 0}, {"note": 52, "name": "E2", "pc": 4}, {"note": 55, "name": "G2", "pc": 7}],
- "chord": "C", "triads": [{"root": 0, "quality": "major", "label": "C"}], "degrees": {},
- "hints": [], "neighbours": [{"root": 0, "quality": "minor", "label": "Cm"}, {"root": 9, "quality": "minor", "label": "Am"},
-                             {"root": 4, "quality": "minor", "label": "Em"}],
- "trail": ["C"], "trail_triads": [{"root": 0, "quality": "major", "label": "C"}], "circle": ["C", "G", "E"]}
+ "chord": "C", "triads": [{"root": 0, "quality": "major", "label": "C", "display": "C"}], "degrees": {},
+ "hints": [], "neighbours": [{"root": 0, "quality": "minor", "label": "Cm", "display": "Cm"},
+                             {"root": 9, "quality": "minor", "label": "Am", "display": "Am"},
+                             {"root": 4, "quality": "minor", "label": "Em", "display": "Em"}],
+ "trail": ["C"], "trail_triads": [{"root": 0, "quality": "major", "label": "C", "display": "C"}], "circle": ["C", "G", "E"],
+ "chord_root": 0, "chord_tones": [0, 4, 7],
+ "played": [{"source": "custom", "channel": 1, "note": 48}, {"source": "custom", "channel": 1, "note": 52},
+            {"source": "custom", "channel": 1, "note": 55}],
+ "names": {"0": "C", "1": "D♭", "2": "D", "3": "E♭", "4": "E", "5": "F", "6": "G♭", "7": "G", "8": "A♭", "9": "A",
+           "10": "B♭", "11": "B"}}
 ```
 
-- Spelling follows the author's MusicCat Explorer: `C C♯ D E♭ E F F♯ G A♭ A B♭ B`. Chords are written like `C`, `Am`, `C/E`,
-  or the notes upwards from the bass (`C C♯ D`) when nothing matches.
+- Chords are written like MusicCat Explorer writes them (`C`, `Am`, `C/E`, `G7`, `Bm7♭5`, `F°`, `C+`), or as the held
+  notes upwards from the bass when nothing matches (`C D♭ D`).
+- **Spelling from context** (2026-10-27): the held notes, the chord and the trail are spelled from what is held. When
+  the held notes form a chord, every held note is spelled in that chord (E major: `E G♯ B`; B♭ major: `B♭ D F`), its
+  root with the fewest accidentals over the chord (`G♯m`, not `A♭m` with its C♭; `D♭`, not `C♯` with its E♯; a key
+  that holds the root wins). Otherwise, when the active layout's colour scheme has a key (`scheme: scale`), the key's
+  names; otherwise each note as its interval above the lowest held note (E + a major third: `G♯`). `names` gives all
+  12 pitch classes as spelled now (C first, keyed by pitch class), for the views. `held[].name` carries the octave
+  of the letter (C3 = 60; 59 spelled C♭ is `C♭3`, which only happens in a key that has C♭).
+- **Readable spellings:** C♭, F♭, E♯, B♯ and double ♯/♭ are never produced unless the active key itself spells
+  the note so (G♭ major's C♭); that note alone falls back to the fixed table: B F A♭ is `F°/B`, C°7's diminished
+  seventh reads A.
+- **Display vs lookup:** `circle`, the keys of `degrees` and each triad's `label` keep the fixed table
+  `C C♯ D E♭ E F F♯ G A♭ A B♭ B`, so the views can look places up by them; each triad's `display` is its name as
+  spelled now (with E major held the neighbours display `Em, C♯m, G♯m`, their labels `Em, C♯m, A♭m`), and the page
+  shows lattice nodes and held circle keys by `names`.
 - With one pitch class held, `degrees` labels every pitch class from it (`{"G": "♭3", "B": "5", …}`), and `hints`
   are the six triads that contain it.
 - `chord` is `—` when nothing is held.
-- The trail keeps the last 8 triads, and the same chord twice adds nothing.
+- `chord_root` and `chord_tones` are the named chord's root and its pitch classes (G7: `7`, `[7, 11, 2, 5]`), for the
+  pad grid's rings; `null` and `[]` when no chord template matches (one note, two notes, a cluster).
+- `played` is every held voice: its source (`custom`, `notes`, `input`), the channel it arrived on when the source is
+  the APC64's Custom port (`null` otherwise) and its note. One pitch held on two strings of a guitar layout is two
+  voices on two channels; the neck view puts each on its string.
+- The trail (amended 2026-10-27) is the last 8 chords held: any chord the namer recognises (three or more pitch
+  classes forming one of its chords; one note, an interval or an unnamed set is not a chord, so a two-note power
+  chord is not an entry either). The same chord again in a row adds nothing (same root and quality: a new inversion
+  or bass is not new). A chord that grows with nothing released in between replaces its own entry (C E G, then B:
+  the entry becomes `Cmaj7`). `trail_triads` are the entries' major or minor triads (an entry without one, such as
+  `Dsus4` or `F°`, is in `trail` only), so the Tonnetz and the circle draw the trail through triads.
 - The JSON is pushed on `/ws` (kind `harmony`) for every note played.
+
+### `POST /api/lab/harmony/trail/clear`
+
+Empties the trail: `{"trail": [], "message": "trail cleared"}`. The new state is pushed on `/ws` at once.
 
 ### `GET /api/lab/harmony/inputs`, `POST /api/lab/harmony/inputs {inputs: [port, …]}`
 
@@ -143,6 +210,8 @@ remembered.
 
 - `{"apc64": ["APC64 Custom", "APC64 Notes"], "inputs": ["Keystation 49 MIDI 1"], "message": "harmony follows the APC64 and Keystation 49 MIDI 1"}`
 - `[]` follows the APC64 only: `harmony follows the APC64 only`.
+- Each choice is also pushed on `/ws` (topic `lab`, kind `inputs`, the same JSON without `message`), so every open
+  page ticks the same inputs.
 - An APC64 port is refused: `APC64 Notes is the APC64's own port; the APC64's Custom and Notes ports are followed already`.
 
 ## Project memory
@@ -293,6 +362,7 @@ here and says `(ports not checked)`.
 | `apc64 lab globals` | `GET /api/lab/globals` | `LED level: 75%`, one line per field |
 | `apc64 lab globals FIELD=VALUE … [--confirm]` | `POST /api/lab/globals` | `set LED level 100% and CV2 channel 4` / `CV3 channel 17: channels are 1–16` (exit 1) |
 | `apc64 lab harmony` | `GET /api/lab/harmony` | `chord: C` / `held: C2 E2 G2` / `triads: C` / `neighbours: Cm, Am, Em` / `trail: C` / `circle of fifths: C – G – E` |
+| `apc64 lab trail [clear]` | `GET /api/lab/harmony` / `POST /api/lab/harmony/trail/clear` | `trail: C → Am → Dsus4 → G7` / `trail cleared` |
 | `apc64 lab inputs [PORT …] [--none]` | `GET`/`POST /api/lab/harmony/inputs` | `harmony follows the APC64 and Keystation 49 MIDI 1` |
 | `apc64 lab slot N` | `GET /api/lab/slots/{n}` | `slot 7` / `  pad r1c1: note 48 ch 1 rest #FFFFFF pressed #FF0000 aftertouch` / … |
 | `apc64 lab dismiss-recovery` | `POST /api/lab/recovery/dismiss` | `recovery dismissed; slot0-… stays listed` |

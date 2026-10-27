@@ -158,3 +158,74 @@ def test_run_reads_the_stream_on_the_loop():   # s19.c1
         return rig.tracker.state().held
 
     assert asyncio.run(scenario()) == (48, 52)
+
+
+# --- the guitar amendment (2026-10-27): voices with the channel they arrived on ----------------------------
+def on_string(note, channel, port=CUSTOM):
+    return PlayEvent("note_on", note=note, velocity=90, port=port, channel=channel)
+
+
+def off_string(note, channel, port=CUSTOM):
+    return PlayEvent("note_off", note=note, port=port, channel=channel)
+
+
+def played(rig):
+    return [(p["source"], p["channel"], p["note"]) for p in rig.tracker.state().to_json()["played"]]
+
+
+def test_one_pitch_on_two_strings_is_held_twice_and_each_string_is_named():
+    rig = Rig()
+    rig.play(on_string(45, 6), on_string(45, 5), on_string(64, 1))     # low E fret 5, the open A, the high E
+    assert rig.tracker.state().held == (45, 64) and rig.tracker.state().chord != "—"
+    assert played(rig) == [("custom", 5, 45), ("custom", 6, 45), ("custom", 1, 64)]
+    rig.play(off_string(45, 5))
+    assert rig.tracker.state().held == (45, 64) and played(rig) == [("custom", 6, 45), ("custom", 1, 64)]
+    assert rig.publisher.published[-1].played == (("custom", 6, 45), ("custom", 1, 64))
+
+
+def test_a_shift_ending_a_pitch_on_two_strings_ends_both_voices():   # d47 with several channels
+    rig = Rig()
+    rig.play(on_string(45, 6), on_string(45, 5))
+    rig.play(*[PlayEvent(NOTE_ENDED, note=45, reason=ENDED_BY_WINDOW_SHIFT, port=CUSTOM, channel=c) for c in (5, 6)])
+    assert rig.tracker.state().held == () and played(rig) == []
+    rig.play(off_string(45, 6), off_string(45, 5))                      # the unit's later releases add nothing
+    assert rig.tracker.state().held == () and played(rig) == []
+    assert rig.tracker.held_notes() == ()
+
+
+def test_sources_without_string_identity_carry_no_channel():
+    rig = Rig()
+    rig.play(on_string(60, 3, NOTES))
+    rig.tracker.select_inputs(["Keys"])
+    rig.feedback.deliver("Keys", NoteOn(4, 62, 80))
+    assert played(rig) == [("notes", None, 60), ("input", None, 62)]
+    rig.feedback.deliver("Keys", NoteOff(4, 62))
+    rig.play(off_string(60, 3, NOTES))
+    assert played(rig) == []
+
+
+# --- after the guitar live test (2026-10-27) --------------------------------------------------------------------
+def test_the_trail_clears_and_the_page_hears_it():
+    rig = Rig()
+    rig.play(on(48), on(52), on(55))
+    assert rig.tracker.state().trail == ("C",)
+    assert rig.tracker.clear_trail()["trail"] == [] and rig.tracker.state().trail == ()
+    assert rig.publisher.published[-1].trail == ()
+
+
+def test_the_layouts_key_spells_the_held_notes():
+    rig = Rig()
+    rig.play(on(49), on(56))
+    assert held_names(rig.tracker.state()) == ["C♯2", "G♯2"]          # no key: a fifth above the lowest
+    rig.tracker.set_key({8: "A♭", 10: "B♭", 0: "C", 1: "D♭", 3: "E♭", 5: "F", 7: "G"})
+    assert held_names(rig.publisher.published[-1]) == ["D♭2", "A♭2"]  # A♭ major's names, published at once
+    count = len(rig.publisher.published)
+    rig.tracker.set_key({8: "A♭", 10: "B♭", 0: "C", 1: "D♭", 3: "E♭", 5: "F", 7: "G"})
+    assert len(rig.publisher.published) == count                      # unchanged: nothing published
+
+
+def test_the_inputs_followed_are_published():
+    rig = Rig()
+    rig.tracker.select_inputs(["Keys"])
+    assert rig.publisher.published[-1] == {"kind": "inputs", "apc64": ["APC64 Custom", "APC64 Notes"],
+                                           "inputs": ["Keys"]}

@@ -1,0 +1,9 @@
+# Modes C: the modes explorer from C2 (docs/lab-guide.md). Rows 1-7, bottom to top, are C's seven modes by
+# brightness: Locrian, Phrygian, Aeolian, Dorian, Mixolydian, Ionian, Lydian, each from the root (column 1) to the
+# octave (column 8). Each row raises one note of the row below; that note keeps its full colour, the root and octave
+# are white, the rest dimmed. Row 8 is a chromatic reference, C to G. Pads 48 (C2) to 60.
+name: Modes C
+lab:
+  generator: modes
+  base: 48            # the root: the note on pad r1c1 and every row's first pad (C2 = 48)
+  scheme: fifths

@@ -1,0 +1,9 @@
+# Guitar 7: a 7-string neck in B standard (docs/lab-guide.md). Rows 1-7 are the strings, the low B on row 1 and
+# the high E on row 7 (row 8 stays silent); columns are frets from the open strings. String 1 (high E) sends on
+# channel 1 … the low B on 7. The encoder moves a fret, or a page with Tempo.
+name: Guitar 7
+lab:
+  generator: guitar
+  tuning: b-standard-7  # 35 40 45 50 55 59 64 (B0 E1 A1 D2 G2 B2 E3; C3 = 60)
+  frets: 24
+  scheme: fifths

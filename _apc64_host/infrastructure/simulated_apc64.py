@@ -17,8 +17,9 @@ apc64-global-settings-2026-10-22.syx). A 0x13 read of slot 0–24 is answered wi
 the global block. Memory faults: no reply, a short dump, a read-back mismatch, an unplug mid-write, replies cut
 into chunks with other messages between them. On-unit actions for the "the user switches or saves projects
 mid-session" path (§2.7 a5/q9): load_project(n) and save_project(n), each with its Project-view report.
-A pad-mode request (0x19) is answered with a view report only when report_view_requests is set (contract 1's
-handshake asks for Session view and the captures show no answer).
+A pad-mode request (0x19) switches the fake's view, as the real unit does (verified live 2026-10-27: it obeys and
+does not report the change); it is answered with a view report only when report_view_requests is set (contract
+1's handshake asks for Session view and the captures show no answer).
 
 The fake is the UnitPort and the UnitLocator; `holder_lookup` is its HolderLookup.
 Delivery is synchronous by default (the caller's thread); threaded=True gives each connection a reader
@@ -510,10 +511,12 @@ class SimulatedApc64:
             self.emit(UnitPortRole.DAW, self.identity_reply())
         elif command in HAZARDS:
             self._memory(command, frame)
-        elif command is SysexCommand.PAD_MODE and self.report_view_requests:
+        elif command is SysexCommand.PAD_MODE:
             view = sysex.view_report(frame)    # the request has the report's shape: 19 00 01 <m>
-            if view is not None:
+            if view is not None and self.report_view_requests:
                 self.view(view)
+            elif view is not None:
+                self.current_view = view       # obeyed, not reported
 
     def frames(self, command: SysexCommand) -> list[bytes]:
         return [f for f, c in zip(self.written, self.commands) if c is command]

@@ -73,3 +73,9 @@ def test_events_reach_an_awaiting_watcher_in_order():
         first = await waiting
         return first
     assert asyncio.run(scenario()).kind == "note_ended"
+
+
+def test_contract1_play_json_is_unchanged_by_the_channel():
+    # the arrival channel (the guitar amendment: a string per channel) is for in-process subscribers too
+    event = PlayEvent("note_on", note=45, velocity=38, channel=6)
+    assert view_model.play_json(event) == view_model.play_json(PlayEvent("note_on", note=45, velocity=38))

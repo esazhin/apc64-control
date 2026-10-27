@@ -3,7 +3,8 @@
 - every YAML example in docs/lab-guide.md validates, and its lab keys follow docs/lab.schema.json;
 - every error line the guide quotes is the validator's own text;
 - the guide's plugin example is a working generator;
-- layouts/tonnetz-c.yaml and layouts/fourths.yaml validate as written and play as A8/A9 say;
+- layouts/tonnetz-c.yaml and layouts/fourths.yaml validate as written and play as A8/A9 say, and the other shipped
+  generated layouts (thirds grid, Wicki-Hayden, Janko, fifths grid, modes C) validate and play as the guide says;
 - docs/lab-api.md names every /api/lab route and every `apc64 lab` command.
 """
 import argparse
@@ -68,6 +69,7 @@ ERROR_CASES = [
     "name: T\nlab:\n  generator: tonnetz\n  strips:\n    1-4: cc 20\n",
     "name: T\nlab:\n  base: 48\n",
     "name: T\ndevices:\n  mpc: MPC Live III MIDI 1\nlab:\n  generator: tonnetz\npages:\n  1:\n    encoder: cc 30 on mpc\n",
+    "name: T\nlab:\n  generator: tonnetz\n  scheme: scale\n  root: H\n",
 ]
 
 
@@ -75,8 +77,23 @@ def test_every_error_the_guide_quotes_is_the_validators_text():   # A10, A11, A1
     produced = {i.message() for case in ERROR_CASES for i in compiled(case, "tonnetz-c.yaml").issues}
     quoted = [line for block in re.findall(r"```text\n(.*?)```", GUIDE, re.DOTALL) for line in block.splitlines()
               if line.startswith("tonnetz-c.yaml")]
-    assert len(quoted) >= 9
+    assert len(quoted) >= 10
     assert [line for line in quoted if line not in produced] == []
+
+
+GUITAR_ERROR_CASES = [
+    "name: T\nlab:\n  generator: guitar\n  tuning: [40, 45, 50]\n",
+    "name: T\nlab:\n  generator: guitar\n  tuning: [E1, H1, 50, 55]\n",
+    "name: T\nlab:\n  generator: guitar\n  tuning: drop-f\n",
+    "name: T\nlab:\n  generator: guitar\n  tuning: drop-d\n  frets: 40\n",
+]
+
+
+def test_every_guitar_error_the_guide_quotes_is_the_validators_text():   # the guitar amendment
+    produced = {i.message() for case in GUITAR_ERROR_CASES for i in compiled(case, "guitar.yaml").issues}
+    quoted = [line for block in re.findall(r"```text\n(.*?)```", GUIDE, re.DOTALL) for line in block.splitlines()
+              if line.startswith("guitar.yaml")]
+    assert len(quoted) == 4 and [line for line in quoted if line not in produced] == []
 
 
 def test_the_guides_plugin_example_is_a_working_generator():   # A18
@@ -114,6 +131,66 @@ def test_the_shipped_fourths_layout_validates_and_plays_as_a9_says():
     for pad in pads:
         by_pc.setdefault(pad.note % 12, set()).add(pad.rest)
     assert all(len(colours) == 1 for colours in by_pc.values())
+
+
+def shipped(name):
+    result = compiled((ROOT / "layouts" / f"{name}.yaml").read_text(), f"{name}.yaml")
+    assert result.valid and result.warnings == (), [i.message() for i in (*result.issues, *result.warnings)]
+    grid = result.layout.section("lab").grid(REGISTRY.generators(), REGISTRY.schemes())
+    notes = {(r, c): grid.note_at(r, c) for r in range(1, 9) for c in range(1, 9)}
+    assert all(0 <= n <= 127 for n in notes.values() if n is not None)
+    return result.layout, notes
+
+
+@pytest.mark.parametrize("name,display,low,high", [
+    ("thirds-grid", "Thirds grid", 36, 85), ("wicki-hayden", "Wicki-Hayden", 36, 85), ("janko", "Janko", 48, 69),
+    ("fifths-grid", "Fifths grid", 36, 92), ("modes-c", "Modes C", 48, 60),
+    ("guitar", "Guitar", 40, 71), ("guitar-7", "Guitar 7", 35, 71), ("guitar-8", "Guitar 8", 30, 71),
+])
+def test_the_new_shipped_layouts_validate_within_a_playable_range(name, display, low, high):
+    layout, notes = shipped(name)
+    assert layout.display_name == display and len(display) <= 14
+    played = [n for n in notes.values() if n is not None]
+    assert (min(played), max(played)) == (low, high)
+    header = (ROOT / "layouts" / f"{name}.yaml").read_text().splitlines()[0]
+    assert header.startswith(f"# {display.split()[0]}")
+
+
+def test_the_thirds_grid_holds_both_triads_of_every_2x2_block():
+    _, notes = shipped("thirds-grid")
+    for r in range(1, 8):
+        for c in range(1, 8):
+            root, right, up, diagonal = notes[(r, c)], notes[(r, c + 1)], notes[(r + 1, c)], notes[(r + 1, c + 1)]
+            assert (right - root, up - root, diagonal - root) == (4, 3, 7)   # major: root right diagonal; minor: root up diagonal
+
+
+def test_the_fifths_grid_runs_round_the_circle_and_the_wicki_hayden_and_janko_steps():
+    _, fifths = shipped("fifths-grid")
+    assert [fifths[(1, c)] % 12 for c in range(1, 9)] == [0, 7, 2, 9, 4, 11, 6, 1]
+    assert fifths[(2, 1)] - fifths[(1, 1)] == 1
+    _, wicki = shipped("wicki-hayden")
+    assert (wicki[(1, 2)] - wicki[(1, 1)], wicki[(2, 1)] - wicki[(1, 1)], wicki[(2, 2)] - wicki[(1, 1)]) == (2, 5, 7)
+    _, janko = shipped("janko")
+    assert janko[(3, 1)] == janko[(1, 2)]   # each note again two rows up, one column left
+
+
+def test_the_modes_c_layout_plays_cs_modes_by_brightness():
+    _, notes = shipped("modes-c")
+    rows = [[notes[(r, c)] for c in range(1, 9)] for r in range(1, 9)]
+    assert rows[0] == [48, 49, 51, 53, 54, 56, 58, 60] and rows[5] == [48, 50, 52, 53, 55, 57, 59, 60]
+    assert rows[6][3] == 54 and rows[7] == list(range(48, 56))
+
+
+@pytest.mark.parametrize("name,strings,rows", [("guitar", 6, range(2, 8)), ("guitar-7", 7, range(1, 8)),
+                                               ("guitar-8", 8, range(1, 9))])
+def test_the_guitar_layouts_put_a_string_on_each_used_row_highest_on_top(name, strings, rows):
+    layout, notes = shipped(name)
+    assert [r for r in range(1, 9) if notes[(r, 1)] is not None] == list(rows)
+    opens = [notes[(r, 1)] for r in rows]
+    assert len(opens) == strings and opens == sorted(opens) and opens[-1] == 64     # the high E on the top used row
+    assert all(notes[(r, c)] == notes[(r, 1)] + c - 1 for r in rows for c in range(1, 9))   # a fret per column
+    grid = layout.section("lab").grid(REGISTRY.generators(), REGISTRY.schemes())
+    assert [grid.at(PadPos(r, 1)).channel for r in reversed(rows)] == list(range(1, strings + 1))
 
 
 def test_the_api_document_names_every_route():

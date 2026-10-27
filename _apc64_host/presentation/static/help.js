@@ -46,8 +46,9 @@ export const LAYOUT_HELP = {
       + 'strip-mode buttons (Device, Volume, Pan, Sends, Channel, Off, left of the pads) choose the bank; here, '
       + 'click a bank in this bar or in the Overview. Their LEDs show the same as the scene buttons.'],
     'Pages and banks are independent: switching one keeps the other. The OLED shows the new name for a moment.',
-    ['View', 'The unit\'s own mode (Session, Note, Chord, Step, Custom…). Pages drive the pads in Session view; '
-      + 'in the other views the APC64 plays its pads itself.'],
+    ['View', 'The unit\'s mode (Session, Note, Chord, Step, Custom…). Pages drive the pads in Session view; '
+      + 'in the other views the APC64 plays its pads itself. The view buttons on the surface switch the unit (Play '
+      + 'mode, while the host holds it), as pressing them on the unit does; Project stays on the unit.'],
     ['Fold', '“Fold ▴” shrinks this bar to one line; “Layouts, pages, banks ▾” opens it again (remembered in '
       + 'this browser).'],
   ],

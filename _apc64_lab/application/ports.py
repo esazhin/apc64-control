@@ -100,7 +100,8 @@ class UnitMemory(Protocol):
 @runtime_checkable
 class UnitControl(Protocol):
     def request_view(self, view: UnitView = UnitView.CUSTOM) -> bool:
-        """Asks the unit for a pad mode (s10.c7); False when nothing is held."""
+        """Asks the unit for a pad mode (s10.c7); False when nothing is held or it was not sent. Sent through the
+        host (ViewRequester), the view counts as reported at once: the unit obeys but never echoes (2026-10-27)."""
         ...
 
 
@@ -256,12 +257,13 @@ class LabState:
     recovery: dict | None = None
     target: dict | None = None
     warnings: tuple[str, ...] = ()
+    layouts: tuple[dict, ...] = ()     # the generated layouts: {layout, name, generator, valid} or {…, valid: false, error}
     kind: str = field(default="lab", init=False)
 
     def to_json(self) -> dict:
         return {"kind": self.kind, "generators": list(self.generators), "schemes": list(self.schemes),
                 "active": self.active, "message": self.message, "recovery": self.recovery,
-                "target": self.target, "warnings": list(self.warnings)}
+                "target": self.target, "warnings": list(self.warnings), "layouts": list(self.layouts)}
 
 
 @runtime_checkable
@@ -332,6 +334,11 @@ class HostLink:
     @property
     def inputs(self):
         return self.ports.inputs
+
+    @property
+    def views(self):
+        """The host's ViewRequester (the engine), or None before bind."""
+        return getattr(self.ports, "views", None)
 
     # time and the loop
     def call_later(self, seconds: float, callback: Callable[[], None]):

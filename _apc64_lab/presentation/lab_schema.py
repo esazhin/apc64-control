@@ -5,7 +5,8 @@ the schema cannot drift from the validator (contract T38; inv10). Regenerate wit
 
 The schema describes one layout file with a 'lab:' section. The host's keys (devices, pages, banks, routing) keep
 their meaning and point into docs/layout.schema.json. Each generator's parameters are allowed only with that
-generator ('if generator is tonnetz, then base and channel').
+generator ('if generator is tonnetz, then base and channel'); a colour scheme's parameters (the scale scheme's
+scale and root) are described in a branch of that scheme and may be written with any generator.
 """
 import json
 import sys
@@ -27,6 +28,23 @@ HEX_PATTERN = r"^#?[0-9A-Fa-f]{6}$"
 
 def param_schema(spec: ParamSpec) -> dict:
     doc = spec.doc or spec.name
+    if spec.kind == ParamKind.CHOICE:
+        return {"type": "string", "enum": list(spec.choices), "default": spec.default,
+                "description": f"{doc}: one of the names listed (any case; spaces for '-' are accepted too)."}
+    if spec.kind == ParamKind.NOTE_LIST:
+        note = {"oneOf": [{"type": "integer", "minimum": 0, "maximum": 127},
+                          {"type": "string", "pattern": NOTE_NAME_PATTERN}]}
+        return {"oneOf": [{"type": "string", "enum": list(spec.choices)},
+                          {"type": "array", "items": note, "minItems": spec.minimum, "maxItems": spec.maximum}],
+                "default": spec.default,
+                "description": f"{doc}: one of the names listed, or a list of {spec.minimum}–{spec.maximum} notes "
+                               "(numbers 0–127 or names such as E1 (40), C3 = 60)."}
+    if spec.kind == ParamKind.PITCH_CLASS:
+        found = {"type": "string", "pattern": PITCH_CLASS_PATTERN,
+                 "description": f"{doc}: a note name without octave such as D, F# or B♭."}
+        if spec.default is not None:
+            found["default"] = spec.default
+        return found
     if spec.kind == ParamKind.NOTE:
         return {"oneOf": [{"type": "integer", "minimum": spec.minimum, "maximum": spec.maximum},
                           {"type": "string", "pattern": NOTE_NAME_PATTERN}],
@@ -43,7 +61,8 @@ def generate(listing: dict | None = None) -> dict:
     if listing is None:
         listing = _shipped_listing()
     generators = [g for g in listing["generators"] if not g.get("broken")]
-    schemes = [s["name"] for s in listing["schemes"] if not s.get("broken")]
+    working = [s for s in listing["schemes"] if not s.get("broken")]
+    schemes = [s["name"] for s in working]
     colour = {"oneOf": [
         {"type": "array", "items": {"type": "integer", "minimum": 0, "maximum": 255}, "minItems": 3, "maxItems": 3,
          "description": "[red, green, blue], each 0–255."},
@@ -80,20 +99,33 @@ def generate(listing: dict | None = None) -> dict:
     assert set(own) == set(OWN_KEYS), "the lab section's own keys follow lab_section.OWN_KEYS"
     params: dict = {}
     branches = []
+    scheme_specs = {s["name"]: [_spec(p) for p in s.get("params", [])] for s in working}
+    scheme_names = list(dict.fromkeys(spec.name for specs in scheme_specs.values() for spec in specs))
     for g in generators:
-        specs = [ParamSpec(p["name"], p["kind"], p["default"], p["min"], p["max"], p.get("doc", "")) for p in g["params"]]
+        specs = [_spec(p) for p in g["params"]]
         for spec in specs:
             params.setdefault(spec.name, {"description": f"A generator parameter (see the {g['name']} branch)."})
         branches.append({
             "if": {"properties": {"generator": {"const": g["name"]}}, "required": ["generator"]},
             "then": {"properties": {spec.name: param_schema(spec) for spec in specs},
-                     "propertyNames": {"enum": [*OWN_KEYS, *(spec.name for spec in specs)]}},
+                     "propertyNames": {"enum": [*OWN_KEYS, *(spec.name for spec in specs),
+                                                *(n for n in scheme_names if n not in {x.name for x in specs})]}},
+        })
+    for name, specs in scheme_specs.items():
+        if not specs:
+            continue
+        for spec in specs:
+            params.setdefault(spec.name, {"description": f"A colour scheme parameter (see the {name} scheme's branch)."})
+        branches.append({
+            "if": {"properties": {"scheme": {"const": name}}, "required": ["scheme"]},
+            "then": {"properties": {spec.name: param_schema(spec) for spec in specs}},
         })
     lab = {"type": "object", "required": ["generator"], "additionalProperties": False,
            "properties": {**own, **params}, "allOf": branches,
            "description": "A generated layout. Its encoder shifts the window one step of the interval "
-                          "(right +1, left -1) and Tempo cycles octave → fifth → third; Shift + encoder still "
-                          "browses layouts. Do not bind encoder or tempo on a page of a lab layout."}
+                          "(right +1, left -1) and Tempo cycles octave → fifth → third, or the generator's own "
+                          "steps (the guitar: Fret and Page); Shift + encoder still browses layouts. Do not bind "
+                          "encoder or tempo on a page of a lab layout."}
     host = {key: {"$ref": f"{HOST_SCHEMA}#/properties/{key}"} for key in TOP_KEYS if key != "name"}
     return {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -109,6 +141,10 @@ def generate(listing: dict | None = None) -> dict:
                        "lab": {"$ref": "#/$defs/lab"}, **host},
         "$defs": {"lab": lab, "colour": colour, "strip": strip},
     }
+
+
+def _spec(p: dict) -> ParamSpec:
+    return ParamSpec(p["name"], p["kind"], p["default"], p["min"], p["max"], p.get("doc", ""), tuple(p.get("choices", ())))
 
 
 def _shipped_listing() -> dict:

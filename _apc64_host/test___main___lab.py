@@ -159,7 +159,7 @@ def test_main_registers_the_lab(tmp_path):   # s43
     app = served[0]
     assert code == 0 and app.state.services.panels[0][0] == "lab"
     answer = TestClient(app, base_url=BASE, client=("127.0.0.1", 4000)).get("/api/lab")   # no lifespan: no unit
-    assert answer.status_code == 200 and [g["name"] for g in answer.json()["generators"]] == ["tonnetz", "isomorphic"]
+    assert answer.status_code == 200 and [g["name"] for g in answer.json()["generators"]] == ["tonnetz", "isomorphic", "guitar", "modes"]
 
 
 def test_a_bad_lab_target_is_a_start_up_error_naming_its_key(tmp_path):
@@ -176,3 +176,28 @@ def test_the_lab_config_keys_are_read(tmp_path):
                          tmp_path / "config.local")
     assert config.lab_target == "MPC Live III MIDI 1 ch 2"
     assert str(config.lab_backups_dir) == "/srv/b" and config.lab_library_dir == tmp_path / "library"
+
+
+def test_the_lab_asks_for_custom_view_and_the_host_assumes_it(tmp_path):   # 2026-10-27: obeyed, never echoed
+    (tmp_path / "layouts").mkdir()
+    (tmp_path / "layouts" / "jam.yaml").write_text(JAM)
+    (tmp_path / "layouts" / "tonnetz-c.yaml").write_text(TONNETZ_C)
+    config = config_for(tmp_path)
+    adapters = root.simulated_adapters(config)
+    comp = root.compose(config, adapters, root.MODULES, local_names=("studio-pc",))
+    (lab,) = comp.parts
+    sim = adapters.simulator
+    with TestClient(comp.app, base_url=BASE, client=("127.0.0.1", 4000)) as client:
+        client.post("/api/unit/take", json={"source": "agent"})
+        assert sim.current_view is UnitView.SESSION and not sim.report_view_requests
+        client.post("/api/lab/activate", json={"layout": "Tonnetz C"})
+        assert wait_until(lambda: lab.session.running and lab.session.state().active["unit_view"] == "custom")
+        assert sim.current_view is UnitView.CUSTOM                     # the unit obeyed the request
+        assert client.get("/api/state").json()["unit"]["view"] == "custom"
+        assert lab.session.message is None                             # no 'Press Custom'
+        # the replica's Session button: the unit switches, the session pauses (d22) as for the unit's own button
+        client.post("/api/control/view session/press")
+        assert sim.current_view is UnitView.SESSION and lab.session.message == "Custom view off"
+        client.post("/api/control/view custom/press")
+        assert wait_until(lambda: lab.session.message is None and sim.current_view is UnitView.CUSTOM)
+        client.post("/api/unit/release", json={})

@@ -1,0 +1,10 @@
+# Fifths grid: a fifth (+7) per column and a semitone (+1) per row (docs/lab-guide.md), so each row runs round the
+# circle of fifths (C G D A E B F# C# from r1c1) and neighbouring keys sit side by side; a key's I, IV and V are
+# three pads in a row. A semitone per row keeps the range playable: pads 36 (C1) to 92.
+name: Fifths grid
+lab:
+  generator: isomorphic
+  base: 36            # the note on pad r1c1 (C1 = 36); the top-right pad is base + 56
+  column: 7           # a fifth per column to the right
+  row: 1              # a semitone per row upwards
+  scheme: fifths

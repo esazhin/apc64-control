@@ -24,6 +24,13 @@ take calls on_held; every Led effect passes led_filter. The engine is the module
 text under host transients, warnings on the banner and OLED) and NoteEnder (end_notes). Calls a module makes from
 inside a hook are queued behind the input being handled. Every play event is stamped with its PlaySource.
 
+Views (2026-10-27): request_view sends the pad-mode request (19 00 01 <m>) through the gate. The unit obeys it but
+does not report the change back (verified live), so a request that was sent while the unit is held counts as the
+unit's report at once: the surface and on_pad_mode follow, as for a press of that view button on the unit; the
+unit's own reports still override it. Switching to Session view repaints the pads on the assumed report and once
+more shortly after (the unit gives no report to repaint on, PROTOCOL-SPEC §4.6). press_view is the replica's and
+the API's way to it.
+
 Threads: post() may be called from any thread; it enqueues and hands a drain to `dispatch` (the
 composition root passes loop.call_soon_threadsafe). submit() is for callers on the loop: it enqueues and
 drains at once, so API calls return the state after their input was handled (s16.c2).
@@ -56,7 +63,7 @@ from ..domain.surface import HostSurface
 from ..protocol import surface_map
 from ..protocol.midi_codec import MidiDecoder
 from ..protocol.stream import MidiStreamSplitter
-from ..protocol.sysex import command_of, oled_frames
+from ..protocol.sysex import command_of, oled_frames, view_request
 from .modules import ModuleCollection, collect
 from .outbound_gate import GateResult
 from .ports import (
@@ -65,6 +72,7 @@ from .ports import (
 
 log = logging.getLogger(__name__)
 POSITIONS_FLUSH = 1.0   # strip positions are written at most once a second
+SESSION_REPAINT_AFTER = 0.15   # a requested Session view is repainted again after this (no report comes)
 MODULE_WARNINGS = 5     # the newest module warnings kept for the banner
 SESSION_SOURCE = PlaySource(PlaySourceKind.SESSION_BINDING)
 
@@ -82,6 +90,12 @@ class HeldUnit:
 @dataclass(frozen=True)
 class EngineOk:
     nav: NavState
+
+
+@dataclass(frozen=True)
+class ViewNotSent:
+    """A view request that did not go out: the unit is not held, or the gate did not pass the frame."""
+    problem: str
 
 
 @dataclass(frozen=True)
@@ -150,6 +164,11 @@ class _UnitFrames:
 @dataclass(frozen=True)
 class _Warn:
     text: str | None
+
+
+@dataclass(frozen=True)
+class _Repaint:
+    """Repaint Session view if the unit is still in it (after a requested switch, which the unit never reports)."""
 
 
 @dataclass(frozen=True)
@@ -239,6 +258,35 @@ class HostEngine:
             raise TypeError(f"not replica input: {event!r}")
         self.submit(replace(event, source=InputSource.REPLICA))
         return EngineOk(self.nav)
+
+    def press_view(self, view: UnitView) -> EngineOk | ViewNotSent:
+        """A view button pressed in the replica (or through the API): the pad-mode request, the view assumed."""
+        view = UnitView(view)
+        if not self._send_view_request(view):
+            return ViewNotSent(f"the APC64 is not held; take control of it to switch it to {view} view")
+        self.submit(ViewReport(view))
+        return EngineOk(self.nav)
+
+    def request_view(self, view: UnitView) -> bool:
+        """From any thread (the lab's slot-0 writer, a module hook): the pad-mode request; True when it was sent.
+        The view is then taken as reported, queued behind the input being handled (ViewRequester)."""
+        view = UnitView(view)
+        if not self._send_view_request(view):
+            return False
+        self._module_post(ViewReport(view))
+        return True
+
+    def _send_view_request(self, view: UnitView) -> bool:
+        if self._held is None:
+            return False
+        try:
+            results = self._gate.send([view_request(view)])
+        except PortGone:
+            return False
+        sent = bool(results) and all(r is GateResult.SENT for r in results)
+        if sent and view.host_drawn:
+            self._clock.call_later(SESSION_REPAINT_AFTER, lambda: self.post(_Repaint()))
+        return sent
 
     def send_to_unit(self, frames, subject: str = "host") -> None:
         """Frames from any other part of the host (modules) go through the same gate and are listed."""
@@ -409,6 +457,9 @@ class HostEngine:
                 self._view_report(item)
             case _Warn(text=text):
                 self._warn(text)
+            case _Repaint():
+                if self._held is not None and self._surface.view.host_drawn:
+                    self._run(self._surface.handle(Redraw()))
             case _EndNotes(notes=notes, role=role):
                 self._run(self._router.end_notes(notes, role, self._surface.view), PlaySource.of_role(role))
             case SelectPage() | SelectBank() | SetPageShift() | FeedbackMessage() | Tick() \

@@ -14,7 +14,7 @@ their answers onto JSON:
 Calls that touch the unit or files block (a read waits up to 2 s, 'back up all' is 26 reads), so those routes are
 plain functions, run by FastAPI's threadpool; routes that hand work to the host engine (activate, preview, tweak,
 the harmony inputs) run on the loop, as the engine's ports require. Beyond §3.5: leave, preview,
-bulk-edit, recovery/dismiss and harmony/inputs, each with its `apc64 lab` twin.
+bulk-edit, recovery/dismiss, harmony/inputs and harmony/trail/clear, each with its `apc64 lab` twin.
 """
 import asyncio
 import base64
@@ -202,6 +202,10 @@ def lab_router(services: LabServices) -> APIRouter:
     @router.get("/api/lab/harmony")
     async def harmony():
         return JSONResponse({"kind": "harmony", **s.tracker.state().to_json()})
+
+    @router.post("/api/lab/harmony/trail/clear")
+    async def clear_trail(request: Request):
+        return await handle(request, lambda d: JSONResponse(s.tracker.clear_trail()))
 
     @router.get("/api/lab/harmony/inputs")
     async def harmony_inputs():

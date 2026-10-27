@@ -21,6 +21,13 @@ def test_the_page_and_its_modules_are_served(rig):
     assert "javascript" in rig.client.get("/state.js").headers["content-type"]
 
 
+def test_the_harmony_full_view_address_is_the_page_itself(rig):
+    """/?view=harmony (a new tab, a bookmark, another device) is the same page: app.js reads the address, so the
+    full view needs no route of its own."""
+    page = rig.client.get("/?view=harmony")
+    assert page.status_code == 200 and page.text == rig.client.get("/").text
+
+
 def test_every_relative_import_of_the_page_resolves():
     missing = []
     for module in STATIC_DIR.glob("*.js"):

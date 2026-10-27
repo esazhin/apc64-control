@@ -21,6 +21,15 @@ export function currentModulePanel(model) {
   return modulePanels(model).find((m) => m.name === model.ui.side) ?? null;
 }
 
+// A module's view alone across the page: the address names it (http://host:5058/?view=harmony), so a bookmark or
+// another device opens just that view. The name of a view, or null (anything but a plain lower-case word).
+export function viewOfAddress(search) {
+  let name = null;
+  try { name = new URLSearchParams(search ?? '').get('view'); } catch { /* not an address: no view */ }
+  name = name?.trim().toLowerCase() ?? null;
+  return name && MODULE_NAME.test(name) ? name : null;
+}
+
 // The latest payload a module published on its topic (the hub greets a new page with them), by kind.
 export function topicData(model, topic, kind = '_') {
   return model.topics?.[topic]?.[kind] ?? null;
@@ -53,6 +62,8 @@ export function initialModel() {
       navCollapsed: false, // the layout / page / bank bar folded to one line (remembered per viewer)
       side: 'overview', // the column beside the surface: 'overview', 'card' (card + activity) or 'none' (remembered)
       help: null, // the open help topic ({title, items}; help.js), or null
+      view: null, // {name, pinned}: a module's view across the whole page; pinned when the address named it (?view=)
+      fullscreen: false, // the page is shown full screen (the browser's Fullscreen API)
     },
   };
 }
@@ -147,6 +158,14 @@ export function reduce(model, action) {
       return action.topic?.title ? withUi(model, { help: action.topic }) : model;
     case 'help_close':
       return model.ui.help ? withUi(model, { help: null }) : model;
+    case 'view': {
+      // a pinned view (the address's) stays: that tab shows nothing else
+      if (model.ui.view?.pinned && action.name !== model.ui.view.name) return model;
+      if (typeof action.name !== 'string' || !MODULE_NAME.test(action.name)) return model.ui.view ? withUi(model, { view: null }) : model;
+      return withUi(model, { view: { name: action.name, pinned: Boolean(action.pinned || model.ui.view?.pinned) } });
+    }
+    case 'fullscreen':
+      return withUi(model, { fullscreen: Boolean(action.on) });
     case 'overview_layer':
       return withUi(model, { overviewLayer: action.layer === 'shift' ? 'shift' : 'base' });
     default:

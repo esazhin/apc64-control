@@ -29,16 +29,29 @@ A page on your home network shows a live replica of the whole unit with every co
 The lab is the **Lab** choice beside the surface on the same page, plus `apc64 lab …` and `/api/lab…`.
 
 - **Generated layouts:** a layout file with a `lab:` section names a generator (the Tonnetz on a staggered
-  checkerboard, isomorphic layouts, or a plugin) and a colour scheme. When it is activated, all 64 pads go into
+  checkerboard, isomorphic layouts, the modes explorer, a guitar or bass neck, or a plugin) and a colour scheme (the fifths hue, a root
+  highlight, or a scale overlay from a library of some 40 scales, many the unit's Note view lacks). When it is activated, all 64 pads go into
   the live edit buffer (slot 0), after one backup. You play them in the unit's **Custom view**, with real
   velocity and per-pad aftertouch.
   - The encoder shifts the window one step of the interval; Tempo cycles octave → fifth → third; the OLED shows
-    the window.
+    the window. A guitar layout has its own steps: Fret and Page (Tempo toggles them), the OLED showing the frets
+    on the pads (`Frets 3-10`) and its pads mark the inlay frets.
   - Shift + encoder still browses layouts. Leaving the layout (or releasing the unit) restores slot 0.
-  - Examples: `layouts/tonnetz-c.yaml` and `layouts/fourths.yaml`.
-- **Harmony views:** what is played, live. They show the pad replica, the Tonnetz lattice with its triads, the
-  chord and its trail, interval and neighbour hints, and the circle of fifths. They follow the APC64 and any MIDI
-  input you choose.
+  - Examples: `layouts/tonnetz-c.yaml`, `layouts/fourths.yaml`, `layouts/thirds-grid.yaml`,
+    `layouts/wicki-hayden.yaml` (a square approximation), `layouts/janko.yaml`, `layouts/fifths-grid.yaml`,
+    `layouts/modes-c.yaml`, and the guitar necks `layouts/guitar.yaml` (6 strings, E standard),
+    `layouts/guitar-7.yaml` (B standard) and `layouts/guitar-8.yaml` (F♯ standard), each string on its own MIDI
+    channel.
+- **Harmony views:** what is played, live, following the active layout: the Tonnetz lattice with its triads for a
+  Tonnetz layout, the neck for a guitar layout (the frets on the pads boxed, each played note on its string and
+  its other places ringed), otherwise a large pad grid in the layout's own shape (note names, held notes, chord
+  tones, scale dimming, the modes' row names); the chord (notes spelled in their chord or key) and its trail of
+  the last 8 chords (with Clear), interval and neighbour hints, and the circle of fifths
+  with the relative minors inside. They follow the APC64 and any MIDI
+  input you choose. **Full screen** and **New tab** on the Harmony heading show them alone, large;
+  `http://<this machine>:5058/?view=harmony` opens that full view directly (a bookmark, a tablet, a second screen).
+
+  ![The harmony full view for the guitar layout: Cmaj7 held, its trail, every place of its notes on the neck, the frets on the pads boxed](docs/screenshot-guitar.jpg)
 - **Project memory:**
   - back up all 25 slots and the global settings in one command;
   - restore one slot;
@@ -89,7 +102,9 @@ Open **http://localhost:5058** (or `http://<this machine>:5058` from a phone on 
   **Inspect**: a click only shows its card. The line under the toolbar says which (or the learn / calibration step
   while one runs). Outside Session view the pad grid is the unit's: it shows dark, with a
   caption saying where the unit's own playing is routed, and clicking a pad sends nothing; in Custom view the side
-  buttons, strips and encoder are the unit's too (only Shift and Tempo reach the host).
+  buttons, strips and encoder are the unit's too (only Shift and Tempo reach the host). The **view buttons**
+  (Session, Note, Chord, Step, Custom) switch the unit while the host holds it, as pressing them on the unit
+  does; Project stays the unit's own.
 - **Beside the surface** (toolbar: Overview · Card & activity · Hide): the **overview** by default — every page as
   a mini grid and every bank as a strip set, scaled to the column; click one to go there. **Card & activity**
   swaps in the control card and the activity list (a debugging aid); **Hide** gives the surface the whole width.
@@ -100,6 +115,8 @@ Open **http://localhost:5058** (or `http://<this machine>:5058` from a phone on 
 - **Learn by touch:** touch a control on the unit to select it (nothing is sent while learning).
 - **Calibrate Note view:** press the bottom-left, then the top-right pad in Note view so played notes light their
   pads — always labelled *calibrated … (assumed)*, since the unit's Note settings cannot be read.
+- **Harmony full view:** `/?view=harmony` is the page with only the harmony views, across the window (Lab → Harmony
+  → **Full screen** or **New tab**); Esc or Leave ends the in-page one.
 - **Help:** the small **?** buttons (layout bar, toolbar, Lab and Harmony headings) open a short explanation;
   ×, a click outside or Esc closes it.
 - **Activity:** the latest 200 actions, `control → message → port: sent / not sent (why) / refused`.

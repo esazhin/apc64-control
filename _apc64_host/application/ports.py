@@ -261,6 +261,14 @@ class LayoutLoader(Protocol):
 
 
 @runtime_checkable
+class ViewRequester(Protocol):
+    def request_view(self, view) -> bool:
+        """Asks the unit for a pad mode (19 00 01 <m>); True when it was sent while held. The unit obeys and does
+        not report it, so the host takes the view as reported at once (on_pad_mode follows); 2026-10-27."""
+        ...
+
+
+@runtime_checkable
 class SectionTweaks(Protocol):
     def save_section_field(self, layout_id, path: str, value) -> Any:
         """Saved, or the issues that refused it (s38)."""
@@ -303,3 +311,4 @@ class HostPorts:
     clock: Clock | None = None
     dispatch: Callable | None = None
     inputs: Any = None                # FeedbackInputs: any other MIDI input (§2.7 q7)
+    views: ViewRequester | None = None   # the pad-mode request with the view assumed (2026-10-27)

@@ -1,7 +1,9 @@
 // The replica of the whole unit (contract 5a.9, inv1, inv2): every control where it sits on the APC64's top
 // panel (user guide §3.1; the OLED takes the AKAI logo's place), labelled with what it does right now (current
 // page, bank and Shift), visibly empty when unbound, LEDs and strip bars as on the unit (colours approximate),
-// the unit's own view buttons, and what the unit itself owns in its current view (PROTOCOL-SPEC §4.6, §5).
+// the view buttons, and what the unit itself owns in its current view (PROTOCOL-SPEC §4.6, §5). Since 2026-10-27
+// the Session, Note, Chord, Step and Custom buttons switch the unit (the host's pad-mode request, which the unit
+// obeys without reporting it back); Project stays the unit's own.
 // Gestures go to handlers: pointer down/up = press/release, a strip drag = moves, the encoder's arrows/wheel =
 // turns.
 //
@@ -63,6 +65,9 @@ const STRIP_X = [0.3, 1.57, 0.3, 1.57, 12.98, 14.28, 12.98, 14.28];
 const ARROWS = { left: [0.33, 9.48, 0.52, 1.24], up: [0.93, 9.48, 0.8, 0.6], down: [0.93, 10.12, 0.8, 0.6],
   right: [1.8, 9.48, 0.52, 1.24] };
 const VIEW_ORDER = ['session', 'note', 'chord', 'step', 'project', 'custom'];
+// the view buttons the host switches the unit with (the service's SWITCHABLE_VIEWS); Project is the unit's own
+export const SWITCHABLE_VIEWS = ['session', 'note', 'chord', 'step', 'custom'];
+export const switchable = (id) => SWITCHABLE_VIEWS.includes(String(id).replace(/^view /, ''));
 export const FIXTURES = {
   oled: { x: 0.3, y: 0.3, w: 2.15, h: 0.85 },
   wordmark: { x: 12.45, y: 0.36, w: 2.6, h: 0.6 },
@@ -218,11 +223,14 @@ export function controlView(entry, model, ui = {}) {
     if (shiftShown(model)) view.classes.push('held');
     view.title = 'Hold to see and play every control\'s Shift layer';
   } else if (entry.role === 'device_local') {
-    view.classes.push('unit-own');
+    view.classes.push(switchable(entry.id) ? 'view-switch' : 'unit-own');
     view.main = entry.display;
     view.phys = '';
-    if (state?.unit?.view === entry.id.replace(/^view /, '')) view.classes.push('current-view');
-    view.title = `${entry.display} view: the unit's own button (it never reaches the host)`;
+    const current = state?.unit?.view === entry.id.replace(/^view /, '');
+    if (current) view.classes.push('current-view');
+    view.title = !switchable(entry.id) ? `${entry.display} view: the unit's own button (the host does not switch to it)`
+      : current ? `${entry.display} view: the unit is in it`
+        : `${entry.display} view: click to switch the APC64 to it (while the host holds the unit)`;
   }
   if (ownedByUnit(model, entry.id)) byUnit(view, entry, model);
   if (ui.pressed?.has(entry.id)) view.classes.push('pressed');
@@ -345,8 +353,9 @@ export function viewCaption(model) {
 // --- the DOM ------------------------------------------------------------------------------------------------
 function ctlNode(entry, extraClass) {
   const at = placeOf(entry.id);
-  return h('div', { class: ['ctl', extraClass], data: { id: entry.id }, tabindex: entry.role === 'device_local' ? null : 0,
-    role: entry.role === 'device_local' ? null : 'button', style: at ? placed(at) : null },
+  const inert = entry.role === 'device_local' && !switchable(entry.id);
+  return h('div', { class: ['ctl', extraClass], data: { id: entry.id }, tabindex: inert ? null : 0,
+    role: inert ? null : 'button', style: at ? placed(at) : null },
   h('span', { class: 'phys' }), h('span', { class: 'main' }), h('span', { class: 'short' }), h('span', { class: 'sub' }));
 }
 
@@ -421,7 +430,12 @@ export function buildReplica(container, surface, handlers, doc = globalThis.docu
     const entry = entries.get(id);
     if (!entry || el.classList.contains('strip')) continue;
     if (entry.role === 'device_local') {
-      el.addEventListener('click', () => handlers.select?.(id));
+      // a view button: a click asks the unit for that view (handlers.view: Play presses, Inspect only selects)
+      const choose = () => (switchable(id) && handlers.view ? handlers.view(id) : handlers.select?.(id));
+      el.addEventListener('click', choose);
+      if (switchable(id)) {
+        el.addEventListener('keydown', (event) => { if ((event.key === 'Enter' || event.key === ' ') && !event.repeat) choose(); });
+      }
       continue;
     }
     let down = false;

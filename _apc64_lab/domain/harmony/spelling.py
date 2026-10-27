@@ -4,6 +4,10 @@ Without key context (chord detection, single notes, lattice labels) a pitch clas
 table NOTE_DISPLAY (C C♯ D E♭ E F F♯ G A♭ A B♭ B, Unicode ♯/♭). With key context (scales, diatonic chords)
 notes are spelled letter-correctly, each letter once, double ♯/♭ allowed (D major = D E F♯ G A B C♯).
 Key names are PARENT_KEYS. The tables are ported from theory.js unchanged.
+
+Spelling from context (2026-10-27, after the guitar live test): a note can also be spelled as an interval above a
+spelled reference, letter-correctly (E + a major third → G♯, not A♭): `spell_above`. The chord's and the key's
+spelling of held notes is built on it (chords.spell_chord, state.spell_held).
 """
 NOTE_DISPLAY = ("C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B")
 NOTE_LETTERS = ("C", "D", "E", "F", "G", "A", "B")
@@ -36,6 +40,11 @@ _LETTER_PC = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
 _ACCIDENTAL = {"♯": 1, "#": 1, "♭": -1, "b": -1, "𝄪": 2, "𝄫": -2}
 
 
+# The letter steps of each DEGREES label (its number less one): '♭3' is two letters up, '♭5' four.
+DEGREE_LETTERS = tuple(int(label.lstrip("♭♯")) - 1 for label in DEGREES)
+_ACCIDENTAL_TEXT = {-2: "♭♭", -1: "♭", 0: "", 1: "♯", 2: "♯♯"}   # theory.js writes doubles as ♯♯ / ♭♭
+
+
 def pc_name(pc: int) -> str:
     """theory.js pcName: the fixed spelling of a pitch class without key context."""
     return NOTE_DISPLAY[pc % 12]
@@ -44,6 +53,54 @@ def pc_name(pc: int) -> str:
 def note_label(note: int) -> str:
     """A MIDI note as its fixed spelling and octave, C3 = 60: 'E3' for 64, 'C♯4' for 73."""
     return f"{pc_name(note)}{note // 12 - 5 + MIDDLE_C_OCTAVE}"
+
+
+def note_label_spelled(note: int, name: str) -> str:
+    """A MIDI note as a given spelling and its octave, counted from the letter (C3 = 60): 'C♭3' for 59 spelled
+    C♭, 'B♯2' for 60 spelled B♯."""
+    natural = note - sum(_ACCIDENTAL.get(ch, 0) for ch in name[1:])
+    return f"{name}{natural // 12 - 5 + MIDDLE_C_OCTAVE}"
+
+
+def spell_letter(pc: int, letter: str) -> str | None:
+    """The pitch class written on this letter ('G' for 8 → 'G♯'), or None when it would need more than two
+    accidentals."""
+    diff = (pc - _LETTER_PC[letter] + 6) % 12 - 6   # -6 … 5
+    return f"{letter}{_ACCIDENTAL_TEXT[diff]}" if diff in _ACCIDENTAL_TEXT else None
+
+
+def spell_above(reference: str, pc: int, letters: int | None = None) -> str:
+    """`pc` spelled as an interval above the spelled `reference`: `letters` letter steps up (by default the
+    DEGREES label's: a major third is two letters, so E → G♯; a minor sixth five, E → C). Falls back to the fixed
+    table when the letter would need more than two accidentals."""
+    ref_pc = parse_pitch_class(reference)
+    if ref_pc is None:
+        return pc_name(pc)
+    if letters is None:
+        letters = DEGREE_LETTERS[(pc - ref_pc) % 12]
+    letter = NOTE_LETTERS[(NOTE_LETTERS.index(reference[0].upper()) + letters) % 7]
+    return spell_letter(pc % 12, letter) or pc_name(pc)
+
+
+def accidentals(name: str) -> int:
+    """How many ♯/♭ a spelling carries (a double counts two)."""
+    return sum(name.count(ch) for ch in "♯♭")
+
+
+RARE_NAMES = frozenset({"C♭", "F♭", "E♯", "B♯"})   # letter-correct, but a player would read the plain name
+
+
+def is_rare(name: str) -> bool:
+    """C♭, F♭, E♯, B♯ or any double sharp/flat: spellings a player would never read outside a key that needs them."""
+    return name in RARE_NAMES or "♯♯" in name or "♭♭" in name
+
+
+def readable(name: str, pc: int, key=None) -> str:
+    """`name`, unless it is rare (is_rare) and the key (pitch class → name) does not itself spell it so: then the
+    fixed table's name for that note only (F°'s C♭ reads B; in G♭ major its C♭ stays)."""
+    if is_rare(name) and name not in set((key or {}).values()):
+        return pc_name(pc)
+    return name
 
 
 def degree_of(pc: int, reference: int) -> str:

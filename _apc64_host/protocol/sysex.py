@@ -71,6 +71,12 @@ def encode_view_report(view: UnitView) -> bytes:
     return akai_frame(PAD_MODE, bytes([code]))
 
 
+def view_request(view: UnitView) -> bytes:
+    """The host's pad-mode request, the report's own shape 'F0 47 00 53 19 00 01 <m> F7'. The unit obeys it
+    (Session, Note, Chord, Step, Custom verified live 2026-10-27) but does not report the change back."""
+    return encode_view_report(view)
+
+
 def oled_frames(text: OledText) -> tuple[bytes, bytes]:
     """Both OLED rows, each padded with spaces to 14 characters so a shorter name fully replaces a longer
     one: 'F0 47 00 53 10 00 <n+2> <row> <ascii…> 00 F7' (PROTOCOL-SPEC §6; rows/length [TBD], ≤14 safe)."""

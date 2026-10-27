@@ -6,7 +6,7 @@ The session decides; the application does the I/O. Every call returns one decisi
   Write       — write this record to slot 0 (OLED rows, notes to end at the target, whether a full backup of
                 slots 1–24 is due right after this write)
   Unchanged   — nothing to write (d7: identical pads under a new name); show the OLED rows
-  EdgeHit     — the step was refused at the edge of 0–127 (d29)
+  EdgeHit     — the step was refused at the edge of 0–127 (d29) or of the generator's window range
   Paused      — the unit is not in Custom view; nothing moves (d22)
   ShowOled    — only the OLED changes (Tempo cycled the interval)
   Ended       — the session is over: restore this record, or report the backup, or end quietly
@@ -19,10 +19,12 @@ Rules:
 - A Project-view report or a slot-0 read that differs from the last record written means the user changed
   projects on the unit: the session ends quietly — nothing written, no restore over the new project, the
   pre-session backup kept (§2.7 a5/q9). Coming back to a generated layout starts a fresh session.
+- Every activation asks for Custom view while the unit is not (known to be) in it, the first and each switch within
+  a running session alike (amended 2026-10-27: the unit obeys the request; activation is explicit intent).
 - At end, release, stop or SIGTERM, slot 0 is restored from the session backup only while it still holds the
   last record written (inv5, inv6); after an unplug the backup is named instead (d80, A43).
 """
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from typing import Callable
 
@@ -34,7 +36,7 @@ from .lab_section import INTERVAL_CYCLE, WINDOW_SHIFT, LabDefinition
 from .memory import full_backup_due
 from .pads import NoteSpan, PadGrid
 from .records import ProjectRecord, StripAssignment
-from .window import Edge, LabWindow
+from .window import Edge, LabWindow, StepWindow, WindowSpec, window_for
 
 CUSTOM_VIEW_OFF = "Custom view off"   # the page's message (d22, A38)
 CUSTOM_OFF_OLED = "Custom off"        # 'Custom view off' is 15 characters; the OLED shows 14 (a build decision)
@@ -66,6 +68,7 @@ class SessionLayout:
     render: Callable[[int], PadGrid] | None = field(default=None, compare=False)
     span: NoteSpan | None = None
     preview: ProjectRecord | None = None
+    window_spec: WindowSpec | None = None   # the generator's own window steps and range (None: Oct/5th/3rd)
 
     @property
     def generated(self) -> bool:
@@ -73,8 +76,12 @@ class SessionLayout:
 
     @classmethod
     def of_grid(cls, layout_id: str, name: str, render: Callable[[int], PadGrid],
-                definition: LabDefinition | None = None) -> "SessionLayout":
-        return cls(layout_id, name, definition, render, render(0).span())
+                definition: LabDefinition | None = None, window_spec: WindowSpec | None = None) -> "SessionLayout":
+        return cls(layout_id, name, definition, render, render(0).span(), window_spec=window_spec)
+
+    def new_window(self) -> "LabWindow | StepWindow":
+        """Where each activation starts (d38; a generator's own window at its start)."""
+        return window_for(self.window_spec)
 
     @property
     def strips(self) -> dict[int, StripAssignment]:
@@ -99,11 +106,13 @@ class Write:
 @dataclass(frozen=True)
 class Unchanged:
     oled: OledText
+    prompt_custom: bool = False   # an activation while the unit is in another view: ask for Custom all the same
 
 
 @dataclass(frozen=True)
 class EdgeHit:
     oled: OledText
+    flash: OledText | None = None   # shown briefly first ('Neck end'), then `oled` (2026-10-27)
 
 
 @dataclass(frozen=True)
@@ -115,6 +124,7 @@ class Paused:
 @dataclass(frozen=True)
 class ShowOled:
     oled: OledText
+    flash: OledText | None = None   # shown briefly first ('Step: Page'), then `oled`
 
 
 @dataclass(frozen=True)
@@ -138,7 +148,7 @@ Decision = NeedBackup | Write | Unchanged | EdgeHit | Paused | ShowOled | Ended 
 class LabSession:
     state: State = State.IDLE
     layout: SessionLayout | None = None
-    window: LabWindow = field(default_factory=LabWindow)
+    window: LabWindow | StepWindow = field(default_factory=LabWindow)
     view: UnitView | None = None
     backup: ProjectRecord | None = None
     backup_id: str | None = None
@@ -178,10 +188,13 @@ class LabSession:
             self.state = State.STARTING
             return NeedBackup()
         if self.state is State.STARTING:
-            self.layout, self.window = layout, LabWindow()
+            self.layout, self.window = layout, layout.new_window()
             return NeedBackup()
-        self.layout, self.window = layout, LabWindow()
-        return self._write_current(held)
+        self.layout, self.window = layout, layout.new_window()
+        decision = self._write_current(held)
+        if self.view is not UnitView.CUSTOM:   # activation is explicit intent: ask for Custom view again (d21)
+            decision = replace(decision, prompt_custom=True)
+        return decision
 
     def started(self, backup: ProjectRecord, backup_id: str, last_full_backup_at: float | None,
                 now: float) -> Decision:
@@ -199,13 +212,17 @@ class LabSession:
         if not self.active:
             return Ignored("no active session")
         span = layout.span
+        if isinstance(self.window, StepWindow) or layout.window_spec is not None:
+            # the generator's own window: kept while the new range holds it (a tweak of frets or tuning)
+            kept = self.window.within(layout.window_spec) if isinstance(self.window, StepWindow) else None
+            self.window = kept or layout.new_window()
         if layout.generated and span is not None and not span.fits(self.window.transposition()):
-            self.window = LabWindow()   # the new definition does not fit where the window was
+            self.window = layout.new_window()   # the new definition does not fit where the window was
         self.layout = layout
         return self._write_current(held)
 
     def _fresh(self, layout: SessionLayout):
-        self.layout, self.window = layout, LabWindow()
+        self.layout, self.window = layout, layout.new_window()
         self.backup = self.backup_id = self.last_written = None
 
     # --- playing -------------------------------------------------------------------------------------
@@ -226,7 +243,7 @@ class LabSession:
             return Ignored("a preview has no window")
         moved = self.window.shifted(steps, self.layout.span)
         if isinstance(moved, Edge):
-            return EdgeHit(moved.oled(self.layout.name))
+            return EdgeHit(moved.oled(self.layout.name), moved.flash(self.layout.name))
         self.window = moved
         return self._write_current(held)
 
@@ -238,7 +255,7 @@ class LabSession:
         if not self.layout.generated:
             return Ignored("a preview has no window")
         self.window = self.window.cycled()
-        return ShowOled(self.oled())
+        return ShowOled(self.oled(), self.window.flash_step(self.layout.name))
 
     def on_view(self, view: UnitView) -> Decision:
         """A pad-mode report: Custom resumes, Project ends quietly (§2.7), any other view pauses (d22)."""

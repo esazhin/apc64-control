@@ -2,9 +2,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
-import { connect, createHandlers, needsCardRefresh, needsOverviewRefresh } from './app.js';
+import { connect, createHandlers, needsCardRefresh, needsOverviewRefresh, pageFullscreen, showView } from './app.js';
 import { bannerView, headerView, unitBanner } from './banner.js';
 import { byClass, findAll, textOf } from './dom.js';
+import { FakeElement } from './fake_dom.js';
 import { learnCardView, learnPorts, toolbarView } from './learn.js';
 import { snapshot } from './page_fixtures.js';
 import { createStore, initialModel, reduce } from './state.js';
@@ -308,4 +309,80 @@ test('no page module asks the browser for MIDI access (A11)', () => {
     .filter((f) => f.endsWith('.js') && !f.endsWith('.test.js'))
     .filter((f) => readFileSync(new URL(f, import.meta.url), 'utf8').includes('requestMIDI' + 'Access'));
   assert.deepEqual(offenders, []);
+});
+
+// --- a module's view across the page: Full screen, Esc, the address's tab ---------------------------------------
+function fakeScreen({ refuse = false } = {}) {
+  const calls = [];
+  const screen = {
+    calls, on: false,
+    active: () => screen.on,
+    enter: () => { calls.push('enter'); if (refuse) return Promise.reject(new Error('denied')); screen.on = true; return Promise.resolve(); },
+    exit: () => { calls.push('exit'); screen.on = false; return Promise.resolve(); },
+  };
+  return screen;
+}
+
+test('Full screen opens the view and asks for full screen; leaving it (Esc) ends the view; Leave does both', async () => {
+  const screen = fakeScreen();
+  const store = storeWith();
+  const h = createHandlers(recordingApi().api, store, { fullscreen: screen });
+  await h.openView('harmony', { fullscreen: true });
+  assert.deepEqual([store.model.ui.view, screen.calls], [{ name: 'harmony', pinned: false }, ['enter']]);
+  h.fullscreenChanged(true);
+  assert.equal(store.model.ui.fullscreen, true);
+  screen.on = false;
+  h.fullscreenChanged(false);   // the browser's Esc
+  assert.deepEqual([store.model.ui.view, store.model.ui.fullscreen], [null, false]);
+  await h.openView('harmony', { fullscreen: true });
+  await h.closeView();
+  assert.deepEqual([store.model.ui.view, screen.calls], [null, ['enter', 'enter', 'exit']]);
+});
+
+test('where full screen is refused the view still fills the window until Leave; the address\'s view stays', async () => {
+  const refused = fakeScreen({ refuse: true });
+  const store = storeWith();
+  const h = createHandlers(recordingApi().api, store, { fullscreen: refused });
+  await h.openView('harmony', { fullscreen: true });
+  assert.equal(store.model.ui.view.name, 'harmony');
+  await h.closeView();
+  assert.equal(store.model.ui.view, null);
+  const screen = fakeScreen();
+  const tab = createHandlers(recordingApi().api, store, { fullscreen: screen });
+  store.dispatch({ type: 'view', name: 'harmony', pinned: true });
+  await tab.toggleFullscreen();
+  tab.fullscreenChanged(true);
+  await tab.toggleFullscreen();
+  tab.fullscreenChanged(false);
+  assert.deepEqual([store.model.ui.view, screen.calls], [{ name: 'harmony', pinned: true }, ['enter', 'exit']]);
+  await tab.closeView();
+  assert.equal(store.model.ui.view.name, 'harmony');
+  await createHandlers(recordingApi().api, store).toggleFullscreen();   // no Fullscreen API: nothing happens
+});
+
+test('the page shell hides while a view is shown, and the tab is named after it', () => {
+  const body = new FakeElement('body');
+  const doc = { title: 'APC64 Host' };
+  showView(body, doc, { name: 'harmony', pinned: true }, 'APC64 Host');
+  assert.deepEqual([body.classList.contains('page-view'), body.dataset.view, doc.title], [true, 'harmony', 'Harmony · APC64']);
+  showView(body, doc, null, 'APC64 Host');
+  assert.deepEqual([body.classList.contains('page-view'), body.dataset.view, doc.title], [false, '', 'APC64 Host']);
+  const css = readFileSync(new URL('./style.css', import.meta.url), 'utf8');
+  assert.match(css, /body\.page-view > \.screen, body\.page-view > \.foot \{ display: none; \}/);
+  const missing = pageFullscreen({ documentElement: {}, fullscreenElement: null });
+  assert.equal(missing.active(), false);
+  return missing.enter().then(() => assert.fail('no Fullscreen API'), () => {});
+});
+
+test('a view button asks the unit for that view in Play; Inspect only shows its card (2026-10-27)', async () => {
+  const { api, calls } = recordingApi({ press: { ok: false, status: 409, problem: 'the APC64 is not held; take control of it to switch it to note view' } });
+  const store = storeWith();
+  const h = createHandlers(api, store);
+  await h.view('view note');
+  assert.deepEqual(calls.filter((c) => c[0] !== 'card'), [['press', 'view note']]);
+  assert.match(store.model.ui.problem, /not held/);
+  calls.length = 0;
+  h.mode('inspect');
+  await h.view('view chord');
+  assert.deepEqual(calls, [['card', 'view chord']]);
 });

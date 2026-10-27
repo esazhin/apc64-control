@@ -20,7 +20,7 @@ examples from the author's setup; use the names `apc64 ports` lists on your mach
 - **Names:** controls are named as in layouts: `pad r1c1`…`pad r8c8` (row 1 at the bottom), `track 1`…`8`,
   `trackctl 1`…`8`, `scene 1`…`8`, `stripmode 1`…`6`, `strip 1`…`8`, `strip 1 touch`, `tempo`, `clear`,
   `duplicate`, `quantize`, `fixed`, `undo`, `play`, `rec`, `stop`, `up`, `down`, `left`, `right`, `recarm`,
-  `mute`, `solo`, `clipstop`, `shift`, `encoder`, `encoder press`, and the unit's own `view session`, `view note`,
+  `mute`, `solo`, `clipstop`, `shift`, `encoder`, `encoder press`, and the view buttons `view session`, `view note`,
   `view chord`, `view step`, `view project`, `view custom`. In a URL, encode the space (`pad%20r1c1`).
   A layout is named by its file name without `.yaml` (`jam`); its display name (`Jam`) is accepted where a layout
   is loaded.
@@ -196,9 +196,17 @@ curl -s -X POST 'http://127.0.0.1:5058/api/control/pad%20r1c1/press' -H 'content
 curl -s -X POST 'http://127.0.0.1:5058/api/control/pad%20r1c1/release' -H 'content-type: application/json' -d '{}'
 curl -s -X POST 'http://127.0.0.1:5058/api/control/strip%204/move' -H 'content-type: application/json' -d '{"value":16383}'
 ```
-Answers: the state. Refused with 400: an unknown control, the unit's own view buttons
-(`view note is the unit's own button; it never reaches the host`), a move on a control that does not move.
+Answers: the state. Refused with 400: an unknown control, `view project` (`view project stays the unit's own
+button: the host does not switch to Project view …`), a move on a control that does not move.
 Replica input works when no APC64 is attached: the bound MIDI is still sent.
+
+**View buttons** (2026-10-27): pressing `view session`, `view note`, `view chord`, `view step` or `view custom`
+sends the pad-mode request `F0 47 00 53 19 00 01 <m> F7` (0, 2, 3, 6, 9) to the unit, which switches. The unit
+does not report a requested change back, so the host takes it as the unit's view at once (`unit.view` in the
+state answered), exactly as if the button had been pressed on the unit: Session view's pads are repainted by the
+host, and a lab session pauses or resumes its window (`Custom view off`). The unit's own reports still win. While
+the host does not hold the unit: 409 `the APC64 is not held; take control of it to switch it to note view`.
+Releasing a view button does nothing (200).
 
 ## Reading controls
 
@@ -220,7 +228,7 @@ Replica input works when no APC64 is attached: the bound MIDI is still sent.
  "layout": "jam", "page": 1, "bank": 1, "layer": "base", "base_hash": "67137b308ee0b9c5…"}
 ```
 `role` is `bindable`, `navigation` (scene and strip-mode buttons), `modifier` (Shift) or `device_local` (the
-unit's own view buttons). `reachable` says whether the Shift layer of that control is known to reach the host.
+view buttons: never bindable; pressed here they switch the unit, see above). `reachable` says whether the Shift layer of that control is known to reach the host.
 `base_hash` is the layout file's hash when the card was read: send it with a tweak. Unknown control: 400.
 
 ### `GET /api/overview` — every page and bank of the live layout

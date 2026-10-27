@@ -20,6 +20,7 @@ Source of message formats: Bitwig's MIT APC64 extension; every row below seen li
 | Shift | note 120 |
 | Strip mode Device/Vol/Pan/Sends/Channel/Off | notes 121–126 |
 | Pad-mode change | `F0 47 00 53 19 00 01 <m> F7`: 0 Session, 2 Note, 3 Chord, 6 Step, 8 Project, 9 Custom |
+| Pad-mode request (host → unit) | the same frame sent to the unit: **obeyed, not echoed** (2026-10-27, below) |
 
 Host → device: OLED text `F0 47 00 53 10 00 <len> <row> <ascii…> 00 F7` (verified: rows 0/1);
 pad LED = note-on `0x90|behaviour`, note = pad, velocity = Ableton-palette colour (ch 6 = full,
@@ -37,6 +38,14 @@ so a host can give each a second function. Device-local, never reaching the host
 buttons (Shift opens their config pages) and the project menu (save / save as); during the pass the
 unit switched itself to Project mode (`19 00 01 08`) right after Shift + scene 4. Not covered:
 shifted grid pads, track buttons, track-control row and scenes 5–8.
+
+**Pad-mode request (verified 2026-10-27).** The unit obeys the host's `F0 47 00 53 19 00 01 <m> F7`: with the
+unit in Session view the host sent m = 9 and the unit switched to Custom view. It does **not** report the change
+back (no `19 00 01 <m>` follows); it still reports every press of its own view buttons. So the host takes a
+request it sent as the new view at once, and a later report from the unit overrides it. Verified for 9 (Custom);
+0, 2, 3, 6 are the same frame, used by the replica's view buttons, to be confirmed one by one; 1 Overview and
+5 Drum are only [CODE] and not requested. After a requested Session view no report comes to repaint on, so the
+host repaints the Session grid itself (at once and again ~150 ms later).
 
 ## Global settings (separate from projects) — the Global Menu (manual v1.1 §5.6)
 Read: `F0 47 00 53 17 00 00 F7` → `F0 47 00 53 18 00 40 <64 packed bytes> F7` (56 raw bytes).
@@ -92,6 +101,10 @@ the unit's current one.
 - **Custom port:** strip 1 = `B0 10 00..7F` (project CC 16, 7-bit); pad = `90 18 vv` with real velocity
   (`26`, `3B`). Shift + pad: Shift arrives on the DAW port, and the pad note still arrives on the Custom
   port, so a host that reads the Custom port can treat Shift + pad as a command and not forward the note.
+- **Rechecked 2026-10-27 (amidi on all four ports, every button):** in Session view all 8 track buttons
+  (100–107), all 8 track-control buttons (64–71) and all 8 scene buttons (112–119) reach the host; after the
+  unit reported Custom view (`19 00 01 09`) the same 24 presses sent nothing on any port, and only Shift (120)
+  still arrived. In Custom view those buttons cannot carry commands; Shift + pad can.
 - Corrects the 2026-10-23 table, which listed only Shift and 72 (Play and Stop were not pressed then).
 
 ## Slot-0 writes under DAW mode in Custom view (verified 2026-10-25, contract 2 a1–a4)

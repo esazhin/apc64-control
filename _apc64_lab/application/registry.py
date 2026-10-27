@@ -18,8 +18,8 @@ from typing import Iterable
 from _apc64_host.domain.issues import DomainInvariantError
 
 from ..domain.generators import (
-    BUILTIN_GENERATORS, BUILTIN_SCHEMES, ColourScheme, GeneratorFault, PadLayoutGenerator, ParamSpec, defaults,
-    out_of_range, raw_notes,
+    BUILTIN_GENERATORS, BUILTIN_SCHEMES, ColourScheme, GeneratorFault, PadLayoutGenerator, ParamSpec, channels_of,
+    configure, defaults, marks_of, out_of_range, raw_notes, scheme_params, window_of,
 )
 from ..domain.lab_section import LabDefinition
 from ..domain.pads import Rgb
@@ -46,7 +46,7 @@ class Listed:
 
     def to_json(self) -> dict:
         found = {"name": self.name, "file": self.file}
-        if self.kind == GENERATOR:
+        if self.kind == GENERATOR or self.params:   # a scheme lists its parameters when it has any
             found["params"] = [p.describe() for p in self.params]
         if self.broken:
             found.update(broken=True, error=self.error)
@@ -64,6 +64,9 @@ def _generator_problem(candidate) -> str | None:
     values = defaults(params)
     try:
         notes = raw_notes(candidate, values)
+        marks_of(candidate, values)
+        channels_of(candidate, values)
+        window_of(candidate, values)
     except GeneratorFault as fault:
         return str(fault)
     problem = out_of_range(notes, values)
@@ -78,8 +81,13 @@ def _scheme_problem(candidate) -> str | None:
         return "does not implement ColourScheme (name, colour(note, root))"
     if not _NAME.match(name):
         return f'"{name}" is not a scheme name; use lower-case letters, digits and "-"'
+    params = getattr(candidate, "params", ())
+    if not isinstance(params, (tuple, list)) or not all(isinstance(p, ParamSpec) for p in params):
+        return "its params are not a tuple of ParamSpec"
+    if params and not callable(getattr(candidate, "configured", None)):
+        return "has params but no configured(values)"
     try:
-        rest, pressed = candidate.colour(60, 0)
+        rest, pressed = configure(candidate).colour(60, 0)
         Rgb.of(rest), Rgb.of(pressed)
     except Exception as error:   # a plugin may fail any way; it is listed, never used
         return str(error) or type(error).__name__
@@ -125,7 +133,8 @@ class GeneratorRegistry:
                 refusals.append(message)
                 log.warning("lab: %s", message)
                 continue
-            params = tuple(getattr(candidate, "params", ())) if kind == GENERATOR and problem is None else ()
+            params = ((tuple(getattr(candidate, "params", ())) if kind == GENERATOR else scheme_params(candidate))
+                      if problem is None else ())
             self._listed.append(Listed(name, kind, file, params, problem))
             if problem is not None:
                 log.warning("lab: %s %s (%s) is broken: %s", kind, name, file, problem)
@@ -175,16 +184,47 @@ class IndexedLayout:
 
 class DefinitionIndex:
     """The generated layouts the lab has seen: every valid 'lab:' section compiled (by layout id), named once
-    the engine loads the layout or the host's catalog tells (the composition wires the catalog's names)."""
+    the engine loads the layout or the host's catalog tells (the composition wires the catalog's names). A layout
+    whose 'lab:' section did not compile (an unknown generator, a bad parameter) is kept as invalid with its first
+    error, so the panel lists it with the reason rather than leaving it out (2026-10-27). Once the host's catalog
+    has told which layouts are invalid (rejected()), only those are listed so: a refused tweak or a draft checked
+    under the same file name compiles too, but leaves the layout in the library as it was."""
 
     def __init__(self):
         self._lock = threading.Lock()
         self._definitions: dict[str, LabDefinition] = {}
         self._names: dict[str, str] = {}
+        self._invalid: dict[str, str] = {}
+        self._rejected: set[str] | None = None   # the host library's invalid layouts (None: not told yet)
 
     def record(self, layout_id, definition: LabDefinition) -> None:
         with self._lock:
             self._definitions[str(layout_id)] = definition
+            self._invalid.pop(str(layout_id), None)
+
+    def failed(self, layout_id, reason: str) -> None:
+        """The layout's 'lab:' section did not compile: listed as invalid with `reason` until it compiles."""
+        with self._lock:
+            self._invalid[str(layout_id)] = str(reason)   # the last good definition stays (a refused tweak)
+
+    def rejected(self, layout_ids) -> None:
+        """The layouts the host's library holds as invalid now."""
+        with self._lock:
+            self._rejected = {str(i) for i in layout_ids}
+
+    def invalid(self) -> list[tuple[str, str, str]]:
+        """(layout id, name, reason) of each layout whose 'lab:' section does not compile, by id."""
+        with self._lock:
+            return [(i, self._names.get(i, i), r) for i, r in sorted(self._invalid.items())
+                    if self._rejected is None or i in self._rejected]
+
+    def listing(self) -> list[dict]:
+        """The panel's generated layouts: the valid ones, then the invalid ones with their reason."""
+        invalid = self.invalid()
+        broken = {i for i, _, _ in invalid}
+        valid = [{"layout": i.layout_id, "name": i.name, "generator": i.definition.generator, "valid": True}
+                 for i in self.all() if i.layout_id not in broken]
+        return valid + [{"layout": i, "name": n, "valid": False, "error": r} for i, n, r in invalid]
 
     def named(self, layout_id, name: str | None) -> None:
         if name:
@@ -195,6 +235,7 @@ class DefinitionIndex:
         with self._lock:
             self._definitions.pop(str(layout_id), None)
             self._names.pop(str(layout_id), None)
+            self._invalid.pop(str(layout_id), None)
 
     def all(self) -> list[IndexedLayout]:
         with self._lock:

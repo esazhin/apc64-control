@@ -24,7 +24,7 @@ from _apc64_lab.domain.lab_section import INTERVAL_CYCLE, WINDOW_SHIFT
 from _apc64_lab.domain.memory import BackupId, OutcomeCode
 from _apc64_lab.domain.note_target import NoteTarget
 from _apc64_lab.domain.session import RESTORED_MESSAGE
-from _apc64_lab.generators import root_highlight
+from _apc64_lab.generators import guitar, modes, root_highlight, scale
 
 TONNETZ_C = "name: Tonnetz C\nlab:\n  generator: tonnetz\n  base: 48\n"
 TONNETZ_C_COPY = "name: Tonnetz C copy\nlab:\n  generator: tonnetz\n  base: 48\n"
@@ -34,7 +34,10 @@ BACKUP = "slot0-2026-10-24T20-15"
 
 class Source:
     def discover(self):
-        return [("_apc64_lab/generators/root_highlight.py", root_highlight.SCHEME)]
+        return [("_apc64_lab/generators/guitar.py", guitar.GENERATOR),
+                ("_apc64_lab/generators/modes.py", modes.GENERATOR),
+                ("_apc64_lab/generators/root_highlight.py", root_highlight.SCHEME),
+                ("_apc64_lab/generators/scale.py", scale.SCHEME)]
 
 
 class Rig:
@@ -156,9 +159,11 @@ def test_the_full_backup_steps_aside_for_an_encoder_shift():   # §2.7 a5/q9: ne
     assert rig.backups.sets()[0].covers_stored_slots
 
 
-def test_outside_custom_view_slot_0_is_written_and_press_custom_shows_after_1_s():   # A23, d21
+def test_outside_custom_view_slot_0_is_written_and_press_custom_shows_after_1_s():   # A23, d21 (as amended)
     rig = Rig()
     rig.service.on_held(object())
+    # the request cannot be sent (the gate dropped it): only then 'Press Custom' (2026-10-27)
+    rig.memory.request_view = lambda view=UnitView.CUSTOM: rig.memory.views.append(view) and False
     rig.load()
     assert rig.r1c1() == 48 and rig.memory.views == [UnitView.CUSTOM]
     rig.clock.advance(0.9)
@@ -167,6 +172,29 @@ def test_outside_custom_view_slot_0_is_written_and_press_custom_shows_after_1_s(
     assert rig.oled == ("Tonnetz C", "Press Custom") and rig.service.message == "Press Custom"
     rig.service.on_view(UnitView.CUSTOM)
     assert rig.oled == ("Tonnetz C", "Oct +0") and rig.service.message is None
+
+
+def test_a_sent_custom_request_shows_no_prompt():   # d21 as amended 2026-10-27: the unit obeys, never echoes
+    rig = Rig()
+    rig.service.on_held(object())
+    rig.load()
+    assert rig.memory.views == [UnitView.CUSTOM]
+    rig.clock.advance(1.5)
+    assert rig.oled == ("Tonnetz C", "Oct +0") and rig.service.message is None
+
+
+def test_activation_in_a_running_session_asks_for_custom_while_the_unit_is_elsewhere():   # d21/d22, 2026-10-27
+    rig = Rig().running()
+    rig.service.on_view(UnitView.SESSION)              # the user pressed Session on the unit
+    assert rig.service.message == "Custom view off"
+    rig.memory.views.clear()
+    rig.load("name: Fourths\nlab:\n  generator: isomorphic\n", "fourths.yaml")
+    assert rig.memory.views == [UnitView.CUSTOM]       # a switch within the session asks too
+    rig.load("name: Fourths\nlab:\n  generator: isomorphic\n", "fourths.yaml")
+    rig.service.on_view(UnitView.CUSTOM)               # as the host reports it once the request was sent
+    rig.memory.views.clear()
+    rig.service.on_layout_loaded(*_with_section(rig.layout(TONNETZ_C, "tonnetz-c.yaml")))
+    assert rig.memory.views == []                      # in Custom view already: no request
 
 
 def test_custom_view_reported_in_time_shows_no_prompt():
@@ -440,11 +468,83 @@ def test_the_state_shows_the_window_the_backup_and_the_note_target():   # §3.5,
     active = state["active"]
     assert (active["layout"], active["interval"], active["offset"]) == ("tonnetz-c", "5th", 2)
     assert active["counts"] == {"octave": 0, "fifth": 2, "third": 0} and active["session_backup"] == BACKUP
-    assert active["pads"][0] == {"pad": "r1c1", "note": 62, "rest": active["pads"][0]["rest"], "silent": False}
+    assert active["pads"][0] == {"pad": "r1c1", "note": 62, "rest": active["pads"][0]["rest"], "silent": False,
+                                 "name": "D"}
+    assert active["rows"] is None and active["scale"] is None
     assert state["target"] == {"default": "MPC Live III MIDI 1 ch 2 aftertouch pass", "routed": True,
                                "from": "default", "text": "MPC Live III MIDI 1 ch 2 aftertouch pass"}
-    assert [g["name"] for g in state["generators"]] == ["tonnetz", "isomorphic"]
+    assert [g["name"] for g in state["generators"]] == ["tonnetz", "isomorphic", "guitar", "modes"]
+    assert active["neck"] is None and active["window"]["steps"] == ["Oct", "5th", "3rd"]
     assert rig.publisher.of_kind("lab")[-1].active["offset"] == 2
+
+
+def test_the_state_gives_the_pad_grid_its_row_names_and_the_scale_spelled_in_key():
+    rig = Rig().running()
+    rig.load("name: Modes\nlab:\n  generator: modes\n  base: 49\n  scheme: scale\n  scale: locrian\n", "modes.yaml")
+    active = rig.service.state().to_json()["active"]
+    assert active["rows"][:2] == ["Locrian", "Phrygian"] and active["rows"][-1] == "Chromatic"
+    assert active["scale"]["key"] == "locrian" and active["scale"]["root_name"] == "C♯"
+    assert active["definition"]["scheme_params"] == {"scale": "locrian"}
+    by_pad = {p["pad"]: p for p in active["pads"]}
+    assert by_pad["r1c2"]["name"] == "D" and by_pad["r1c4"]["name"] == "F♯"   # C♯ Locrian: C♯ D E F♯ G A B
+    assert by_pad["r2c5"]["name"] == "G♯"                       # C♯ Phrygian's 5: each row is spelled in its mode
+
+
+def test_the_playing_layouts_key_reaches_the_harmony_views():   # spelling from context (2026-10-27)
+    rig = Rig()
+    keys = []
+    rig.service._on_key = keys.append
+    rig.running()
+    assert keys[-1] is None                                           # Tonnetz C, scheme fifths: no key
+    rig.load("name: Modes\nlab:\n  generator: modes\n  base: 49\n  scheme: scale\n  scale: locrian\n", "modes.yaml")
+    assert keys[-1][1] == "C♯" and keys[-1][6] == "F♯" and rig.service.key() == keys[-1]
+    rig.service.leave()
+    assert keys[-1] is None
+
+
+GUITAR = "name: Guitar\nlab:\n  generator: guitar\n  tuning: drop-d\n"
+
+
+def test_a_guitar_layout_moves_by_fret_and_page_and_the_state_gives_the_neck():   # the guitar amendment
+    rig = Rig().running()
+    rig.load(GUITAR, "guitar.yaml")
+    assert rig.oled == ("Guitar", "Frets 0-7")
+    assert rig.slot0.pad(PadPos(2, 1)).note == 38 and rig.slot0.pad(PadPos(2, 1)).channel == 6
+    assert rig.slot0.pad(PadPos(7, 8)).note == 71 and rig.slot0.pad(PadPos(7, 8)).channel == 1
+    rig.turn(+2)
+    rig.tempo()
+    rig.turn(+1)
+    rig.service.drain()
+    assert rig.oled == ("Guitar", "Frets 8-15") and rig.slot0.pad(PadPos(2, 1)).note == 46
+    active = rig.service.state().to_json()["active"]
+    assert (active["interval"], active["offset"], active["transposition"]) == ("Page", 8, 8)
+    assert active["window"] == {"steps": ["Fret", "Page"], "step": "Page", "position": 8, "label": "Page 8-15",
+                                "lowest": 0, "highest": 17, "pages": [0, 8, 16, 17], "shown": 8, "unit": "Frets"}
+    assert active["neck"]["first"] == 8 and active["neck"]["frets"] == 24
+    assert active["neck"]["strings"][-1] == {"string": 6, "open": 38, "name": "D", "channel": 6}
+    assert active["rows"][1] == "6 D" and active["rows"][0] == "" and active["pads"][8]["name"] == "B♭"   # r2c1: low D + 8
+    assert rig.service.transposition_of("guitar") == 8                      # q3: push stores the window
+
+
+def test_a_guitar_flashes_the_step_kind_and_the_neck_end_for_a_second():   # 2026-10-27
+    rig = Rig().running()
+    rig.load(GUITAR, "guitar.yaml")
+    rig.tempo()
+    assert rig.oled == ("Guitar", "Step: Page")
+    rig.clock.advance(1.1)
+    assert rig.oled == ("Guitar", "Frets 0-7")
+    rig.turn(-1)                                       # past the nut: refused
+    assert rig.oled == ("Guitar", "Neck end")
+    rig.clock.advance(0.5)
+    rig.tempo()                                        # a newer toggle cancels the pending flash's end …
+    assert rig.oled == ("Guitar", "Step: Fret")
+    rig.clock.advance(0.6)                             # … the first flash's second is up: nothing changes
+    assert rig.oled == ("Guitar", "Step: Fret")
+    rig.clock.advance(0.5)
+    assert rig.oled == ("Guitar", "Frets 0-7")
+    rig.turn(+1)
+    rig.service.drain()
+    assert rig.oled == ("Guitar", "Frets 1-8")         # a step shows the frets at once
 
 
 def test_without_a_target_the_state_says_notes_are_only_shown():   # §2.7 q2

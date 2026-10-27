@@ -84,7 +84,8 @@ def test_the_registry_over_real_discovery(plugins):   # A18, A19, A20
     assert "grey" in registry.schemes() and "wicki-hayden" in registry.generators()
 
 
-def test_the_shipped_plugin_directory():   # s18 (the root-highlight scheme ships)
+def test_the_shipped_plugin_directory():   # s18 (the guitar and modes generators, the root-highlight and scale schemes)
     found = PluginDiscovery().discover()
-    assert [f for f, _ in found] == ["_apc64_lab/generators/root_highlight.py"]
-    assert found[0][1].name == "root-highlight"
+    assert [f for f, _ in found] == ["_apc64_lab/generators/guitar.py", "_apc64_lab/generators/modes.py",
+                                     "_apc64_lab/generators/root_highlight.py", "_apc64_lab/generators/scale.py"]
+    assert [p.name for _, p in found] == ["guitar", "modes", "root-highlight", "scale"]

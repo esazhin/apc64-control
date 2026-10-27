@@ -131,7 +131,10 @@ def test_a_replica_press_sends_exactly_what_a_hardware_press_sends(rig):
 
 
 def test_replica_input_refuses_what_cannot_be_done(rig):
-    assert post(rig, "/api/control/view note/press").status_code == 400
+    not_held = post(rig, "/api/control/view note/press")
+    assert not_held.status_code == 409 and not_held.json()["problem"].startswith("the APC64 is not held")
+    project = post(rig, "/api/control/view project/press")
+    assert project.status_code == 400 and "Project view" in project.json()["problem"]
     assert post(rig, "/api/control/pad r9c1/press").json()["problem"].startswith("no such pad")
     assert post(rig, "/api/control/pad r1c1/move", {"value": 3}).status_code == 400
     assert post(rig, "/api/control/strip 1/move", {"value": 20000}).json()["problem"] == "value must be 0–16383"
@@ -268,3 +271,17 @@ def test_responses_are_the_view_models_dicts_and_sockets_go_to_the_hub(tmp_path)
         with client.websocket_connect(WS_BASE + "/ws/play") as ws:
             assert ws.receive_json() == {"channel": "play"}
     assert accepted == ["state", "play"]
+
+
+# --- the replica's view buttons switch the unit (2026-10-27) ----------------------------------------------------
+def test_a_replica_view_button_switches_the_unit_and_the_host_assumes_the_view(rig):
+    post(rig, "/api/unit/take", {"source": "agent"})
+    custom = post(rig, "/api/control/view custom/press")
+    assert custom.status_code == 200 and custom.json()["unit"]["view"] == "custom"   # assumed at once: no echo
+    assert rig.sim.current_view.value == "custom"                                     # the unit obeyed
+    assert rig.sim.written[-1] == bytes.fromhex("F0 47 00 53 19 00 01 09 F7")
+    assert post(rig, "/api/control/view custom/release").status_code == 200
+    before = len(rig.sim.written)
+    session = post(rig, "/api/control/view session/press")
+    assert session.json()["unit"]["view"] == "session" and rig.sim.current_view.value == "session"
+    assert len(rig.sim.written) - before > 64   # the request, then Session view's pads repainted

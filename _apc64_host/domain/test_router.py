@@ -142,3 +142,45 @@ def test_replaying_the_same_performance_routes_identically():   # A119, inv10
                 messages.append(NoteOff(1, 40 + (n - 1) % 12))
         return play(r, *messages)
     assert performance() == performance()
+
+
+# --- the guitar amendment (contract 2, 2026-10-27): a string per channel on the Custom port -----------------
+def custom(r, *messages):
+    return play(r, *messages, role=CUSTOM, view=UnitView.CUSTOM)
+
+
+def events(effects):
+    return [e.event for e in effects if isinstance(e, Play)]
+
+
+def test_every_string_channel_reaches_the_target_on_the_rules_channel():
+    r = router(RoutingRule(CUSTOM, "mpc", 2))
+    effects = custom(r, NoteOn(1, 64, 90), NoteOn(6, 45, 70), PolyAftertouch(6, 45, 30), NoteOff(6, 45), NoteOff(1, 64))
+    assert sent(effects) == [NoteOn(2, 64, 90), NoteOn(2, 45, 70), PolyAftertouch(2, 45, 30), NoteOff(2, 45),
+                             NoteOff(2, 64)]
+    assert [(e.kind, e.note, e.channel) for e in events(effects)] == [
+        ("note_on", 64, 1), ("note_on", 45, 6), ("aftertouch", 45, 6), ("note_off", 45, 6), ("note_off", 64, 1)]
+
+
+def test_one_pitch_on_two_strings_is_two_sounding_notes_until_each_lets_go():
+    r = router(RoutingRule(CUSTOM, "mpc", 1))
+    custom(r, NoteOn(6, 45, 80), NoteOn(5, 45, 60))          # low E fret 5 and the open A
+    assert sorted(n.note for n in r.sounding()) == [45, 45]
+    custom(r, NoteOff(5, 45))
+    assert [(n.note, n.velocity) for n in r.sounding()] == [(45, 80)]
+    custom(r, NoteOff(6, 45))
+    assert r.sounding() == ()
+
+
+def test_ending_a_note_ends_it_on_every_string_and_absorbs_each_release():   # d47 with several channels
+    r = router(RoutingRule(CUSTOM, "mpc", 1))
+    custom(r, NoteOn(6, 45, 80), NoteOn(5, 45, 60))
+    ended = r.end_notes([45], CUSTOM, UnitView.CUSTOM)
+    assert sent(ended) == [NoteOff(1, 45), NoteOff(1, 45)]
+    assert sorted(e.channel for e in events(ended)) == [5, 6] and r.sounding() == ()
+    assert sent(custom(r, NoteOff(6, 45), NoteOff(5, 45))) == []
+
+
+def test_without_a_rule_the_channel_is_still_reported():
+    r = router()
+    assert [(e.note, e.channel, e.reason) for e in events(custom(r, NoteOn(3, 55, 70)))] == [(55, 3, NOT_ROUTED)]

@@ -1,0 +1,9 @@
+# Guitar: a 6-string neck in E standard (docs/lab-guide.md). Rows are strings, the high E on row 7 and the low E on
+# row 2 (rows 1 and 8 stay silent); columns are frets, the open strings in column 1. Each string sends on its own
+# channel (string 1, the high E, on channel 1 … the low E on 6). The encoder moves a fret, or a page with Tempo.
+name: Guitar
+lab:
+  generator: guitar
+  tuning: e-standard  # the open strings, low to high: 40 45 50 55 59 64 (E1 A1 D2 G2 B2 E3; C3 = 60)
+  frets: 24           # the neck's length: the window shows frets 0-7 up to 17-24
+  scheme: fifths      # every place of a note shares its colour

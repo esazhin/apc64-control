@@ -1,0 +1,9 @@
+# Guitar 8: an 8-string neck in F# standard (docs/lab-guide.md). All 8 rows are strings, the low F# on row 1 and
+# the high E on row 8; columns are frets from the open strings. String 1 (high E) sends on channel 1 … the low F#
+# on 8. The encoder moves a fret, or a page with Tempo.
+name: Guitar 8
+lab:
+  generator: guitar
+  tuning: fs-standard-8  # 30 35 40 45 50 55 59 64 (F#0 B0 E1 A1 D2 G2 B2 E3; C3 = 60)
+  frets: 24
+  scheme: fifths

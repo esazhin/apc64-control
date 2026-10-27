@@ -37,6 +37,7 @@ from _apc64_host.domain.layout import UnitPortRole
 from _apc64_host.domain.oled import OledText
 from _apc64_host.domain.unit_status import ReleaseReason
 
+from ..domain.harmony.spelling import pc_name
 from ..domain.lab_section import LabDefinition
 from ..domain.memory import (
     EDIT_BUFFER, BackupId, OutcomeCode, OutcomeKind, Slot, WriteOutcome,
@@ -57,7 +58,8 @@ from .registry import DefinitionIndex, GeneratorRegistry
 log = logging.getLogger(__name__)
 SETTLE = 0.03          # the burst has settled when no write came for this long: then read back
 POLL = 0.002           # how often a wait checks for a newer write (inv7)
-CUSTOM_PROMPT_AFTER = 1.0   # d21: 'Press Custom' when the unit is not in Custom view 1 s after activation
+FLASH_FOR = 1.0        # a brief OLED message ('Step: Page', 'Neck end') before row 2 shows the window again
+CUSTOM_PROMPT_AFTER = 1.0   # d21: 'Press Custom' 1 s after an activation whose Custom request could not be sent
 _RELEASE_TO_END = {ReleaseReason.RELEASE: EndReason.RELEASE, ReleaseReason.STOP: EndReason.STOP,
                    ReleaseReason.UNPLUG: EndReason.GONE, ReleaseReason.FAULT: EndReason.RELEASE}
 
@@ -230,7 +232,7 @@ class SessionService:
                  publisher: LabStatePublisher | None = None, control: UnitControl | None = None,
                  held_notes: Callable[[], Iterable[int]] = tuple, index: DefinitionIndex | None = None,
                  target: NoteTarget | None = None, wall: Callable[[], datetime] = datetime.now,
-                 threaded: bool = True, settle: float = SETTLE):
+                 threaded: bool = True, settle: float = SETTLE, on_key: Callable[[dict | None], None] | None = None):
         self._writer, self._backups, self._registry, self._link = writer, backups, registry, link
         self._publisher = publisher or NullPublisher()
         self._control = control
@@ -238,6 +240,7 @@ class SessionService:
         self._index = index
         self.target = target
         self._wall = wall
+        self._on_key = on_key                   # the harmony tracker's set_key: the active layout's key spelling
         self._lock = threading.RLock()
         self._session = LabSession()
         self._layout = None                     # the engine's layout (host or generated)
@@ -249,6 +252,7 @@ class SessionService:
         self._last_sent: ProjectRecord | None = None
         self._earlier = 0
         self._message: str | None = None
+        self._flash = 0                         # bumped by every OLED change: a newer one cancels a pending flash
         self._recovery: BackupId | None = None
         self._last_full: dict | None = None
         self.slot0 = Slot0Writer(writer, self._written_cb, self._read_back_cb, self._fault_cb, threaded, settle,
@@ -291,7 +295,8 @@ class SessionService:
                             self._message,
                             {"backup": self._recovery, "message": recovery_text(self._recovery)}
                             if self._recovery else None,
-                            self._target_json(), tuple(listing["refusals"]))
+                            self._target_json(), tuple(listing["refusals"]),
+                            tuple(self._index.listing()) if self._index is not None else ())
 
     def _active_json(self) -> dict | None:
         session = self._session
@@ -301,16 +306,41 @@ class SessionService:
         window = session.window
         record = session.last_written
         return {"layout": str(layout.layout_id), "name": layout.name, "preview": not layout.generated,
-                "interval": window.interval.label, "offset": window.count(),
-                "counts": {interval.name.lower(): n for interval, n in window.counts},
-                "transposition": window.transposition(),
+                **window.to_json(),   # interval, offset, counts, transposition and the window's steps
                 "unit_view": str(session.view) if session.view is not None else None,
                 "session_backup": session.backup_id, "oled": list(session.oled().rows),
                 "starting": session.state is State.STARTING,
                 "definition": {"generator": layout.definition.generator, "params": layout.definition.parameters,
-                               "scheme": layout.definition.scheme} if layout.definition is not None else None,
-                "pads": [{"pad": str(pos).removeprefix("pad "), "note": pad.note, "rest": pad.rest.to_hex(), "silent": pad.silent}
-                         for pos, pad in _pads(record)] if record is not None else []}
+                               "scheme": layout.definition.scheme,
+                               "scheme_params": dict(layout.definition.scheme_params)}
+                if layout.definition is not None else None,
+                **self._grid_extras(layout.definition, record, window.transposition())}
+
+    def _grid_extras(self, definition: LabDefinition | None, record, transposition: int) -> dict:
+        """What the harmony pad grid needs beyond the pads: the generator's row names (the modes explorer's) and
+        the scheme's scale overlay, and each pad's name: the generator's own spelling (each modes row in its
+        mode), else the overlay's scale where the note is in it, else the fixed table; and a fretboard generator's
+        neck (its strings, frets and channels) with the fret the window puts in column 1 ('first')."""
+        rows = overlay = own = neck = None
+        if definition is not None:
+            try:
+                rows = definition.row_labels(self._registry.generators())
+                overlay = definition.overlay(self._registry.schemes())
+                own = definition.pad_names(self._registry.generators(), transposition)
+                neck = definition.neck(self._registry.generators())
+            except Exception:   # a nicety for the page: never in the way of the state
+                log.exception("lab: the pad grid's labels failed")
+        names = dict(overlay.names) if overlay is not None else {}
+
+        def name(i, pad):
+            if pad.silent:
+                return None
+            return (own[i] if own and own[i] else None) or names.get(pad.note % 12) or pc_name(pad.note)
+        pads = [{"pad": str(pos).removeprefix("pad "), "note": pad.note, "rest": pad.rest.to_hex(), "silent": pad.silent,
+                 "name": name(i, pad)} for i, (pos, pad) in enumerate(_pads(record))] if record is not None else []
+        return {"pads": pads, "rows": list(rows) if rows else None,
+                "scale": overlay.to_json() if overlay is not None else None,
+                "neck": {**neck.to_json(), "first": transposition} if neck is not None else None}
 
     def _target_json(self) -> dict:
         default = self.target.text() if self.target else None
@@ -329,6 +359,25 @@ class SessionService:
             self._publisher.publish(self.state())
         except Exception:
             log.exception("lab: publishing the lab state failed")
+        if self._on_key is not None:
+            try:
+                self._on_key(self.key())
+            except Exception:
+                log.exception("lab: handing the layout's key to the harmony views failed")
+
+    def key(self) -> dict | None:
+        """The playing layout's key spelling (its scale overlay's names, pitch class → name), or None: the harmony
+        views spell held notes in it when they form no chord (2026-10-27)."""
+        with self._lock:
+            layout = self._session.layout if self.running else None
+        definition = layout.definition if layout is not None else None
+        if definition is None:
+            return None
+        try:
+            overlay = definition.overlay(self._registry.schemes())
+        except Exception:   # a nicety: never in the way of the state
+            return None
+        return dict(overlay.names) if overlay is not None and overlay.names else None
 
     # === the host's events (the loop; never blocking) ======================================================
     def on_held(self, unit=None) -> None:
@@ -506,7 +555,8 @@ class SessionService:
     # === internals =========================================================================================
     def _session_layout(self, layout_id: str, name: str, definition: LabDefinition) -> SessionLayout:
         generators, schemes = self._registry.generators(), self._registry.schemes()
-        return SessionLayout.of_grid(layout_id, name, lambda t: definition.grid(generators, schemes, t), definition)
+        return SessionLayout.of_grid(layout_id, name, lambda t: definition.grid(generators, schemes, t), definition,
+                                     definition.window_spec(generators))
 
     def _activate(self, playing: SessionLayout) -> None:
         with self._lock:
@@ -533,20 +583,43 @@ class SessionService:
                 self.slot0.job(self._start_job)
             case Write():
                 self._submit(decision)
-            case Unchanged(oled=oled) | EdgeHit(oled=oled) | ShowOled(oled=oled):
-                self._link.resting(oled)
+            case Unchanged(oled=oled, prompt_custom=prompt):
+                self._rest(oled)
+                if prompt:
+                    self._ask_for_custom()
+            case EdgeHit(oled=oled, flash=flash) | ShowOled(oled=oled, flash=flash):
+                self._rest(oled, flash)
             case Paused(oled=oled, message=message):
                 with self._lock:
                     self._message = message
-                self._link.resting(oled)
+                self._rest(oled)
             case Ended():
                 self._quiet_end(decision)
             case _:
                 pass
 
+    def _rest(self, oled: OledText | None, flash: OledText | None = None) -> None:
+        """The resting OLED text; with a flash, the flash first and `oled`'s window again after FLASH_FOR, unless a
+        newer OLED change came in between (a newer step or toggle cancels a pending flash)."""
+        with self._lock:
+            self._flash += 1
+            token = self._flash
+        if flash is None:
+            self._link.resting(oled)
+            return
+        self._link.resting(flash)
+        self._link.call_later(FLASH_FOR, lambda: self._flash_over(token))
+
+    def _flash_over(self, token: int) -> None:
+        with self._lock:
+            if token != self._flash or not self._session.active:
+                return
+            oled = self._session.oled()
+        self._link.resting(oled)
+
     def _submit(self, write: Write) -> None:
         self._link.end_notes(write.end_notes)
-        self._link.resting(write.oled)
+        self._rest(write.oled)
         self.slot0.submit(write.record)
         if write.full_backup:
             self.slot0.background(self._full_backup())
@@ -554,12 +627,16 @@ class SessionService:
             self._ask_for_custom()
 
     def _ask_for_custom(self) -> None:
+        """d21 as amended (2026-10-27): the unit obeys the request and the host then takes Custom view as reported,
+        so 'Press Custom' is due only when the request could not be sent."""
+        sent = False
         if self._control is not None:
             try:
-                self._control.request_view(UnitView.CUSTOM)
+                sent = bool(self._control.request_view(UnitView.CUSTOM))
             except MemoryFault:
-                pass
-        self._link.call_later(CUSTOM_PROMPT_AFTER, self._custom_timeout)
+                sent = False
+        if not sent:
+            self._link.call_later(CUSTOM_PROMPT_AFTER, self._custom_timeout)
 
     def _custom_timeout(self) -> None:
         with self._lock:
@@ -568,7 +645,7 @@ class SessionService:
                 return
             self._message = PRESS_CUSTOM
             name = session.layout.name
-        self._link.resting(OledText(name, PRESS_CUSTOM))                            # d21, A23
+        self._rest(OledText(name, PRESS_CUSTOM))                                    # d21, A23
         self.publish()
 
     # --- on the writer's thread -------------------------------------------------------------------------
@@ -674,7 +751,7 @@ class SessionService:
                 return None
             backup_id = session.backup_id
             starting = session.state is State.STARTING
-        self._link.resting(None)
+        self._rest(None)
         if reason is EndReason.GONE:
             with self._lock:
                 decision = session.end(EndReason.GONE)
@@ -730,7 +807,7 @@ class SessionService:
         with self._lock:
             self._message = (f"lab session ended quietly ({why}); nothing restored; "
                              f"session backup {decision.backup_id} kept")
-        self._link.resting(None)
+        self._rest(None)
 
     def _full_backup(self) -> Iterator:
         """Slots 1–24 after the session's first write (§2.7 a5/q9), one slot per step, stepping aside for writes."""

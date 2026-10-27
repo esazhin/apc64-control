@@ -47,6 +47,10 @@ DAW mode unless product `53` is seen; it should warn (not refuse) on an unknown 
    to either value. [LIVE: worked with Device Mode = 1 (Standalone) and = 0]
 5. Pad-mode reports, unit → host: `F0 47 00 53 19 00 01 <m> F7`, m = 0 Session, 1 Overview [CODE],
    2 Note, 3 Chord, 5 Drum [CODE], 6 Step Seq, 8 Project, 9 Custom. [LIVE for 0,2,3,6,8,9]
+   Pad-mode request, host → unit: the same frame. The unit **obeys it but does not report the change back**
+   [LIVE 2026-10-27 for m = 9; 0/2/3/6 the same frame, to confirm]; its own view buttons still report. The host
+   therefore treats a request it sent as the new view until the unit reports otherwise, and repaints a
+   requested Session view itself.
 6. **Session view (m=0) is host-drawn**: the unit clears it on every mode change, so the host must
    redraw all host-owned LEDs when it receives a mode-0 report. [LIVE] In Note/Chord/Step/Project/
    Custom the **pad grid** (and its LEDs) is the unit's; its played notes go out on the Notes port
@@ -77,10 +81,12 @@ Channels below are 1-based.
 | Encoder turn | CC 0x5A value 1 = clockwise, 127 = counter-clockwise | [CODE] |
 | Encoder press | note 0x5A | [CODE] |
 | Pad velocity / aftertouch | Session view: **fixed 127, no aftertouch** [LIVE 2026-10-23]. Expressive playing comes from the unit's own views: Note/Chord → **Notes port** with real velocity and **poly aftertouch** `A0`; Step → Notes port, velocity, no AT; Custom → **Custom port**, velocity, AT per project pad flag [LIVE 2026-10-23, NOTES-daw-mode.md] | |
-| Side buttons/strips per view | Note view: all buttons and strips still reach the host on the DAW port [LIVE]. Custom view: Shift (120), Tempo (72), Play (91), Stop (93) and the encoder turn (CC 90, 01 = right / 7F = left, also with Shift) reach the host; arrows (also with Shift), track and scene buttons are silent; strips send project CCs on the Custom port [LIVE 2026-10-24, NOTES-daw-mode.md]. Chord/Step: [TBD], expected as Note | |
+| Side buttons/strips per view | Note view: all buttons and strips still reach the host on the DAW port [LIVE]. Custom view: Shift (120), Tempo (72), Play (91), Stop (93) and the encoder turn (CC 90, 01 = right / 7F = left, also with Shift) reach the host; arrows (also with Shift), all track, track-control and scene buttons are silent [LIVE 2026-10-27]; strips send project CCs on the Custom port [LIVE 2026-10-24, NOTES-daw-mode.md]. Chord/Step: [TBD], expected as Note | |
 
 Device-local, never reaching the host [LIVE]: the pad-mode buttons (Session/Note/Chord/Step/
-Project/Custom; Shift + them opens their config pages) and the Project menu (save / save as).
+Project/Custom; Shift + them opens their config pages) and the Project menu (save / save as). The host can
+still switch the view itself with the pad-mode request (§4.5 item 5); the page's replica does so for Session,
+Note, Chord, Step and Custom.
 Shift + grid pads, track buttons, track-control row, scenes 5–8: not yet captured [TBD].
 **Outside DAW mode the buttons are silent** on every port; only pads and strips send [LIVE].
 

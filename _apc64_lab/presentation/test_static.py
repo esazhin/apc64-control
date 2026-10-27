@@ -3,7 +3,8 @@
 - node --test passes in _apc64_lab/presentation/static (lab.test.js, harmony_views.test.js);
 - lab.fixture.json, the recorded 'lab' + 'harmony' snapshot pair (plus the lists the panel reads) the JS tests
   render, is what the real services produce: 'Tonnetz C' active at Oct +0 with C3 E3 G3 held (the host's C2 E2 G2,
-  48 52 55);
+  48 52 55); and, under 'guitar', 'Guitar' (E standard) active at Fret 3-10 with the low E's fret 5 and the open
+  high E played on their strings and a G from another input held (the neck view's data);
 - every relative import resolves, the page asks the browser for no Web MIDI, and the note table is the core's.
 """
 import json
@@ -14,7 +15,10 @@ from pathlib import Path
 
 import pytest
 
-from _apc64_lab.application.test_session_service import Rig
+from _apc64_host.domain.effects import PlayEvent, PlaySource, PlaySourceKind
+from _apc64_host.domain.midi import NoteOn
+from _apc64_lab.application.harmony_tracker import HarmonyTracker
+from _apc64_lab.application.test_session_service import GUITAR, Rig
 from _apc64_lab.application.global_settings import GlobalSettingsService
 from _apc64_lab.application.project_memory import ProjectMemory
 from _apc64_lab.application.conftest import FakeLibrary
@@ -34,7 +38,22 @@ def fixture_data() -> dict:
     for note in (48, 52, 55):
         state = harmony.note_on(note)
     return {"lab": payload_of(rig.service.state()), "harmony": payload_of(state), "library": projects.library(),
-            "backups": projects.backups(), "globals": GlobalSettingsService(rig.writer).read()}
+            "backups": projects.backups(), "globals": GlobalSettingsService(rig.writer).read(),
+            "guitar": guitar_data()}
+
+
+def guitar_data() -> dict:
+    rig = Rig().running()
+    rig.load(GUITAR.replace("  tuning: drop-d\n", "  tuning: e-standard\n"), "guitar.yaml")
+    rig.turn(+3)
+    rig.service.drain()
+    tracker = HarmonyTracker()
+    custom = PlaySource(PlaySourceKind.CUSTOM)
+    for note, channel in ((45, 6), (64, 1)):          # low E fret 5 (string 6), the open high E (string 1)
+        tracker.apply(PlayEvent("note_on", note=note, velocity=90, port=custom, channel=channel))
+    tracker.select_inputs(["Keys"])
+    tracker.on_input("Keys", NoteOn(1, 55, 80))        # a G from a keyboard: no string
+    return {"lab": payload_of(rig.service.state()), "harmony": payload_of(tracker.state())}
 
 
 def render() -> str:
@@ -70,6 +89,15 @@ def test_the_panel_never_asks_the_browser_for_midi_access():   # inv15: the view
 def test_the_panels_note_names_are_the_harmony_cores():   # §2.7 a25
     table = re.search(r"NOTE_NAMES = \[([^\]]*)\]", (STATIC / "harmony_views.js").read_text()).group(1)
     assert [name.strip().strip("'") for name in table.split(",")] == list(NOTE_DISPLAY)
+
+
+def test_the_circles_keys_are_the_harmony_cores():   # spelled once, in the core
+    from _apc64_lab.domain.harmony import circle_keys
+    source = (STATIC / "harmony_views.js").read_text()
+    rows = re.findall(r"\{ pc: (\d+), major: \[([^\]]*)\], minorPc: (\d+), minor: \[([^\]]*)\] \}", source)
+    names = lambda text: tuple(n.strip().strip("'") for n in text.split(","))
+    assert [(int(pc), names(major), int(minor_pc), names(minor)) for pc, major, minor_pc, minor in rows] == [
+        (k.pc, k.major, k.minor_pc, k.minor) for k in circle_keys()]
 
 
 def test_the_panel_is_served_by_the_module_mount():

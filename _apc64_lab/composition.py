@@ -91,17 +91,21 @@ class Lab:
 
     def name_layouts(self, summaries) -> None:
         """The host library's ids and display names (LayoutSummary rows, or (id, name) pairs); a generated
-        layout whose file is gone is forgotten."""
-        present = set()
+        layout whose file is gone is forgotten. The panel's list follows at once (the lab state is published)."""
+        present, rejected = set(), set()
         for row in summaries:
             layout_id, name = (row.id, row.name) if hasattr(row, "id") else row
             if getattr(row, "deleted", False):
                 continue
             present.add(str(layout_id))
+            if getattr(row, "valid", True) is False:
+                rejected.add(str(layout_id))
             self.index.named(layout_id, name)
-        for entry in self.index.all():
-            if entry.layout_id not in present:
-                self.index.forget(entry.layout_id)
+        self.index.rejected(rejected)
+        for layout_id in [e.layout_id for e in self.index.all()] + [i for i, _, _ in self.index.invalid() if i not in present]:
+            if layout_id not in present:
+                self.index.forget(layout_id)
+        self.session.publish()
 
     def start(self) -> None:
         """On the event loop, at service start: the harmony tracker follows the play stream (s19.c1)."""
@@ -147,14 +151,17 @@ def build_lab(paths: LabPaths, capability, *, target: NoteTarget | None = None, 
         if listed.broken:
             log.warning("lab: %s %s is broken (%s): %s", listed.kind, listed.name, listed.file, listed.error)
     index = DefinitionIndex()
-    compiler = LabSectionCompiler(registry.generators, registry.schemes, target, index.record)
+    compiler = LabSectionCompiler(registry.generators, registry.schemes, target, index.record, index.failed)
     publisher = HubPublisher()
     tracker = HarmonyTracker(publisher, settings, link)
     session = SessionService(writer, backups, registry, link, publisher, control=memory,
-                             held_notes=tracker.held_notes, index=index, target=target, wall=wall, threaded=threaded)
+                             held_notes=tracker.held_notes, index=index, target=target, wall=wall, threaded=threaded,
+                             on_key=tracker.set_key)
     projects = ProjectMemory(writer, backups, library, registry, index, session, wall)
     global_settings = GlobalSettingsService(writer)
-    services = LabServices(session, projects, global_settings, tracker, _validator(compiler, link))
+    # validation of a text sent to the API compiles without the index hooks: a draft never changes the list
+    services = LabServices(session, projects, global_settings, tracker,
+                           _validator(LabSectionCompiler(registry.generators, registry.schemes, target), link))
     router = lab_router(services)
     cli = LabCli(offline_validation)
 
@@ -162,6 +169,7 @@ def build_lab(paths: LabPaths, capability, *, target: NoteTarget | None = None, 
         publisher.bind(host.topics)
         session.publish()
         publisher.publish(tracker.state())
+        tracker.publish_inputs()
 
     module = LabModule(link, writer, session, compiler, tracker, router=router, panel=str(STATIC_DIR),
                        cli_commands=(cli,), on_bind=(bound,))

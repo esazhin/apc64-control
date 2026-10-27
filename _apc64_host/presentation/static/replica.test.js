@@ -92,7 +92,10 @@ test('scene and strip-mode buttons show pages and banks: current, defined, empty
   assert.equal(bank1.sub, 'Mix');
   assert.equal(controlView(entry('stripmode 5'), model).sub, '—');
   const view = controlView(entry('view session'), model);
-  assert.ok(view.classes.includes('unit-own') && view.classes.includes('current-view'));   // A65
+  assert.ok(view.classes.includes('view-switch') && view.classes.includes('current-view'));   // A65
+  assert.match(controlView(entry('view note'), model).title, /click to switch the APC64 to it/);   // 2026-10-27
+  const project = controlView(entry('view project'), model);
+  assert.ok(project.classes.includes('unit-own') && /the host does not switch to it/.test(project.title));
 });
 
 test('LED colour, brightness and readable ink', () => {
@@ -304,4 +307,15 @@ test('the built replica places every control and shows the unit\'s view over the
   replica.update(inView('session'));
   assert.equal(r1c1.children[1].textContent, 'Note 36');
   assert.ok(!r1c1.classList.contains('by-unit'));
+});
+
+test('a click on a switchable view button calls handlers.view; Project only selects (2026-10-27)', () => {
+  const doc = new FakeDocument();
+  const container = doc.createElement('div');
+  const calls = [];
+  const replica = buildReplica(container, surface, { view: (id) => calls.push(['view', id]),
+    select: (id) => calls.push(['select', id]) }, doc);
+  replica.controls.get('view custom').dispatch('click');
+  replica.controls.get('view project').dispatch('click');
+  assert.deepEqual(calls, [['view', 'view custom'], ['select', 'view project']]);
 });

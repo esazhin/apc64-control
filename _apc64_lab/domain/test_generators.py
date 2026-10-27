@@ -114,3 +114,64 @@ def test_builtins_satisfy_the_protocols():   # d11, A17 (names)
     assert all(isinstance(g, PadLayoutGenerator) for g in BUILTIN_GENERATORS)
     assert all(isinstance(s, ColourScheme) for s in BUILTIN_SCHEMES)
     assert [p.name for p in TonnetzCheckerboard().params] == ["base", "channel"]
+
+
+# --- the guitar amendment (2026-10-27): per-pad channels, a generator's root, a list parameter -------------
+from _apc64_lab.domain.generators import ParamKind, ParamSpec, channels_of, root_of
+
+
+class _TwoChannels(Isomorphic):
+    """Rows 1–4 on channel 3, the rest on the layout's channel."""
+    def channels(self, params):
+        return tuple(3 if r < 4 else None for r in range(8) for x in range(8))
+
+    def root(self, params):
+        return 9
+
+
+def test_a_generator_may_give_pads_channels_of_their_own():
+    gen = _TwoChannels()
+    grid = generate(gen, parse_params(gen.params, {"base": 36, "channel": 5}), FifthsHue())
+    assert grid.at(PadPos(1, 1)).channel == 3 and grid.at(PadPos(4, 8)).channel == 3
+    assert grid.at(PadPos(5, 1)).channel == 5 and grid.at(PadPos(8, 8)).channel == 5
+
+
+def test_generators_without_the_hook_keep_one_channel_for_every_pad():
+    gen = Isomorphic()
+    assert channels_of(gen, {}) is None
+    grid = generate(gen, parse_params(gen.params, {"channel": 4}), FifthsHue())
+    assert {p.channel for _, p in grid.active} == {4}
+
+
+def test_a_channels_hook_answering_badly_is_a_fault():
+    class Bad(Isomorphic):
+        def channels(self, params):
+            return (17,) * 64
+    with pytest.raises(GeneratorFault, match="channels must be 64 of 1–16"):
+        generate(Bad(), parse_params(Bad.params, {}), FifthsHue())
+
+
+def test_the_layouts_root_is_the_generators_own_when_it_has_one():
+    assert root_of(_TwoChannels(), {"base": 36}) == 9
+    assert root_of(Isomorphic(), {"base": 38}) == 2 and root_of(None, {}) == 0
+
+
+TUNING = ParamSpec("tuning", ParamKind.NOTE_LIST, "e-standard", 4, 8, "the open strings",
+                   choices=("e-standard", "drop-d"))
+
+
+def test_a_note_list_parameter_takes_a_preset_or_a_list_of_notes():
+    assert TUNING.parse("drop-d") == "drop-d"
+    assert TUNING.parse(["E1", "A1", 50, "G2", "B2", "E3"]) == (40, 45, 50, 55, 59, 64)   # C3 = 60: E1 is 40
+    assert TUNING.describe()["choices"] == ["e-standard", "drop-d"]
+
+
+@pytest.mark.parametrize("value,problem,fix", [
+    ([40, 45, 50], "3 notes", "write 4 to 8 notes, low to high, or one of: e-standard, drop-d"),
+    (["E1", "H1", 50, 55], "note 2: 'H1' is not a note", "write a number 0–127 or a name like C1 (36), F#2 or Bb3 (C3 = 60)"),
+    ("drop-q", 'no tuning "drop-q"', "did you mean drop-d? available: e-standard, drop-d"),
+])
+def test_a_note_list_parameter_is_refused_precisely(value, problem, fix):
+    with pytest.raises(DomainInvariantError) as error:
+        TUNING.parse(value)
+    assert (error.value.field, error.value.problem, error.value.fix) == ("tuning", problem, fix)

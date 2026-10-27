@@ -176,7 +176,7 @@ def test_a_mode_report_and_answering_view_requests():
     custom_request = sysex.akai_frame(sysex.PAD_MODE, b"\x09")
     unit.sim.current_view = UnitView.SESSION
     unit.send(custom_request)
-    assert unit.received == [] and unit.sim.current_view is UnitView.SESSION   # contract 1: no answer
+    assert unit.received == [] and unit.sim.current_view is UnitView.CUSTOM    # obeyed, no answer (live 2026-10-27)
     unit.sim.report_view_requests = True
     unit.send(custom_request)
     assert unit.received == [bytes.fromhex("F0 47 00 53 19 00 01 09 F7")]

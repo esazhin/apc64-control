@@ -8,7 +8,8 @@ const ROLE_TEXT = {
   bindable: null,
   navigation: 'Navigation: selects a page or strip bank, never sends MIDI',
   modifier: 'Modifier: hold for every control\'s Shift layer',
-  device_local: 'The unit\'s own button: it never reaches the host',
+  device_local: 'A view button: pressed on the unit it never reaches the host. Session, Note, Chord, Step and Custom '
+    + 'pressed here (Play) ask the unit for that view while the host holds it; Project stays the unit\'s own.',
 };
 
 export function cardView(model, handlers = {}) {

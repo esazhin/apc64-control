@@ -14,11 +14,13 @@ import {
 } from './nav.js';
 import { overviewView } from './overview.js';
 import { buildReplica, playedView } from './replica.js';
-import { createStore, currentModulePanel, modulePanels, ownedByUnit, sidePanels, unitView } from './state.js';
+import {
+  createStore, currentModulePanel, modulePanels, ownedByUnit, sidePanels, unitView, viewOfAddress,
+} from './state.js';
 import { tweakKey, tweakView } from './tweak.js';
 
 // --- gestures → API calls ------------------------------------------------------------------------------------
-export function createHandlers(api, store, { onWindowPointerUp, remember: keep } = {}) {
+export function createHandlers(api, store, { onWindowPointerUp, remember: keep, fullscreen: screen } = {}) {
   let chain = Promise.resolve();
   let pendingMove = null;
   let moveQueued = false;
@@ -58,6 +60,12 @@ export function createHandlers(api, store, { onWindowPointerUp, remember: keep }
       if (answer.ok) store.dispatch({ type: 'card', id, data: answer.data });
       else store.dispatch({ type: 'card_problem', problem: answer.problem });
       return answer;
+    },
+    // a view button (2026-10-27): Play asks the unit for that view, as pressing it on the unit would; Inspect looks
+    view(id) {
+      handlers.select(id);
+      if (inspecting()) { reveal(); return Promise.resolve(null); }
+      return serial(() => api.press(id)).then((a) => show(a));
     },
     // replica input: the same path as the unit's own (A70)
     down(id) {
@@ -158,6 +166,25 @@ export function createHandlers(api, store, { onWindowPointerUp, remember: keep }
     // help overlays (help.js): the page's own topics and the ones module panels bring
     help: (topic) => store.dispatch({ type: 'help', topic }),
     closeHelp: () => store.dispatch({ type: 'help_close' }),
+    // a module's view across the whole page (?view=<name>, or its Full screen button); `screen` is the browser's
+    // Fullscreen API. Where it is refused or missing the view still fills the window, and Esc or Leave ends it.
+    openView(name, { fullscreen = false } = {}) {
+      store.dispatch({ type: 'view', name });
+      return fullscreen && screen && !screen.active() ? Promise.resolve().then(() => screen.enter()).catch(() => {}) : Promise.resolve();
+    },
+    closeView() {
+      store.dispatch({ type: 'view', name: null });
+      return screen?.active() ? Promise.resolve().then(() => screen.exit()).catch(() => {}) : Promise.resolve();
+    },
+    toggleFullscreen() {
+      if (!screen) return Promise.resolve();
+      return Promise.resolve().then(() => (screen.active() ? screen.exit() : screen.enter())).catch(() => {});
+    },
+    // leaving full screen (Esc, the browser's own control) also ends a view that a button opened
+    fullscreenChanged(on) {
+      store.dispatch({ type: 'fullscreen', on });
+      if (!on && store.model.ui.view && !store.model.ui.view.pinned) store.dispatch({ type: 'view', name: null });
+    },
     overviewLayer: (layer) => store.dispatch({ type: 'overview_layer', layer }),
     async loadOverview() {
       const answer = await api.overview();
@@ -241,6 +268,23 @@ export function needsOverviewRefresh(previous, next) {
 }
 
 // --- the page --------------------------------------------------------------------------------------------------
+// The page shell hides while a module's view fills the page (style.css: body.page-view); the tab names the view.
+export function showView(body, doc, view, title = 'APC64 Host') {
+  body.classList.toggle('page-view', Boolean(view));
+  body.dataset.view = view?.name ?? '';
+  if (doc) doc.title = view ? `${capital(view.name)} · APC64` : title;
+}
+
+// The browser's Fullscreen API on the whole page, so the help overlay still shows over a full-screen view.
+export function pageFullscreen(doc = globalThis.document) {
+  const root = doc?.documentElement;
+  return {
+    active: () => Boolean(doc?.fullscreenElement),
+    enter: () => (root?.requestFullscreen ? root.requestFullscreen() : Promise.reject(new Error('no Fullscreen API'))),
+    exit: () => (doc?.fullscreenElement && doc.exitFullscreen ? doc.exitFullscreen() : Promise.resolve()),
+  };
+}
+
 function debounce(fn, ms) {
   let timer = null;
   return () => { clearTimeout(timer); timer = setTimeout(fn, ms); };
@@ -255,7 +299,14 @@ async function boot() {
   const handlers = createHandlers(api, store, {
     onWindowPointerUp: (fn) => window.addEventListener('pointerup', fn, { once: true }),
     remember: (key, on) => remember(storage, key, on),
+    fullscreen: pageFullscreen(document),
   });
+  // http://host:5058/?view=harmony: only that module view, from the first paint (no flash of the whole page)
+  const title = document.title;
+  const addressed = viewOfAddress(location.search);
+  if (addressed) store.dispatch({ type: 'view', name: addressed, pinned: true });
+  showView(document.body, document, store.model.ui.view, title);
+  document.addEventListener('fullscreenchange', () => handlers.fullscreenChanged(Boolean(document.fullscreenElement)));
   store.dispatch({ type: 'nav_collapsed', collapsed: remembered(storage, NAV_KEY, navFoldedByDefault(window.innerHeight)) });
   store.dispatch({ type: 'side', panel: rememberedSide(storage, sideByDefault(window.innerWidth, window.innerHeight)) });
   let storedSide = null;
@@ -313,6 +364,7 @@ async function boot() {
     $('nav').classList.toggle('collapsed', m.ui.navCollapsed);
     for (const panel of sidePanels(m)) document.body.classList.toggle(`side-${panel}`, m.ui.side === panel);
     document.body.classList.toggle('side-module', Boolean(currentModulePanel(m)));
+    showView(document.body, document, m.ui.view, title);
     panels.sync(m);
     renderPart('toolbar', JSON.stringify([m.ui.mode, s?.learn, s?.calibration_step, s?.calibration_label, s?.unit?.view,
       m.ui.side, s?.modules]), () => toolbarView(m, handlers));
@@ -346,7 +398,9 @@ async function boot() {
   });
   window.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
-    if (store.model.ui.help) handlers.closeHelp(); else handlers.dismiss();
+    if (store.model.ui.help) handlers.closeHelp();
+    else if (store.model.ui.view && !store.model.ui.view.pinned) handlers.closeView();
+    else handlers.dismiss();
   });
   render();
   connect(store);

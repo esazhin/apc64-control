@@ -5,8 +5,16 @@ Sources (§2.7 q7): the APC64's Custom and Notes ports from the host's play stre
 user selects (a keyboard, the MPC), listened to through the host's FeedbackInputs and remembered in the lab's
 settings. Session-view bindings are triggers, not played notes, and are skipped (d50, A70). A note the host
 ended at a window shift clears it (NOTE_ENDED). Each source keeps its own count per note, so a release from one
-source never ends a note another source holds (d46). The analysis itself stays in the pure, device-independent
+source never ends a note another source holds (d46).
+
+The guitar amendment (2026-10-27): each held voice is also kept with the channel it arrived on when the source is
+the APC64's Custom port (a guitar layout sends each string on its own channel), and published as the state's
+`played`, so the neck view puts a played note on its string. Other sources carry no string identity (None). The analysis itself stays in the pure, device-independent
 domain/harmony core; this service only feeds it and publishes each snapshot as it is applied (A78).
+
+After the guitar live test (2026-10-27): the trail can be cleared (clear_trail: the API, CLI and panel), the layout's
+key spelling reaches the core through set_key (SessionService gives the active layout's scale overlay), and the
+inputs followed are published too (kind 'inputs'), so every open page shows a choice made elsewhere.
 
 Threads: the play stream is read on the host's loop (run(), or pump() from an action); input callbacks may
 arrive on a reader thread. Both go through one lock.
@@ -15,6 +23,7 @@ import asyncio
 import logging
 import threading
 from collections import Counter
+from dataclasses import replace
 
 from _apc64_host.domain.effects import NOTE_ENDED, PlayEvent, PlaySourceKind
 from _apc64_host.domain.issues import DomainInvariantError
@@ -25,6 +34,7 @@ from .ports import HostLink, LabSettingsStore, LabStatePublisher, MemorySettings
 
 log = logging.getLogger(__name__)
 INPUTS_KEY = "harmony.inputs"
+INPUTS = "inputs"   # the publisher kind of the inputs followed
 UNIT_KINDS = (PlaySourceKind.CUSTOM, PlaySourceKind.NOTES)
 _APC64 = "apc64"
 
@@ -38,6 +48,7 @@ class HarmonyTracker:
         self._lock = threading.RLock()
         self._harmony = Harmony()
         self._counts: Counter = Counter()           # (source key, note) → holds
+        self._voices: Counter = Counter()           # (source key, channel or None, note) → holds (the neck view)
         self._subscription = None
         self._listeners: dict[str, object] = {}
         self._stopped = False
@@ -98,10 +109,11 @@ class HarmonyTracker:
         if source.kind is PlaySourceKind.INPUT and str(source.port) not in self._inputs:
             return False
         key = (str(source.kind), str(source.port))
+        channel = event.channel if source.kind is PlaySourceKind.CUSTOM else None   # a string per channel
         if event.kind == "note_on" and (event.velocity is None or event.velocity > 0):
-            return self._on(key, event.note)
+            return self._on(key, event.note, channel)
         if event.kind in ("note_off", NOTE_ENDED) or event.kind == "note_on":
-            return self._off(key, event.note)
+            return self._off(key, event.note, channel)
         return False
 
     # === other MIDI inputs (§2.7 q7) =======================================================================
@@ -131,8 +143,28 @@ class HarmonyTracker:
         for port in names:
             self._listen(port)
         self._settings.put(INPUTS_KEY, list(names))
+        self.publish_inputs()
         return {**self.inputs(), "message": "harmony follows the APC64" + (
             " and " + ", ".join(names) if names else " only")}
+
+    def publish_inputs(self) -> None:
+        """The inputs followed, on the lab topic as kind 'inputs' (each page's ticks follow a choice made elsewhere)."""
+        self._publish({"kind": INPUTS, **self.inputs()})
+
+    # === the trail and the key (2026-10-27) ================================================================
+    def clear_trail(self) -> dict:
+        with self._lock:
+            state = self._with_voices(self._harmony.clear_trail())
+        self._publish(state)
+        return {"trail": [], "message": "trail cleared"}
+
+    def set_key(self, key) -> None:
+        """The active layout's key spelling (pitch class → name), or None: held notes are spelled in it."""
+        with self._lock:
+            changed = self._harmony.set_key(key)
+            state = self._with_voices(self._harmony.state()) if changed else None
+        if state is not None:
+            self._publish(state)
 
     def _listen(self, port: str) -> None:
         inputs = self._link.inputs
@@ -152,14 +184,15 @@ class HarmonyTracker:
         return False
 
     # === held notes ========================================================================================
-    def _on(self, key, note) -> bool:
+    def _on(self, key, note, channel=None) -> bool:
         with self._lock:
             self._counts[(key, int(note))] += 1
-            state = self._harmony.note_on(int(note))
+            self._voices[(key, channel, int(note))] += 1
+            state = self._with_voices(self._harmony.note_on(int(note)))
         self._publish(state)
         return True
 
-    def _off(self, key, note) -> bool:
+    def _off(self, key, note, channel=None) -> bool:
         with self._lock:
             if self._counts[(key, int(note))] <= 0:
                 self._counts.pop((key, int(note)), None)
@@ -167,9 +200,27 @@ class HarmonyTracker:
             self._counts[(key, int(note))] -= 1
             if not self._counts[(key, int(note))]:
                 del self._counts[(key, int(note))]
-            state = self._harmony.note_off(int(note))
+            self._voice_off(key, channel, int(note))
+            state = self._with_voices(self._harmony.note_off(int(note)))
         self._publish(state)
         return True
+
+    def _voice_off(self, key, channel, note) -> None:
+        """One hold of that voice ends; a release on a channel never seen ends another hold of the note instead."""
+        voice = (key, channel, note)
+        if self._voices[voice] <= 0:
+            self._voices.pop(voice, None)
+            voice = next((v for v in self._voices if v[0] == key and v[2] == note), None)
+            if voice is None:
+                return
+        self._voices[voice] -= 1
+        if not self._voices[voice]:
+            del self._voices[voice]
+
+    def _with_voices(self, state: HarmonyState) -> HarmonyState:
+        played = sorted(((key[0], channel, note) for (key, channel, note), n in self._voices.items() for _ in range(n)),
+                        key=lambda v: (v[2], v[1] or 0, v[0]))
+        return replace(state, played=tuple(played))
 
     def _end_source(self, key) -> None:
         with self._lock:
@@ -178,6 +229,10 @@ class HarmonyTracker:
             for item in held:
                 for _ in range(self._counts.pop(item)):
                     state = self._harmony.note_off(item[1])
+            for voice in [v for v in self._voices if v[0] == key]:
+                del self._voices[voice]
+            if state is not None:
+                state = self._with_voices(state)
         if state is not None:
             self._publish(state)
 
@@ -189,9 +244,9 @@ class HarmonyTracker:
 
     def state(self) -> HarmonyState:
         with self._lock:
-            return self._harmony.state()
+            return self._with_voices(self._harmony.state())
 
-    def _publish(self, state: HarmonyState) -> None:
+    def _publish(self, state: "HarmonyState | dict") -> None:
         try:
             self._publisher.publish(state)
         except Exception:

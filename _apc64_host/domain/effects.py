@@ -30,6 +30,14 @@ class UnitView(StrEnum):
         return self is UnitView.SESSION
 
 
+# The view buttons the host may switch the unit with, by the pad-mode request (19 00 01 <m>; verified live
+# 2026-10-27: obeyed, never echoed). Project is not among them: it ends a lab session and its browser is the unit's.
+SWITCHABLE_VIEWS = {"session": UnitView.SESSION, "note": UnitView.NOTE, "chord": UnitView.CHORD,
+                    "step": UnitView.STEP, "custom": UnitView.CUSTOM}
+NOT_SWITCHED = {"project": "view project stays the unit's own button: the host does not switch to Project view "
+                           "(it would end a lab session, and the project browser is the unit's)"}
+
+
 class InputSource(StrEnum):
     UNIT = "unit"
     REPLICA = "replica"
@@ -247,7 +255,9 @@ class PlayEvent:
     """One event of the agents' play stream (contract d150, d153).
 
     Contract 2: `port` names the input the event came from (PlaySource), and the kind NOTE_ENDED with reason
-    ENDED_BY_WINDOW_SHIFT is a held note the host ended at a window shift or layout switch."""
+    ENDED_BY_WINDOW_SHIFT is a held note the host ended at a window shift or layout switch. `channel` (the guitar
+    amendment) is the channel a played note arrived on from the unit (1–16), before routing re-channels it: a
+    generated layout may send each string on its own channel."""
     kind: str                      # press, release, move, turn, note_on, note_off, aftertouch, nav, shift, view, layout,
                                    # note_ended (contract 2)
     source: InputSource = InputSource.UNIT
@@ -261,6 +271,7 @@ class PlayEvent:
     reason: str | None = None
     at: float | None = None
     port: PlaySource | None = None
+    channel: int | None = None
 
 
 @dataclass(frozen=True)

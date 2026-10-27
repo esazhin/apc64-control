@@ -1,0 +1,11 @@
+# Wicki-Hayden (square approximation): whole tones (+2) across, fourths (+5) up (docs/lab-guide.md).
+# An approximation: the real Wicki-Hayden keyboard is hexagonal, each row offset half a key, with the fifth up-right
+# and the fourth up-left. On the APC64's square grid the fifth is still up-right (+5 + 2) but the fourth is straight
+# up, so shapes lean; every key still has one shape per scale and chord. Pads 36 (C1) to 85.
+name: Wicki-Hayden
+lab:
+  generator: isomorphic
+  base: 36            # the note on pad r1c1 (C1 = 36); the top-right pad is base + 49
+  column: 2           # a whole tone per column to the right
+  row: 5              # a fourth per row upwards
+  scheme: fifths

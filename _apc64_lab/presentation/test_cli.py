@@ -110,10 +110,13 @@ def test_a_fix_the_problem_does_not_say_is_printed_after_it():
         "changes": {"device_mode": "standalone"}, "confirm": True})),
     (["inputs", "Keystation 49 MIDI 1"], ("POST", "/api/lab/harmony/inputs", {"inputs": ["Keystation 49 MIDI 1"]})),
     (["inputs", "--none"], ("POST", "/api/lab/harmony/inputs", {"inputs": []})),
+    (["trail", "clear"], ("POST", "/api/lab/harmony/trail/clear", {})),
+    (["trail"], ("GET", "/api/lab/harmony", None)),
     (["dismiss-recovery"], ("POST", "/api/lab/recovery/dismiss", {})),
 ])
 def test_each_command_sends_its_request(argv, sent):
-    answers = {("POST", "/api/lab/harmony/inputs"): (200, {"apc64": ["APC64 Custom"], "inputs": [], "message": "ok"})}
+    answers = {("POST", "/api/lab/harmony/inputs"): (200, {"apc64": ["APC64 Custom"], "inputs": [], "message": "ok"}),
+               ("GET", "/api/lab/harmony"): (200, {"trail": ["C", "Am"]})}
     transport = FakeTransport(answers)
     code, out, _ = run(argv, transport)
     assert code == 0 and transport.requests == [sent]
@@ -144,6 +147,20 @@ def test_list_shows_generators_with_parameters_broken_ones_and_the_active_layout
         "active: Tonnetz C  5th +2  (encoder: shift · Tempo: interval)",
         "  session backup: slot0-2026-10-24T20-15",
         "notes: notes are only shown: no default target and no layout target"]
+
+
+def test_list_shows_a_guitar_layouts_tuning_and_its_own_window_steps():   # the guitar amendment
+    guitar = {"name": "guitar", "file": "_apc64_lab/generators/guitar.py", "params": [
+        {"name": "tuning", "kind": "notes", "default": "e-standard", "min": 4, "max": 8, "doc": "",
+         "choices": ["e-standard", "drop-d"]},
+        {"name": "frets", "kind": "int", "default": 24, "min": 12, "max": 36, "doc": ""}]}
+    state = {**LAB_STATE, "generators": [guitar], "active": {
+        "layout": "guitar", "name": "Guitar", "preview": False, "oled": ["Guitar", "Page 8-15"], "counts": {},
+        "window": {"steps": ["Fret", "Page"], "step": "Page"}, "session_backup": "slot0-2026-10-27T10-00"}}
+    _, out, _ = run(["list"], FakeTransport({("GET", "/api/lab"): (200, state)}))
+    assert "  guitar  tuning: e-standard, drop-d, or a list of 4–8 notes (default e-standard), frets 12–36 (default 24)" \
+        in out.splitlines()
+    assert "active: Guitar  Page 8-15  (encoder: one page · Tempo: Fret ↔ Page)" in out.splitlines()
 
 
 def test_reading_commands_print_their_lines():
@@ -213,7 +230,7 @@ def test_validate_without_the_service_compiles_here(tmp_path):
     assert code == 0 and out.strip().endswith("(ports not checked)")
     path.write_text("name: T\nlab:\n  generator: tonetz\n")
     code, _, err = run(["validate", str(path)], DownTransport(), LabCli(offline_validation))
-    assert code == 1 and err == 't.yaml line 3: no generator "tonetz"; available: isomorphic, tonnetz\n'
+    assert code == 1 and err == 't.yaml line 3: no generator "tonetz"; available: guitar, isomorphic, modes, tonnetz\n'
 
 
 def test_without_an_offline_compiler_service_down_reaches_the_host_command():

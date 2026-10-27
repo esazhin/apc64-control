@@ -209,3 +209,27 @@ def test_the_host_librarys_names_reach_the_index(tmp_path):
         assert lab.index.resolve("tonnetz c").layout_id == "tonnetz-c"
     finally:
         lab.stop()
+
+
+def test_a_layout_with_an_unknown_generator_is_listed_as_invalid_with_its_reason(tmp_path):   # 2026-10-27
+    from types import SimpleNamespace
+    lab = composition.build_lab(composition.LabPaths.under(tmp_path / "b", tmp_path / "l", tmp_path / "s"),
+                                WriteCapability("x"), threaded=False)
+    try:
+        compile_text(TONNETZ_C, "tonnetz-c.yaml", sections=lab.module.layout_sections())
+        compile_text("name: Banjo\nlab:\n  generator: banjo\n", "banjo.yaml", sections=lab.module.layout_sections())
+        lab.name_layouts([SimpleNamespace(id="tonnetz-c", name="Tonnetz C", valid=True),
+                          SimpleNamespace(id="banjo", name="banjo", valid=False)])
+        layouts = lab.session.state().to_json()["layouts"]
+        assert [(e["layout"], e["valid"]) for e in layouts] == [("tonnetz-c", True), ("banjo", False)]
+        assert 'no generator "banjo"' in layouts[1]["error"] and "available: " in layouts[1]["error"]
+        assert lab.publisher.current()["lab"]["layouts"] == layouts          # published at once
+        # a draft checked through the API never changes the list
+        lab.services.validate("name: Tonnetz C\nlab:\n  generator: nope\n", "tonnetz-c.yaml")
+        assert [e["valid"] for e in lab.session.state().to_json()["layouts"]] == [True, False]
+        # a layout the library holds as valid is not listed invalid, whatever was compiled last
+        compile_text("name: Tonnetz C\nlab:\n  generator: nope\n", "tonnetz-c.yaml", sections=lab.module.layout_sections())
+        lab.name_layouts([SimpleNamespace(id="tonnetz-c", name="Tonnetz C", valid=True)])
+        assert [(e["layout"], e["valid"]) for e in lab.session.state().to_json()["layouts"]] == [("tonnetz-c", True)]
+    finally:
+        lab.stop()

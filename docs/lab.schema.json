@@ -45,7 +45,9 @@
           "type": "string",
           "enum": [
             "tonnetz",
-            "isomorphic"
+            "isomorphic",
+            "guitar",
+            "modes"
           ],
           "description": "Required: which generator fills the 64 pads."
         },
@@ -53,7 +55,8 @@
           "type": "string",
           "enum": [
             "fifths",
-            "root-highlight"
+            "root-highlight",
+            "scale"
           ],
           "default": "fifths",
           "description": "The colour scheme (any scheme works with any generator)."
@@ -89,6 +92,21 @@
         },
         "row": {
           "description": "A generator parameter (see the isomorphic branch)."
+        },
+        "tuning": {
+          "description": "A generator parameter (see the guitar branch)."
+        },
+        "frets": {
+          "description": "A generator parameter (see the guitar branch)."
+        },
+        "fret_marks": {
+          "description": "A generator parameter (see the guitar branch)."
+        },
+        "scale": {
+          "description": "A colour scheme parameter (see the scale scheme's branch)."
+        },
+        "root": {
+          "description": "A colour scheme parameter (see the scale scheme's branch)."
         }
       },
       "allOf": [
@@ -135,7 +153,9 @@
                 "colours",
                 "strips",
                 "base",
-                "channel"
+                "channel",
+                "scale",
+                "root"
               ]
             }
           }
@@ -199,13 +219,218 @@
                 "base",
                 "column",
                 "row",
-                "channel"
+                "channel",
+                "scale",
+                "root"
               ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "generator": {
+                "const": "guitar"
+              }
+            },
+            "required": [
+              "generator"
+            ]
+          },
+          "then": {
+            "properties": {
+              "tuning": {
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "e-standard",
+                      "drop-d",
+                      "eb-standard",
+                      "d-standard",
+                      "drop-c",
+                      "dadgad",
+                      "open-g",
+                      "open-d",
+                      "b-standard-7",
+                      "drop-a-7",
+                      "fs-standard-8",
+                      "drop-e-8",
+                      "bass-4",
+                      "bass-5"
+                    ]
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "oneOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 127
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "^[A-Ga-g][#b]?-?\\d+$"
+                        }
+                      ]
+                    },
+                    "minItems": 4,
+                    "maxItems": 8
+                  }
+                ],
+                "default": "e-standard",
+                "description": "a preset, or the open strings low to high (4–8 notes, C3 = 60: the low E is E1, 40): one of the names listed, or a list of 4–8 notes (numbers 0–127 or names such as E1 (40), C3 = 60)."
+              },
+              "frets": {
+                "type": "integer",
+                "minimum": 12,
+                "maximum": 36,
+                "default": 24,
+                "description": "the neck's length in frets (12–36)."
+              },
+              "fret_marks": {
+                "type": "string",
+                "enum": [
+                  "on",
+                  "off"
+                ],
+                "default": "on",
+                "description": "the inlay frets marked on the pads (on or off): one of the names listed (any case; spaces for '-' are accepted too)."
+              }
+            },
+            "propertyNames": {
+              "enum": [
+                "generator",
+                "scheme",
+                "colours",
+                "strips",
+                "tuning",
+                "frets",
+                "fret_marks",
+                "scale",
+                "root"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "generator": {
+                "const": "modes"
+              }
+            },
+            "required": [
+              "generator"
+            ]
+          },
+          "then": {
+            "properties": {
+              "base": {
+                "oneOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 115
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^[A-Ga-g][#b]?-?\\d+$"
+                  }
+                ],
+                "default": 48,
+                "description": "the root: the note on pad r1c1 and every row's first pad: a note number 0–115 or a note name such as C2 (48) or F#3 (66)."
+              },
+              "channel": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 16,
+                "default": 1,
+                "description": "MIDI channel the unit sends the pads on (q8) (1–16)."
+              }
+            },
+            "propertyNames": {
+              "enum": [
+                "generator",
+                "scheme",
+                "colours",
+                "strips",
+                "base",
+                "channel",
+                "scale",
+                "root"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "scheme": {
+                "const": "scale"
+              }
+            },
+            "required": [
+              "scheme"
+            ]
+          },
+          "then": {
+            "properties": {
+              "scale": {
+                "type": "string",
+                "enum": [
+                  "chromatic",
+                  "major",
+                  "melodic-minor",
+                  "harmonic-minor",
+                  "major-pentatonic",
+                  "minor-pentatonic",
+                  "dorian",
+                  "phrygian",
+                  "lydian",
+                  "mixolydian",
+                  "aeolian",
+                  "locrian",
+                  "blues",
+                  "whole-tone",
+                  "flamenco",
+                  "hungarian-minor",
+                  "hungarian-major",
+                  "harmonic-major",
+                  "double-harmonic",
+                  "neapolitan-major",
+                  "neapolitan-minor",
+                  "dorian-b2",
+                  "lydian-augmented",
+                  "lydian-dominant",
+                  "mixolydian-b6",
+                  "locrian-natural2",
+                  "altered",
+                  "phrygian-dominant",
+                  "octatonic-half-whole",
+                  "octatonic-whole-half",
+                  "bebop-dominant",
+                  "bebop-major",
+                  "hirajoshi",
+                  "in",
+                  "iwato",
+                  "prometheus",
+                  "enigmatic"
+                ],
+                "default": "major",
+                "description": "the scale lit (the harmony core's library): one of the names listed (any case; spaces for '-' are accepted too)."
+              },
+              "root": {
+                "type": "string",
+                "pattern": "^[A-Ga-g](♯|#|♭|b|𝄪|𝄫)*$",
+                "description": "the scale's root, a note name without octave (default: the layout's root): a note name without octave such as D, F# or B♭."
+              }
             }
           }
         }
       ],
-      "description": "A generated layout. Its encoder shifts the window one step of the interval (right +1, left -1) and Tempo cycles octave → fifth → third; Shift + encoder still browses layouts. Do not bind encoder or tempo on a page of a lab layout."
+      "description": "A generated layout. Its encoder shifts the window one step of the interval (right +1, left -1) and Tempo cycles octave → fifth → third, or the generator's own steps (the guitar: Fret and Page); Shift + encoder still browses layouts. Do not bind encoder or tempo on a page of a lab layout."
     },
     "colour": {
       "oneOf": [

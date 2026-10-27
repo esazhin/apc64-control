@@ -4,7 +4,7 @@
     lab:
       generator: tonnetz          # required: a registered generator
       base: C3                    # the generator's parameters (base, column, row, channel, …)
-      scheme: fifths              # optional colour scheme, default 'fifths'
+      scheme: fifths              # optional colour scheme, default 'fifths' (and its parameters, e.g. scale)
       colours:                    # optional rest-colour overrides by pitch class
         C: [255, 255, 255]
       strips:                     # optional strip section (§2.7 q6); without it strips stay as read
@@ -25,12 +25,15 @@ from _apc64_host.domain.layout import (
 
 from .bulk_edit import NAMED_COLOURS
 from .generators import (
-    BUILTIN_GENERATORS, BUILTIN_SCHEMES, DEFAULT_SCHEME, ColourScheme, GeneratorFault, PadLayoutGenerator,
-    generate, out_of_range, raw_notes,
+    BUILTIN_GENERATORS, BUILTIN_SCHEMES, DEFAULT_SCHEME, ColourScheme, GeneratorFault, Neck, PadLayoutGenerator,
+    ParamKind, ScaleOverlay, channels_of, configure, generate, neck_of, out_of_range, overlay_of, pad_names_of,
+    raw_notes, root_of, row_labels_of, scheme_params, window_of,
 )
+from .music import PitchClass
 from .harmony.spelling import parse_pitch_class, pc_name
 from .pads import PadGrid, Rgb
 from .records import StripAssignment
+from .window import WindowSpec
 
 LAB_MODULE, SECTION = "lab", "lab"
 WINDOW_SHIFT, INTERVAL_CYCLE = "window_shift", "interval_cycle"
@@ -39,32 +42,67 @@ OWN_KEYS = ("generator", "scheme", "colours", "strips")
 STRIP_KEYS = ("cc", "lsb", "channel", "ch", "bar", "indicator", "bipolar", "outputs")
 
 
-def implied_bindings() -> dict:
+def implied_bindings(window: WindowSpec | None = None) -> dict:
+    """The base-layer encoder and Tempo of a generated layout. Tempo's label names what it toggles: 'interval'
+    (octave / fifth / third), or the generator's own step kinds ('Fret / Page' for the guitar)."""
+    tempo = " / ".join(step.label for step in window.steps) if window is not None else "interval"
     return {Encoder(): Binding((), label="window shift", module_action=ModuleAction(LAB_MODULE, WINDOW_SHIFT)),
-            TEMPO: Binding((), label="interval", module_action=ModuleAction(LAB_MODULE, INTERVAL_CYCLE))}
+            TEMPO: Binding((), label=tempo, module_action=ModuleAction(LAB_MODULE, INTERVAL_CYCLE))}
 
 
 @dataclass(frozen=True)
 class LabDefinition:
-    """A validated generated layout: generator and parameters, scheme, colour overrides, strips, and where
-    each field is written (for page tweaks spliced back into the file, d10)."""
+    """A validated generated layout: generator and parameters, scheme and its parameters, colour overrides,
+    strips, and where each field is written (for page tweaks spliced back into the file, d10)."""
     generator: str
-    params: tuple[tuple[str, int], ...]
+    params: tuple[tuple[str, int | str], ...]
     scheme: str = DEFAULT_SCHEME
     colours: tuple[tuple[int, Rgb], ...] = ()
     strips: tuple[tuple[int, StripAssignment], ...] = ()
     file: str = ""
     line: int = 0
     field_lines: tuple[tuple[str, int], ...] = field(default=(), compare=False)
+    scheme_params: tuple[tuple[str, int | str | None], ...] = ()
+    layout_root: int | None = None   # the generator's root(params) when it has one (the guitar: its lowest string)
 
     @property
-    def parameters(self) -> dict[str, int]:
+    def parameters(self) -> dict[str, int | str]:
         return dict(self.params)
+
+    @property
+    def root(self) -> int:
+        """The layout's root pitch class: the generator's own, else its base note's (C without a base)."""
+        if self.layout_root is not None:
+            return self.layout_root
+        return int(PitchClass.of(self.parameters.get("base", 0)))
+
+    def colour_scheme(self, schemes: Mapping[str, ColourScheme]) -> ColourScheme:
+        return configure(schemes[self.scheme], dict(self.scheme_params))
 
     def grid(self, generators: Mapping[str, PadLayoutGenerator], schemes: Mapping[str, ColourScheme],
              transposition: int = 0) -> PadGrid:
-        return generate(generators[self.generator], self.parameters, schemes[self.scheme], transposition,
+        return generate(generators[self.generator], self.parameters, self.colour_scheme(schemes), transposition,
                         dict(self.colours))
+
+    def overlay(self, schemes: Mapping[str, ColourScheme]) -> ScaleOverlay | None:
+        """The scale the scheme lights, when it is a scale overlay."""
+        return overlay_of(self.colour_scheme(schemes), self.root) if self.scheme in schemes else None
+
+    def row_labels(self, generators: Mapping[str, PadLayoutGenerator]) -> tuple[str, ...] | None:
+        generator = generators.get(self.generator)
+        return row_labels_of(generator, self.parameters) if generator is not None else None
+
+    def pad_names(self, generators: Mapping[str, PadLayoutGenerator], transposition: int = 0) -> tuple | None:
+        generator = generators.get(self.generator)
+        return pad_names_of(generator, self.parameters, transposition) if generator is not None else None
+
+    def window_spec(self, generators: Mapping[str, PadLayoutGenerator]) -> WindowSpec | None:
+        """The generator's own window steps and range, or None (Octave / Fifth / Third)."""
+        return window_of(generators.get(self.generator), self.parameters)
+
+    def neck(self, generators: Mapping[str, PadLayoutGenerator]) -> Neck | None:
+        """The fretboard the page draws for a guitar-like generator, or None."""
+        return neck_of(generators.get(self.generator), self.parameters)
 
     def line_of(self, path: str) -> int | None:
         """The line of a field path such as 'lab.base' (None when the field is not written)."""
@@ -99,17 +137,24 @@ class _LabSection:
             self.lines[f"lab.{entry.key.lower()}"] = entry.line
         generator = self._generator(body)
         scheme = self._scheme(body)
-        params = self._params(body, generator) if generator is not None else None
+        values = self._params(body, generator, self.schemes.get(scheme)) if generator is not None else None
+        params, given_scheme_params = values if values is not None else (None, None)
         colours = self._colours(body.get("colours"))
         strips = self._strips(body.get("strips"))
         if generator is not None and params is not None:
             self._check_range(generator, params, body)
         self._clashes()
-        if self.issues:
+        if any(issue.is_error for issue in self.issues):
             return SectionResult(None, {}, tuple(self.issues))
+        own_root = root_of(generator, params) if callable(getattr(generator, "root", None)) else None
         definition = LabDefinition(generator.name, tuple(params.items()), scheme, tuple(colours.items()),
-                                   tuple(strips.items()), self.file, line, tuple(self.lines.items()))
-        return SectionResult(definition, implied_bindings(), ())
+                                   tuple(strips.items()), self.file, line, tuple(self.lines.items()),
+                                   tuple(given_scheme_params.items()), own_root)
+        try:
+            window = window_of(generator, params)
+        except Exception:   # checked above (_check_range); a label is no reason to refuse the layout
+            window = None
+        return SectionResult(definition, implied_bindings(window), tuple(self.issues))   # warnings only
 
     # --- generator, scheme, parameters ----------------------------------------------------------------
     def _available(self, names) -> str:
@@ -136,38 +181,65 @@ class _LabSection:
             self.error(entry.line, "scheme", f'no colour scheme "{name}"', self._available(self.schemes))
         return name
 
-    def _params(self, body: SectionMap, generator: PadLayoutGenerator) -> dict | None:
+    def _params(self, body: SectionMap, generator: PadLayoutGenerator,
+                scheme: ColourScheme | None) -> tuple[dict, dict] | None:
+        """The generator's parameters (defaults filled in) and the scheme's as written. A name both declare is
+        the generator's."""
         specs = {p.name: p for p in generator.params}
+        own_scheme = {p.name: p for p in scheme_params(scheme) if p.name not in specs} if scheme else {}
         values = {p.name: p.default for p in generator.params}
+        scheme_values: dict = {}
         ok = True
         for entry in body.entries:
             key = entry.key.lower()
             if key in OWN_KEYS:
                 continue
-            if key not in specs:
-                self.error(entry.line, None, f"unknown key '{entry.key}'",
-                           f"the lab section takes {', '.join(OWN_KEYS)} and the {generator.name} parameters: "
-                           + (", ".join(specs) or "none"))
+            spec = specs.get(key) or own_scheme.get(key)
+            owner = self._scheme_owning(key) if spec is None else None
+            if owner is not None:   # left over from another scheme (a scheme switch): unused, not wrong
+                self.issues.append(LayoutIssue(
+                    Severity.WARNING, SourceRef(self.file, entry.line), key,
+                    f"{key} is a parameter of the {owner} colour scheme, unused with {scheme.name if scheme else 'this scheme'}",
+                    f"remove it, or write 'scheme: {owner}'"))
+                continue
+            if spec is None:
+                self.error(entry.line, None, f"unknown key '{entry.key}'", self._unknown_fix(generator, own_scheme))
                 ok = False
                 continue
+            given = _list(entry.value) if spec.kind == ParamKind.NOTE_LIST else _scalar(entry.value)
             try:
-                values[key] = specs[key].parse(_scalar(entry.value))
+                (values if key in specs else scheme_values)[key] = spec.parse(given)
             except DomainInvariantError as error:
                 self.error(entry.line, key, error.problem, error.fix, error.joiner)
                 ok = False
-        return values if ok else None
+        return (values, scheme_values) if ok else None
+
+    def _scheme_owning(self, key: str) -> str | None:
+        return next((name for name, s in sorted(self.schemes.items())
+                     if any(p.name == key for p in scheme_params(s))), None)
+
+    def _unknown_fix(self, generator: PadLayoutGenerator, own_scheme: Mapping) -> str:
+        fix = (f"the lab section takes {', '.join(OWN_KEYS)} and the {generator.name} parameters: "
+               + (", ".join(p.name for p in generator.params) or "none"))
+        if own_scheme:
+            fix += " and the scheme's: " + ", ".join(own_scheme)
+        return fix
 
     def _check_range(self, generator: PadLayoutGenerator, params: dict, body: SectionMap):
         try:
             notes = raw_notes(generator, params)
+            channels_of(generator, params)
+            window_of(generator, params)
         except GeneratorFault as fault:
             self.error(body.get("generator").line, "generator", f'generator "{generator.name}" failed: {fault}',
                        "fix the generator or choose another")
             return
         problem = out_of_range(notes, params)
         if problem is not None:
-            base = body.get("base")
-            self.error(base.line if base else self.section.line, "base", problem.problem(params.get("base")),
+            name = next((p.name for p in generator.params if p.kind in (ParamKind.NOTE, ParamKind.NOTE_LIST)
+                         and body.get(p.name) is not None), "base")   # the note parameter written (base, tuning)
+            written = body.get(name)
+            self.error(written.line if written else self.section.line, name, problem.problem(params.get("base")),
                        problem.fix())   # A10
 
     # --- colours and strips ---------------------------------------------------------------------------
@@ -271,6 +343,11 @@ class _LabSection:
 
 def _scalar(node):
     return node.value if isinstance(node, SectionScalar) else None
+
+
+def _list(node):
+    """A list's scalars ([E1, A1, 50]), else the scalar."""
+    return [_scalar(item) for item in node.items] if isinstance(node, SectionList) else _scalar(node)
 
 
 def _text(node) -> str:

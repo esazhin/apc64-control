@@ -4,9 +4,11 @@
 .lab-panel {
   --tri-major: rgba(255, 170, 60, .55); --tri-minor: rgba(90, 160, 255, .55); --trail: var(--accent);
   --node-ink: #111;   /* the page shell alone shows or hides the panel (only while Lab is chosen) */
+  --neck-wood: #2b2119; --neck-fret: #8d8f96; --neck-nut: #e9e2cf; --neck-string: #c9c4b8; --neck-inlay: #6d655a;
 }
 @media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) .lab-panel { --tri-major: rgba(230, 140, 20, .45); --tri-minor: rgba(40, 110, 230, .40); }
+  :root:not([data-theme="dark"]) .lab-panel { --tri-major: rgba(230, 140, 20, .45); --tri-minor: rgba(40, 110, 230, .40);
+    --neck-wood: #3a2c20; }
 }
 .lab-panel h2 { display: flex; align-items: center; gap: 8px; }
 .lab-panel h3 { font-size: 12px; color: var(--muted); margin: 10px 0 6px; font-weight: 600; }
@@ -49,6 +51,8 @@
 .lab-list li button { margin-left: auto; }
 .lab-list li.current .name { color: var(--accent); }
 .lab-list li.broken .name { text-decoration: line-through; color: var(--bad); }
+.lab-list li.invalid .name { color: var(--bad); }
+.lab-list li.invalid .bad { flex: 1 1 100%; font-size: 12px; overflow-wrap: anywhere; }
 .scheme.broken { color: var(--bad); }
 
 /* harmony: every row keeps its height whatever is held (harmony_views.js chordView), so nothing below moves */
@@ -58,8 +62,12 @@
   white-space: nowrap; }
 .held-names { color: var(--muted); flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden;
   text-overflow: ellipsis; }
-.trail-row { font-size: 13px; line-height: 1.5; display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: baseline;
-  align-content: flex-start; height: calc(2 * 1.5em + 4px); overflow: hidden; }
+.trail-row { font-size: 13px; line-height: 1.5; display: flex; flex-wrap: nowrap; gap: 6px; align-items: flex-start;
+  height: calc(2 * 1.5em + 4px); overflow: hidden; }
+.trail-label { flex: none; }
+.trail-chords { flex: 1 1 auto; min-width: 0; display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: baseline;
+  align-content: flex-start; height: 100%; overflow: hidden; }
+.trail-clear { flex: none; font-size: 11px; line-height: 1.4; padding: 0 6px; }
 .trail-chord { padding: 0 4px; border-radius: 4px; background: var(--panel-2); }
 .trail-chord.newest { background: color-mix(in srgb, var(--accent) 25%, transparent); font-weight: 650; }
 .hint-line { font-size: 13px; line-height: 1.4; margin-top: 4px; height: 1.4em; white-space: nowrap; overflow: hidden;
@@ -70,7 +78,9 @@
 .harmony-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 10px; }
 .lab-panel .view { margin: 0; }
 .lab-panel .view figcaption { font-size: 11px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .05em; }
-.lattice-view { margin-top: 10px; }
+.lattice-view, .grid-view { margin-top: 10px; }
+.main-choice { display: inline-flex; gap: 4px; align-items: center; font-size: 12px; }
+.view-btn.on { color: var(--text); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, transparent); }
 .lab-panel svg { display: block; width: 100%; height: auto; }
 .lab-panel svg text { font: 600 9px system-ui, sans-serif; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
 .lattice .tri { fill: transparent; stroke: var(--line); stroke-width: 1; }
@@ -90,9 +100,144 @@
 .lattice .trail-dot.newest { opacity: 1; }
 .circle .ring { fill: none; stroke: var(--line); }
 .circle .joined { fill: var(--tri-major); stroke: var(--accent); stroke-width: 2; }
+.circle .trail { fill: none; stroke: var(--trail); stroke-width: 1.6; stroke-dasharray: 4 3; opacity: .7; }
 .circle .fifth circle { opacity: .3; }
 .circle .fifth.held circle { opacity: 1; stroke: var(--text); stroke-width: 1.5; }
+.circle .minor-key circle { fill: var(--panel-2); stroke: var(--line); }
+.circle .in-trail circle { stroke: var(--trail); stroke-width: 1.5; stroke-dasharray: 3 2; }
+.circle .trail-newest circle { stroke-dasharray: none; }
+/* the held chord's key: a major triad lights its key outside, a minor one inside */
+.circle .fifth.lit circle { opacity: 1; stroke: var(--text); stroke-width: 4; stroke-dasharray: none; }
+.circle .minor-key.lit circle { fill: var(--tri-minor); stroke: var(--text); stroke-width: 3; stroke-dasharray: none; }
 .circle text { fill: var(--node-ink); font-size: 11px; }
+.circle text.two { font-size: 8px; }
+.circle .minor-name { fill: var(--text); font-size: 8.5px; font-weight: 550; }
+.circle .minor-name.two { font-size: 6.5px; }
+
+/* the large pad grid: the main view of every layout but the Tonnetz (harmony_views.js padGridView) */
+.pad-grid { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; }
+.pad-grid.with-rows { grid-template-columns: max-content repeat(8, minmax(0, 1fr)); }
+.pad-grid .row-label { align-self: center; justify-self: end; padding-right: 6px; font-size: 11px; color: var(--muted);
+  white-space: nowrap; }
+.grid-pad { position: relative; aspect-ratio: 1; border-radius: 6px; background: var(--pad-off, #23262c); display: flex;
+  flex-direction: column; align-items: center; justify-content: center; line-height: 1; min-width: 0; overflow: hidden;
+  container-type: inline-size; }
+.grid-pad.ink-dark { color: #111; }
+.grid-pad.ink-light { color: #f2f4f8; }
+.grid-pad .pad-name { font-weight: 700; font-size: clamp(9px, 34cqi, 30px); }
+.grid-pad .pad-octave { font-size: clamp(7px, 20cqi, 15px); opacity: .7; margin-top: 1px; }
+.grid-pad.silent { opacity: .3; }
+.grid-pad.approx { outline: 1px dashed var(--faint); outline-offset: -1px; }
+.grid-pad.out-of-scale .pad-name, .grid-pad.out-of-scale .pad-octave { opacity: .45; }
+.grid-pad.chord-tone { box-shadow: inset 0 0 0 3px var(--accent); }
+.grid-pad.chord-root::after { content: ""; position: absolute; top: 9%; right: 9%; width: 16%; aspect-ratio: 1;
+  border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 1.5px var(--bg); }
+.grid-pad.held { box-shadow: 0 0 0 3px var(--text), 0 0 14px var(--text); transform: scale(1.06); z-index: 1; }
+.grid-pad.held.chord-tone { box-shadow: inset 0 0 0 3px var(--accent), 0 0 0 3px var(--text), 0 0 14px var(--text); }
+.pad-grid-empty { padding: 18px 8px; border: 1px dashed var(--line); border-radius: 8px; line-height: 1.5; }
+.grid-view .legend { margin-top: 6px; }
+.lab-panel .harmony > .view { margin-top: 12px; }
+.harmony .grid-view .pad-grid { max-width: 460px; }
+
+/* the neck: a guitar layout's main view (harmony_views.js neckView); its size depends only on the neck, so the
+   dots and rings come and go without moving anything */
+.neck-view { margin-top: 10px; }
+.neck { display: block; width: 100%; height: auto; }
+.neck .neck-wood { fill: var(--neck-wood); }
+.neck .fret-wire { stroke: var(--neck-fret); stroke-width: 1.4; }
+.neck .fret-wire.nut { stroke: var(--neck-nut); stroke-width: 4; }
+.neck .inlay { fill: var(--neck-inlay); }
+.neck .string-line { stroke: var(--neck-string); }
+.neck .string-name { fill: var(--muted); font-size: 11px; font-weight: 600; text-anchor: middle; dominant-baseline: central; }
+.neck .fret-number { fill: var(--faint); font-size: 9px; text-anchor: middle; }
+.neck .fret-number.shown { fill: var(--accent); font-weight: 650; }
+.neck .window-box { fill: color-mix(in srgb, var(--accent) 10%, transparent); stroke: var(--accent); stroke-width: 2; }
+.neck .ring { fill: none; stroke-width: 2.2; }
+.neck .played circle { stroke: var(--text); stroke-width: 1.2; }
+.neck .dot-name { fill: #111; font-size: 7.5px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
+
+/* the buttons beside the Harmony "?": Full screen and New tab (in the full view: the toggle and Leave) */
+.view-btns { display: inline-flex; gap: 6px; flex: none; }
+.view-btn { font-size: 12px; font-weight: 500; text-transform: none; letter-spacing: 0; line-height: 1.4;
+  padding: 2px 9px; color: var(--muted); }
+a.view-btn { background: var(--panel-2); border: 1px solid var(--line); border-radius: 7px; text-decoration: none; }
+.view-btn:hover { color: var(--text); border-color: var(--muted); }
+
+/* --- the harmony full view (lab.js harmonyFullPart: ?view=harmony, or Full screen) ------------------------------
+   The panel's views, sized by the window: the text by vmin, the SVGs by their viewBox (each fills its area and
+   keeps its proportion, so it stays sharp), and every row keeps its reserved height as in the panel. A wide window
+   holds it all on one screen, the Tonnetz and the circle side by side; a tall or small one stacks it and scrolls. */
+.harmony-full {
+  --chord-size: clamp(44px, 10vmin, 150px); --trail-size: clamp(15px, 2.4vmin, 30px);
+  --hint-size: clamp(14px, 1.9vmin, 24px);
+  display: flex; flex-direction: column; gap: 12px; min-height: 100vh; min-height: 100dvh; background: var(--bg);
+  padding: max(10px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+}
+.full-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; flex: none; }
+.full-head h2 { margin: 0; font-size: 14px; color: var(--muted); font-weight: 650; text-transform: uppercase;
+  letter-spacing: .07em; }
+.full-head .inputs { margin: 0; font-size: 13px; }
+.full-head .grow { flex: 1; }
+.full-conn { width: 10px; height: 10px; border-radius: 50%; background: var(--bad); flex: none; }
+.full-conn.live { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+.full-waiting { padding: 24px 0; }
+
+.full-views { display: grid; gap: 14px 24px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas: "chord chord" "main main" "circle pads" "hints hints"; }
+.full-views[data-main="pads"] { grid-template-areas: "chord chord" "main main" "circle circle" "hints hints"; }
+.full-views .neck-view { margin-top: 0; }
+.full-views .neck-view .legend { text-align: center; }
+.full-views > [data-area="chord"] { grid-area: chord; }
+.full-views > [data-area="pads"] { grid-area: pads; }
+.full-views > [data-area="main"] { grid-area: main; }
+.full-views > [data-area="circle"] { grid-area: circle; }
+.full-views > [data-area="hints"] { grid-area: hints; }
+.full-views .view { margin: 0; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.full-views .view figcaption { font-size: 12px; }
+.full-views .lattice-view { margin-top: 0; }
+.full-views .circle { max-width: 640px; margin: 0 auto; }
+.full-views [data-area="pads"] { width: min(100%, 420px); justify-self: center; }
+.full-views [data-area="pads"] .legend { text-align: center; }
+.full-views .grid-view .pad-grid { width: min(100%, 720px); margin: 0 auto; gap: 6px; }
+.full-views .grid-view .legend { text-align: center; }
+.full-views .grid-view .row-label { font-size: clamp(11px, 1.6vmin, 18px); }
+/* the reserved rows, larger: the chord row is one line of the chord's size, the trail two lines, a hint one (two) */
+.full-views .chord-row { font-size: var(--chord-size); height: 1.2em; gap: .3em; }
+.full-views .chord { font-size: 1em; line-height: 1.2em; }
+.full-views .held-names { font-size: max(14px, .26em); }
+.full-views .trail-row { font-size: var(--trail-size); }
+.full-views .trail-chord { padding: 0 .3em; }
+.full-views .trail-clear { font-size: max(11px, .5em); }
+.full-views .hint-line { font-size: var(--hint-size); }
+@media (max-width: 600px) {
+  .full-views, .full-views[data-main="pads"] { grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "chord" "main" "hints" "circle" "pads"; }
+  .full-views [data-area="pads"] { width: min(100%, 340px); }
+}
+/* one screen: the lattice and the circle share the height left by the chord row (the pads beside it) and the hints */
+@media (min-width: 900px) and (min-aspect-ratio: 5/4) and (min-height: 540px) {
+  .harmony-full { height: 100vh; height: 100dvh; overflow: hidden; }
+  .full-views { flex: 1 1 0; min-height: 0; grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto; grid-template-areas: "chord pads" "main circle" "hints hints"; }
+  .full-views[data-main="pads"] { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+    grid-template-areas: "chord chord" "main circle" "hints hints"; }
+  /* the neck is wide: it takes the whole width; below it the hints, then the circle and the pads, side by side */
+  .full-views[data-main="neck"] { grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-rows: auto auto minmax(0, 1fr); grid-template-areas: "chord chord chord" "main main main" "hints circle pads"; }
+  .full-views[data-main="neck"] .neck { max-height: 36vh; }   /* the circle and the pads keep the rest */
+  .full-views[data-main="neck"] [data-area="circle"] { width: 30vh; height: 100%; }
+  .full-views[data-main="neck"] [data-area="pads"] { width: 25vh; justify-self: end; align-self: center; }
+  .full-views[data-main="neck"] > [data-area="hints"] { align-self: center; }
+  .full-views > [data-area="chord"] { align-self: center; }
+  .full-views [data-area="pads"] { width: min(100%, 21vh); justify-self: end; }
+  .full-views .lattice-view svg, .full-views .circle-view svg { flex: 1 1 0; min-height: 0; height: 100%; max-width: none; }
+  /* the pad grid: square, as large as the height left allows */
+  .full-views .grid-view .pad-grid-block { flex: 1 1 0; min-height: 0; container-type: size; display: flex;
+    flex-direction: column; align-items: center; }
+  .full-views .grid-view .pad-grid { width: min(100cqw, 100cqh - 30px); margin: 0; }
+  .full-views .grid-view .pad-grid.with-rows { width: min(100cqw, (100cqh - 30px) * 1.22); }
+}
 
 /* pads (the replica and a slot as read) */
 .lab-pads { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; }

@@ -1,0 +1,10 @@
+# Janko: whole tones (+2) across, a semitone (+1) up (docs/lab-guide.md). Rows alternate between the two
+# whole-tone scales, as the Janko keyboard's tiers do, so a scale or chord has one fingering in every key, and
+# each note repeats two rows up one column left. Pads 48 (C2) to 69: under two octaves, played compactly.
+name: Janko
+lab:
+  generator: isomorphic
+  base: 48            # the note on pad r1c1 (C2 = 48); the top-right pad is base + 21
+  column: 2           # a whole tone per column to the right
+  row: 1              # a semitone per row upwards
+  scheme: fifths

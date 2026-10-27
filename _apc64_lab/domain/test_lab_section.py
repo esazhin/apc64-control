@@ -134,3 +134,16 @@ def test_the_optional_strip_section():   # §2.7 q6
 
 def test_without_the_lab_registered_the_section_is_an_unknown_key():   # contract 1 unchanged
     assert compile_text(TONNETZ_C, "tonnetz-c.yaml").issues[0].problem == "unknown key 'lab'"
+
+
+def test_tempos_label_follows_the_layouts_own_window_steps():   # after the guitar live test (2026-10-27)
+    from _apc64_lab.generators.guitar import GENERATOR as GUITAR
+
+    class WithGuitar:
+        def compile(self, section, file, existing):
+            generators = {g.name: g for g in (*BUILTIN_GENERATORS, GUITAR)}
+            return compile_lab_section(section, file, existing, generators)
+    result = compile_text("name: Guitar\nlab:\n  generator: guitar\n", "guitar.yaml", sections={"lab": WithGuitar()})
+    assert result.valid, messages(result)
+    assert result.layout.page(1).binding(Layer.BASE, TEMPO).label == "Fret / Page"
+    assert lab(TONNETZ_C).layout.page(1).binding(Layer.BASE, TEMPO).label == "interval"

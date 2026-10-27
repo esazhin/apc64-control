@@ -137,7 +137,8 @@ def test_each_route_reaches_its_use_case():
                         slot={"slot": 3, "pads": [], "strips": [], "raw": "00"})
     globals_ = Recorder(read={"fields": [{"field": "led_level", "text": "75%"}], "raw": "00"})
     tracker = Recorder(state=harmony.state(), inputs={"apc64": ["APC64 Custom", "APC64 Notes"], "inputs": []},
-                       select_inputs=lambda ports: {"inputs": ports, "message": "ok"})
+                       select_inputs=lambda ports: {"inputs": ports, "message": "ok"},
+                       clear_trail={"trail": [], "message": "trail cleared"})
     client, _ = client_for(session=session, projects=projects, globals=globals_, tracker=tracker)
     data = base64.b64encode(b"preset").decode()
     requests = [
@@ -145,6 +146,7 @@ def test_each_route_reaches_its_use_case():
         ("post", "/api/lab/leave", {}), ("post", "/api/lab/recovery/dismiss", {}),
         ("get", "/api/lab/harmony", None), ("get", "/api/lab/harmony/inputs", None),
         ("post", "/api/lab/harmony/inputs", {"inputs": ["Keystation 49"]}),
+        ("post", "/api/lab/harmony/trail/clear", {}),
         ("get", "/api/lab/slots/3", None), ("post", "/api/lab/preview", {"entry": "Live set B"}),
         ("post", "/api/lab/backup", {"all": True}), ("post", "/api/lab/backup", {"slot": 7}),
         ("post", "/api/lab/backup", {"slot": "globals"}), ("get", "/api/lab/backups", None),
@@ -167,7 +169,7 @@ def test_each_route_reaches_its_use_case():
         ("capture", (12, "Live set B")), ("bulk_edit", ("5", ["all pads channel 3"]))]
     assert globals_.calls == [("read", ()), ("change", ({"led_level": 100, "cv2_channel": 4}, False)),
                               ("change", ({"device_mode": "standalone"}, True))]
-    assert [c[0] for c in tracker.calls] == ["state", "inputs", "select_inputs"]
+    assert [c[0] for c in tracker.calls] == ["state", "inputs", "select_inputs", "clear_trail"]
     assert client.get("/api/lab/harmony").json()["kind"] == "harmony"
 
 

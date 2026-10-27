@@ -26,6 +26,11 @@
 > - The library directory (`APC64_LAB_LIBRARY_DIR`, default `library/`) is git-ignored in the public repository,
 >   since it holds the user's own projects (§3.2 had it tracked); backups stay git-ignored as before.
 > - The serial numbers in the captures under `fixtures/` are masked.
+> - **Amendment 2026-10-27, the guitar neck** (§2.8): a `guitar` generator, per-generator window steps and limits
+>   (amending d33–d41), one MIDI channel per string, and the neck as a Harmony main view.
+> - **Amendment 2026-10-27, after the guitar live test** (§2.9): the trail takes every named chord (d57), notes
+>   are spelled from their chord or key (a25), the host assumes the view it asked for and the page's view buttons
+>   switch the unit (d21, d22), and the guitar pads mark the inlay frets.
 >
 > [README.md](../README.md), [docs/lab-guide.md](lab-guide.md), [docs/lab-api.md](lab-api.md) and
 > [PROTOCOL-SPEC.md](../PROTOCOL-SPEC.md) describe the current state; contract 1 is
@@ -251,8 +256,8 @@ Scales: **importance** = impact if the assumption is false (0 = none → 10 = th
 | d18 | colour scheme — any scheme with any generator: A scheme is chosen separately from the generator, and any scheme combines with any generator. | kind | 3 | 3 | noted | - | - |
 | d19 | colour scheme — colour out of range: forced | form | - | - | resolved | Pad colours are raw RGB bytes, so a component outside 0–255 is refused at validation. (source: p8) | - |
 | d20 | colour scheme — page shows written colours: In the lab panel, a generated pad shows the RGB written to its record, with no 'approximate' mark. Session-view palette colours keep the host's 'approximate' mark. | sameness | 2 | 4 | noted | - | - |
-| d21 | Custom view — other view at activation: On activation the host asks the unit for Custom view and writes slot 0 anyway. If the unit does not report Custom view within 1 s, the OLED and page show 'Press Custom'. | kind | 5 | 6 | bounded | - | - |
-| d22 | Custom view — leaves Custom view: While the unit reports a view other than Custom, encoder turns and Tempo presses do not shift the window, and the OLED shows 'Custom view off'. Returning to Custom view resumes at the same interval and offset. | time | 3 | 3 | noted | - | - |
+| d21 | Custom view — other view at activation: On activation the host asks the unit for Custom view and writes slot 0 anyway. If the unit does not report Custom view within 1 s, the OLED and page show 'Press Custom'. (Amended 2026-10-27, §2.9: every activation asks, a switch within a running session too, and a request that was sent counts as Custom view at once; 'Press Custom' only when it could not be sent.) | kind | 5 | 6 | bounded | - | - |
+| d22 | Custom view — leaves Custom view: While the unit reports a view other than Custom, encoder turns and Tempo presses do not shift the window, and the OLED shows 'Custom view off'. Returning to Custom view resumes at the same interval and offset. (Amended 2026-10-27, §2.9: "reports" includes a view the host asked for, from the page's view buttons; only a real other view pauses.) | time | 3 | 3 | noted | - | - |
 | d23 | Custom view — written while DAW mode is on: Assumes that a slot-0 write sent while the unit is in DAW mode and Custom view changes the pads immediately. This was verified outside DAW mode only, so a live check proves it before any build depends on it. | time | 9 | 5 | bounded | - | - |
 | d24 | encoder click — right detent: forced | kind | - | - | resolved | A detent to the right shifts the window +1 step. (source: the stakeholder's brief) | - |
 | d25 | encoder click — left detent: forced | kind | - | - | resolved | A detent to the left shifts the window −1 step. (source: the stakeholder's brief) | - |
@@ -287,7 +292,7 @@ Scales: **importance** = impact if the assumption is false (0 = none → 10 = th
 | d54 | played notes — inversion: A chord whose lowest note is not the root is named as a slash chord with the bass after the slash. | amount | 2 | 2 | noted | - | - |
 | d55 | played notes — unrecognised set: A set that matches no chord template is shown as its pitch names. | amount | 1 | 1 | noted | - | - |
 | d56 | played notes — octave doubling: forced | sameness | - | - | resolved | The same pitch class in two octaves counts once for the chord name and the triad. (source: definition: a chord is named by its set of pitch classes) | - |
-| d57 | played notes — trail: A completed triad joins the trail. Repeating the same chord adds nothing, and the last 8 are kept. | time | 2 | 2 | noted | - | - |
+| d57 | played notes — trail: A completed triad joins the trail. Repeating the same chord adds nothing, and the last 8 are kept. (Amended 2026-10-27, §2.9: any named chord joins; a chord that grows while held replaces its own entry; the trail can be cleared.) | time | 2 | 2 | noted | - | - |
 | d58 | played notes — played order: forced | time | - | - | resolved | The views show notes in the order the host's play stream delivers them, which is the order played. (source: p1) | - |
 | d59 | played notes — view opened mid-play: A page opened while notes are held shows them at once. | time | 2 | 3 | noted | - | - |
 | d60 | harmony views — circle of fifths: forced | kind | - | - | resolved | The held pitch classes are highlighted on the circle and joined in fifths order. (source: definition: the circle of fifths orders the 12 pitch classes by perfect fifths) | - |
@@ -367,6 +372,81 @@ Add the tasks and tests it needs, and record each in the build log with the row 
   - Returning to a generated layout (Shift + encoder, page, agent) starts a fresh session.
   - Because an on-unit save while a generated layout sits in slot 0 overwrites that project slot without the host knowing, **each lab session takes a full backup of slots 1–24** (or reuses one younger than 10 minutes). It runs right after the session's first slot-0 write, so activation stays instant.
   - Hermetic tests cover: load another project mid-session, save on the unit mid-session (the simulator models it), return to the lab, and release after an on-unit project change (no restore over it).
+
+### 2.8 Amendment (2026-10-27): the guitar neck — binding; agreed with the stakeholder
+Where this section conflicts with d33–d41, inv11 or q8 above, this section wins for the layouts it names; every
+layout whose generator declares nothing keeps the rows above unchanged.
+
+- **The `guitar` generator.** Rows are strings and columns frets: the highest string on the top used row, the
+  lowest on the bottom one (r1 is the bottom row). 8 strings use rows 1–8, 7 strings rows 1–7, 6 or fewer start at
+  row 2; the unused rows are silent, kept for a later performer step. Column 1 is the fret at the window's
+  position (fret 0, the open strings, at the start). Parameters: `tuning`, a preset (E standard, drop D, E♭ and D
+  standard, drop C, DADGAD, open G, open D; B standard and drop A for 7 strings; F♯ standard and drop E for 8; bass
+  4 and 5) or a list of 4–8 open notes low to high (numbers or names, C3 = 60, so a guitar's low E is E1, 40);
+  `frets` 12–36, default 24. Anything else is a precise validation error at its line. Default scheme `fifths`;
+  `scale` works, its default root being the lowest string's.
+- **Per-generator window steps and limits (amends d33–d41, inv11).** A generator may declare its own step kinds and
+  a transposition range. The guitar's window position t is the fret in column 1 (the pads show t … t+7), 0 ≤ t ≤
+  frets − 7. Two kinds, **Fret** (one semitone per detent) and **Page** (to the next or previous page position: the
+  multiples of 8 below the end, then the end; 24 frets: 0, 8, 16, 17). Tempo toggles Fret ↔ Page (d33 for this
+  generator); each activation starts at Fret, t = 0 (d38). A step beyond either end, or one that would leave
+  0–127, is refused as an Edge, a multi-detent message as a whole (d29). ~~Row 2 shows the kind and the frets on the
+  pads within 14 characters, the edge marker included (`Fret 3-10`, `Page 17-24`, `Pg 17-24 edge`) (d39–d41).~~
+  Amended 2026-10-27 (§2.9): row 2 always shows the frets on the pads, `Frets 8-15`; the step kind (`Step: Page`)
+  and a refused step (`Neck end`) flash there for about 1 s (d39–d41). Push
+  stores the transposition t (q3). Shift + encoder stays the host's browser (inv12).
+- **One MIDI channel per string (amends q8 for this generator).** String 1 (the highest) sends on channel 1, string
+  2 on channel 2, and so on, because in Custom view the unit sends only note and channel. The generator API gains
+  optional per-pad channels; other generators keep the one `channel` parameter. The host keeps forwarding to the
+  routing rule's channel; the lab maps the arrival channel back to the string for the page.
+- **The neck view.** For a guitar layout the Harmony main view is a horizontal neck: nut, all frets spaced like a
+  real neck with a floor, inlays, strings with the highest on top, their letters at the nut; a box around the frets
+  the pads show; a played note a dot on its string and fret, every other place of that pitch a ring (notes without
+  a string: rings everywhere); Main gains Neck; a page-only, remembered left-handed flip; nothing moves as notes
+  come and go.
+- **Out of scope:** the performer (chord types on the free rows, Shift + pad chord types, strum and arpeggio
+  patterns, MIDI clock), triad shapes on the neck, colour calibration.
+
+### 2.9 Amendment (2026-10-27): after the guitar live test — binding; agreed with the stakeholder
+Where this section conflicts with d21, d22, d57, a25 or §2.8 above, this section wins.
+
+- **The trail (amends d57).** Any chord the namer recognises joins the trail: three or more pitch classes forming
+  one of its chords (triads, sevenths, sus, °, +). A single note, an interval (a two-note "power chord" included)
+  or an unnamed set is not a chord and adds nothing. The same chord again in a row adds nothing (same root and
+  quality; an inversion or a new bass alone is not new). A chord that grows with nothing released in between
+  replaces its own newest entry (C E G, then + B: the entry becomes Cmaj7). The last 8 are kept. Each entry keeps
+  its primary major or minor triad, if any, for the Tonnetz and the circle; an entry without one is in the trail's
+  text only. The trail can be cleared from the panel, the full view, `POST /api/lab/harmony/trail/clear` and
+  `apc64 lab trail clear`; the panel says what the trail holds, and nothing moves as it changes.
+- **Spelling from context (refines a25).** When the held notes form a named chord, every held note is spelled in
+  that chord (E major: G♯; B♭ major: B♭ D F); its root takes the key's spelling when a key holds it, otherwise
+  the spelling with the fewest accidentals over the chord. Otherwise, when the active layout's colour scheme has a
+  key (`scale`), the key's names; otherwise each note as its interval above the lowest held note (E + a major
+  third: G♯). C♭, F♭, E♯, B♯ and double ♯/♭ are never produced unless the active key itself spells the note so;
+  that note alone takes the fixed table's name (B F A♭: `F°/B`). This applies to everything displayed: the held
+  notes, the chord name, the trail entries, the neck's labels, the lattice's nodes and triads, the hints and the
+  held circle keys (with E major held the neighbours read Em, C♯m, G♯m). Lookups keep the fixed names (degree keys,
+  the circle order, each triad's `label`; the display name is a separate `display`). A75's unnamed set therefore
+  reads `C D♭ D` again. MusicCat's chord detection and its golden cases are unchanged; the core stays pure.
+- **The pad-mode request (amends d21, d22).** The unit obeys the host's request `19 00 01 <m>` but does not
+  report it back (verified live for Custom). A request sent while the host holds the unit makes the host's view
+  the requested one at once, as if reported; the unit's own reports still override it. Every activation while
+  the unit is not in Custom view asks for it, a switch within a running session included. 'Press Custom' shows
+  only when the request could not be sent. The encoder and Tempo pause ('Custom view off') only while the unit is
+  really in another view: after the user pressed another view button on the unit, or chose one on the page.
+- **The guitar's OLED (amends §2.8's row 2).** Row 2 always reads what the pads show, `Frets <a>-<b>` (14
+  characters up to `Frets 29-36`). When Tempo toggles, row 2 flashes `Step: Page` / `Step: Fret` for about 1 s,
+  then the frets again; a refused step flashes `Neck end` for about 1 s instead of the edge suffix. A newer step or
+  toggle cancels a pending flash. The page's window line keeps the step kind. Other layouts keep `5th +2` and the
+  `edge` suffix.
+- **Fret marks on the guitar.** The pad columns on the inlay frets (3, 5, 7, 9, 15, 17, 19, 21, 27, 29, 31, 33)
+  keep the scheme's full colour; the others are shaded to 45 % (a colour already dark is kept); 12, 24 and 36 are
+  lifted 40 % toward white. They move with the window (a generator hook `window_marks(params, transposition)`);
+  pressed colours are unchanged; `fret_marks: off` turns them off (default on).
+- **The page's view buttons.** Session, Note, Chord, Step and Custom on the replica send the pad-mode request
+  while the host holds the unit (contract 1 amended likewise, d43); the host repaints a requested Session view;
+  a lab session reacts as to the unit's own button. Not held: refused with a plain message. Project, Overview and
+  Drum are not requested.
 
 ## 3 · Context — execution-ready
 Role: informational — orientation, except §3.5 below.

@@ -1,0 +1,10 @@
+# Thirds grid: an isomorphic layout, a major third (+4) per column and a minor third (+3) per row (docs/lab-guide.md).
+# Every 2x2 block holds a root, its minor and major thirds and its fifth: the bottom row of the block with the pad
+# up-right is a major triad, the left column with the pad up-right a minor one. Pads 36 (C1) to 85.
+name: Thirds grid
+lab:
+  generator: isomorphic
+  base: 36            # the note on pad r1c1 (C1 = 36); the top-right pad is base + 49
+  column: 4           # a major third per column to the right
+  row: 3              # a minor third per row upwards
+  scheme: fifths

@@ -141,6 +141,11 @@ class UnitMemoryAdapter:
 
     # --- UnitControl ------------------------------------------------------------------------------------
     def request_view(self, view: UnitView = UnitView.CUSTOM) -> bool:
+        """Through the host when it offers it (the view is then assumed, as the unit never reports a requested
+        change, 2026-10-27); else straight through the gate."""
+        views = self._link.views
+        if views is not None:
+            return bool(views.request_view(view))
         try:
             self._send([view_request_frame(view)])
         except (NotHeld, Gone, Refused):

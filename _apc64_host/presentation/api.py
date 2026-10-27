@@ -18,14 +18,14 @@ from fastapi import FastAPI, Request, WebSocket
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from ..application.engine import UnknownLayout
+from ..application.engine import UnknownLayout, ViewNotSent
 from ..application.layout_pipeline import UnknownVersion
 from ..application.learn import LearnMode, UnknownPort
 from ..application.session import ReleaseResult, TakeResult
 from ..application.state_view import UnknownControl
 from ..application.tweaks import Invalid, Saved, Stale
 from ..domain.controls import ControlRole, Encoder, EncoderPress, Strip, StripTouch, entry, parse_control
-from ..domain.effects import EncoderTurn, Press, Release, StripMove
+from ..domain.effects import NOT_SWITCHED, SWITCHABLE_VIEWS, EncoderTurn, Press, Release, StripMove
 from ..domain.issues import DomainInvariantError
 from ..domain.layout import MAX_BANKS, MAX_PAGES, Layer, LayoutId, TweakField, TweakRequest
 from ..domain.network import AllowedNetworks, ClientAddress
@@ -211,6 +211,8 @@ def build_app(services: Services, *, static_dir=STATIC_DIR, view_model=_view_mod
     def nav_answer(answer):
         if isinstance(answer, UnknownLayout):
             raise Refusal(409, answer.problem, allowed=list(answer.allowed))
+        if isinstance(answer, ViewNotSent):
+            raise Refusal(409, answer.problem)
         return state_now()
 
     @app.post("/api/layout")
@@ -239,14 +241,22 @@ def build_app(services: Services, *, static_dir=STATIC_DIR, view_model=_view_mod
     # --- replica input (s16; a19, d49) -------------------------------------------------------------------
     def replica_control(name: str):
         control = _control(name)
-        if entry(control).role is ControlRole.DEVICE_LOCAL:
-            raise _bad(f"{name} is the unit's own button; it never reaches the host")
+        if entry(control).role is ControlRole.DEVICE_LOCAL:   # a view button: the pad-mode request (2026-10-27)
+            kind = str(control.kind)
+            if kind not in SWITCHABLE_VIEWS:
+                raise _bad(NOT_SWITCHED.get(kind, f"{name} is the unit's own button; it never reaches the host"),
+                           allowed=[f"view {v}" for v in SWITCHABLE_VIEWS])
         return control
+
+    def view_of(control):
+        return SWITCHABLE_VIEWS.get(str(control.kind)) if entry(control).role is ControlRole.DEVICE_LOCAL else None
 
     @app.post("/api/control/{name}/press")
     async def press(name: str, request: Request):
         data = await _body(request)
         control = replica_control(name)
+        if view_of(control) is not None:
+            return nav_answer(s.engine.press_view(view_of(control)))
         if isinstance(control, Strip):
             control = StripTouch(control.n)
         if isinstance(control, Encoder):
@@ -258,6 +268,8 @@ def build_app(services: Services, *, static_dir=STATIC_DIR, view_model=_view_mod
     async def release_control(name: str, request: Request):
         await _body(request)
         control = replica_control(name)
+        if view_of(control) is not None:
+            return state_now()   # the press switched the view; letting go does nothing
         if isinstance(control, Strip):
             control = StripTouch(control.n)
         if isinstance(control, Encoder):
