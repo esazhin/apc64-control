@@ -282,8 +282,8 @@ class TweaksDouble:
     def __init__(self, answer="saved"):
         self.calls, self.answer = [], answer
 
-    def save_section_field(self, layout_id, path, value, base_hash=None):
-        self.calls.append((str(layout_id), path, value))
+    def save_section_field(self, layout_id, path, value, base_hash=None, comment=None):
+        self.calls.append((str(layout_id), path, value) + ((comment,) if comment is not None else ()))
         return self.answer
 
 

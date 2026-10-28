@@ -274,9 +274,10 @@ def _key_of(content: str) -> str | None:
     return head.split(":", 1)[0].strip().strip("'\"")
 
 
-def splice_section_field(text: str, path: str, value) -> str:
+def splice_section_field(text: str, path: str, value, comment: str | None = None) -> str:
     """The text with one field of a block-style section set: 'lab.base' → the 'base:' line under 'lab:' gets
-    the new value (its comment kept), or a new line is added at the end of the section. Only that one line
+    the new value (its comment kept, or replaced by `comment` when one is given: a comment that describes the
+    value would otherwise go stale), or a new line is added at the end of the section. Only that one line
     changes; anything else is refused with a SectionSpliceError."""
     parts = [p for p in str(path).split(".") if p]
     if len(parts) < 2:
@@ -310,7 +311,8 @@ def splice_section_field(text: str, path: str, value) -> str:
                 at -= 1                               # after the section's last entry, before blank lines
             if at > 0 and not lines[at - 1].endswith("\n"):
                 lines[at - 1] += "\n"
-            lines.insert(at, " " * indent + f"{part}: {_value_text(value)}\n")
+            note = f"  # {comment}" if comment else ""
+            lines.insert(at, " " * indent + f"{part}: {_value_text(value)}{note}\n")
             return "".join(lines)
         content = _content(lines[found])
         rest = content.split(":", 1)[1].strip()
@@ -330,11 +332,12 @@ def splice_section_field(text: str, path: str, value) -> str:
         if not rest and nested:
             raise SectionSpliceError(found + 1, str(path), f"'{path}' holds a block, not one value",
                                      "tweak one of its fields instead")
-        if rest == _value_text(value):
-            return text                               # already so: the file stays byte for byte
         line = lines[found]
+        note = _comment_of(line) if comment is None else (f"  # {comment}" if comment else "")
+        if rest == _value_text(value) and note == _comment_of(line):
+            return text                               # already so: the file stays byte for byte
         ending = "\n" if line.endswith("\n") else ""
         key = content.strip().split(":", 1)[0]
-        lines[found] = " " * _indent(line) + f"{key}: {_value_text(value)}{_comment_of(line)}{ending}"
+        lines[found] = " " * _indent(line) + f"{key}: {_value_text(value)}{note}{ending}"
         return "".join(lines)
     raise SectionSpliceError(1, str(path), f"'{path}' was not found", "check the field path")

@@ -83,8 +83,10 @@ class TweakService:
         return Saved(ContentHash.of(new_text))
 
     # --- module sections (contract 2, s38) -------------------------------------------------------------------
-    def save_section_field(self, layout_id, path: str, value, base_hash: ContentHash | None = None) -> TweakAnswer:
-        """One field of a module section, e.g. ('tonnetz-c', 'lab.base', 'D3'): Saved, Stale or Invalid."""
+    def save_section_field(self, layout_id, path: str, value, base_hash: ContentHash | None = None,
+                           comment: str | None = None) -> TweakAnswer:
+        """One field of a module section, e.g. ('tonnetz-c', 'lab.base', 'D3'): Saved, Stale or Invalid. A given
+        `comment` replaces the line's comment (the module's description of the new value)."""
         layout_id = LayoutId(layout_id)
         file = f"{layout_id}.yaml"
         read = self._source.read(layout_id)
@@ -97,7 +99,7 @@ class TweakService:
                                         f"'{top}' is not a module section",
                                         f"use one of: {', '.join(sorted(self._sections))}"),))
         try:
-            new_text = splice_section_field(text, path, value)
+            new_text = splice_section_field(text, path, value, comment)
         except SectionSpliceError as error:
             return Invalid((LayoutIssue(Severity.ERROR, SourceRef(file, error.line), error.field, error.problem,
                                         error.fix),))

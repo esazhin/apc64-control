@@ -106,6 +106,17 @@ class GuitarNeck:
         rows = string_rows(params)
         return tuple(rows[r][0] if r in rows else None for r in range(8) for x in range(8))
 
+    def describe(self, param, value):
+        """The comment written next to a tuning chosen on the page: its open strings, numbers and names."""
+        if param != "tuning":
+            return None
+        preset = _lookup(value)
+        if preset is None:
+            return "the open strings, low to high (C3 = 60)"
+        notes = TUNINGS[preset]
+        names = " ".join(f"{pc_name(n % 12)}{n // 12 - 2}" for n in notes)
+        return f"the open strings, low to high: {' '.join(map(str, notes))} ({names}; C3 = 60)"
+
     def row_labels(self, params):
         rows = string_rows(params)
         return tuple(f"{rows[r][0]} {pc_name(rows[r][1])}" if r in rows else "" for r in range(8))

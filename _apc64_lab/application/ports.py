@@ -315,8 +315,12 @@ class HostLink:
     def load(self, layout_id):
         return self.ports.loader.load(layout_id) if self.ports.loader is not None else None
 
-    def tweak(self, layout_id, path: str, value):
-        return self.ports.tweaks.save_section_field(layout_id, path, value) if self.ports.tweaks else None
+    def tweak(self, layout_id, path: str, value, comment: str | None = None):
+        if not self.ports.tweaks:
+            return None
+        if comment is None:
+            return self.ports.tweaks.save_section_field(layout_id, path, value)
+        return self.ports.tweaks.save_section_field(layout_id, path, value, comment=comment)
 
     # the session's SysEx tap and the gate (for the unit-memory adapter)
     @property

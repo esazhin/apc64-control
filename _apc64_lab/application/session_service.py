@@ -37,6 +37,7 @@ from _apc64_host.domain.layout import UnitPortRole
 from _apc64_host.domain.oled import OledText
 from _apc64_host.domain.unit_status import ReleaseReason
 
+from ..domain.generators import describe_of
 from ..domain.harmony.spelling import pc_name
 from ..domain.lab_section import LabDefinition
 from ..domain.memory import (
@@ -542,15 +543,17 @@ class SessionService:
                 names = sorted(i.name for i in self._index.all()) if self._index is not None else []
                 return refused(f"no generated layout {layout}", OutcomeCode.NOT_FOUND, "layout",
                                "generated layouts: " + (", ".join(names) or "none"))
-            layout_id = found.layout_id
+            layout_id, definition = found.layout_id, found.definition
         else:
             with self._lock:
                 wanted = self._wanted
             if wanted is None:
                 return refused("no generated layout is active; activate one first", OutcomeCode.SESSION)
-            layout_id = wanted.layout_id
+            layout_id, definition = wanted.layout_id, wanted.definition
         path = field if str(field).startswith("lab.") else f"lab.{field}"
-        return self._link.tweak(layout_id, path, value)
+        generator = self._registry.generators().get(definition.generator) if definition is not None else None
+        comment = describe_of(generator, path.split(".", 1)[1], value) if generator is not None else None
+        return self._link.tweak(layout_id, path, value, comment)
 
     # === internals =========================================================================================
     def _session_layout(self, layout_id: str, name: str, definition: LabDefinition) -> SessionLayout:

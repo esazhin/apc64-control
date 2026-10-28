@@ -270,8 +270,8 @@ class ViewRequester(Protocol):
 
 @runtime_checkable
 class SectionTweaks(Protocol):
-    def save_section_field(self, layout_id, path: str, value) -> Any:
-        """Saved, or the issues that refused it (s38)."""
+    def save_section_field(self, layout_id, path: str, value, base_hash=None, comment: str | None = None) -> Any:
+        """Saved, or the issues that refused it (s38); `comment` replaces the line's comment when given."""
         ...
 
 

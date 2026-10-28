@@ -4,6 +4,26 @@ A Linux host and layout lab for the **Akai APC64**, in two parts: the **Host** a
 
 ![The page: the live replica in Custom view with the generated Tonnetz C layout, and the Lab panel](docs/screenshot.png)
 
+## Quick start
+
+Linux with Python 3.14+ and the APC64 on USB:
+
+```sh
+git clone https://github.com/esazhin/apc64-control.git && cd apc64-control
+./start.sh                  # the first run sets everything up; then open http://localhost:5058/
+```
+
+1. On the page, answer **Yes** to "Take control of APC64?".
+2. Open **Lab** beside the surface and **Activate** a generated layout (`Guitar`, `Tonnetz C`, `Fourths` …). The
+   unit switches to Custom view and the pads take the layout. The encoder moves it, Tempo changes the step.
+3. To hear it, set where the pads play in `config.local`, e.g. `APC64_LAB_TARGET=MPC Live III MIDI 1 ch 1
+   aftertouch pass` (a port name as `.venv/bin/apc64 ports` lists it), and run `./start.sh` again.
+
+No APC64 at hand? `./start.sh --simulate` runs a simulated unit. `./start.sh --install` runs it at login as a
+systemd user service, with a desktop launcher. More in [Install](#install).
+
+## What it is
+
 The Host is a Linux service that hosts the **Akai APC64** in its DAW ("Ableton") mode — without Ableton — when, and only
 when, you say yes. Every pad, button, touch strip and the encoder does what the current **layout** says: MIDI to
 any named port (the MPC, Bitwig, anything ALSA can see). The pads stay expressive: in the unit's own Note, Chord,
@@ -130,11 +150,21 @@ Open **http://localhost:5058** (or `http://<this machine>:5058` from a phone on 
 
 ## Install
 
-From the repository directory:
+Clone and start:
+
+```sh
+git clone https://github.com/esazhin/apc64-control.git && cd apc64-control
+./start.sh                  # sets up .venv on the first run, then serves; open http://localhost:5058/
+./start.sh --simulate       # no APC64 needed: a simulated unit
+./start.sh --install        # optional: run it as a systemd user unit at login, plus a desktop launcher
+```
+
+`./start.sh --uninstall` removes the unit and the launcher; `./start.sh --help` lists the options, and any other
+arguments go to the service (`--port 5791`). The steps it runs, by hand:
 
 ```sh
 python3.14 -m venv .venv
-.venv/bin/pip install -e '.[dev]'
+.venv/bin/pip install -e '.[dev]'           # [dev]: pytest and httpx, for the gates
 cp config.local.example config.local      # optional: port, listen address, dirs, networks, auto-accept, lab target
 ```
 

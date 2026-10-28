@@ -81,6 +81,17 @@ def test_t16_lab_base_d3_changes_the_file_by_one_splice_and_hands_it_to_the_pipe
     assert handed == ["tonnetz-c"]                                                    # a new version (s39)
 
 
+def test_a_given_comment_replaces_the_lines_comment_and_a_new_line_carries_it():
+    # a comment that spells out the value (a guitar tuning's notes) would go stale: the module gives a new one
+    tweaks, source, _ = service()
+    assert isinstance(tweaks.save_section_field("tonnetz-c", "lab.base", "D3", comment="D3 = 62"), Saved)
+    assert source.files["tonnetz-c"].splitlines()[9] == "  base: D3  # D3 = 62"
+    assert isinstance(tweaks.save_section_field("tonnetz-c", "lab.base", "D3", comment="the root"), Saved)
+    assert source.files["tonnetz-c"].splitlines()[9] == "  base: D3  # the root"   # same value, new comment
+    assert isinstance(tweaks.save_section_field("tonnetz-c", "lab.column_step", 2, comment="semitones"), Saved)
+    assert source.files["tonnetz-c"].splitlines()[11] == "  column_step: 2  # semitones"
+
+
 def test_a_field_the_section_lacks_is_added_as_one_line():
     tweaks, source, _ = service()
     assert isinstance(tweaks.save_section_field("tonnetz-c", "lab.column_step", 2), Saved)

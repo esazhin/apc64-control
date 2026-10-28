@@ -505,6 +505,16 @@ def test_the_playing_layouts_key_reaches_the_harmony_views():   # spelling from 
 GUITAR = "name: Guitar\nlab:\n  generator: guitar\n  tuning: drop-d\n"
 
 
+def test_a_tuning_chosen_on_the_page_rewrites_the_comment_with_its_strings():   # 2026-10-28: no stale comment
+    rig = Rig().running()
+    rig.load(GUITAR, "guitar.yaml")
+    assert rig.service.tweak("tuning", "bass-4") == "saved"
+    assert rig.tweaks.calls == [("guitar", "lab.tuning", "bass-4",
+                                 "the open strings, low to high: 28 33 38 43 (E0 A0 D1 G1; C3 = 60)")]
+    assert rig.service.tweak("frets", 22) == "saved"                     # no description: the comment stays
+    assert rig.tweaks.calls[-1] == ("guitar", "lab.frets", 22)
+
+
 def test_a_guitar_layout_moves_by_fret_and_page_and_the_state_gives_the_neck():   # the guitar amendment
     rig = Rig().running()
     rig.load(GUITAR, "guitar.yaml")

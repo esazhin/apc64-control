@@ -240,6 +240,19 @@ def window_marks_of(generator: PadLayoutGenerator, params: Mapping[str, Any],
     return marks
 
 
+def describe_of(generator: PadLayoutGenerator, param: str, value) -> str | None:
+    """The generator's comment for a parameter's new value, written next to it when the page changes it (a
+    comment that spells out the old value would go stale), or None to keep the line's comment."""
+    hook = getattr(generator, "describe", None)
+    if not callable(hook):
+        return None
+    try:
+        text = hook(param, value)
+    except Exception:
+        return None
+    return str(text) if text else None
+
+
 def row_labels_of(generator: PadLayoutGenerator, params: Mapping[str, Any]) -> tuple[str, ...] | None:
     """The generator's 8 row names, bottom first, or None (also when the hook fails: labels are a nicety)."""
     hook = getattr(generator, "row_labels", None)
