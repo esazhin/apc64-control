@@ -267,3 +267,82 @@ table.globals td { padding: 2px 4px; }
 table.globals td.shown { color: var(--text); }
 table.globals input[type="number"] { width: 5.5em; }
 .hazard { color: var(--warn); }
+
+/* the performer (§2.10): its controls and the pattern as a read-only grid, the playing step lit */
+.performer-controls select, .performer-tempo select { max-width: 14em; }
+.pattern-grid { border-collapse: collapse; margin-top: 8px; font-size: 12px; width: 100%; table-layout: fixed; }
+.pattern-grid caption { text-align: left; caption-side: top; padding-bottom: 4px; }
+.pattern-grid th, .pattern-grid td { border: 1px solid var(--line); text-align: center; padding: 2px 0; height: 18px; }
+.pattern-grid tr > th:first-child { width: 4.5em; text-align: left; padding-left: 4px; font-weight: 500; color: var(--muted);
+  white-space: nowrap; overflow: hidden; }
+.pattern-grid th { font-weight: 400; color: var(--faint); }
+.pattern-grid td.hit { color: var(--accent); }
+.pattern-grid td.accent { color: var(--accent); font-weight: 700; }
+.pattern-grid .bar { border-left: 2px solid var(--muted); }
+.pattern-grid .now { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.pattern-grid tr.manual .manual-note { color: var(--muted); font-style: italic; text-align: left; padding-left: 6px; }
+.pattern-grid tr.strum td { color: var(--muted); }
+
+/* the performer's chord types and slots, and the pattern editor (Phase 2). The playhead only colours a cell's
+   background, and the status line keeps one line, so nothing moves while the pattern plays */
+.lab-panel [data-part="performer-status"] { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.performer-chords .row { gap: 4px; }
+.performer-chords .type-btn, .performer-chords .slot-btn { padding: 2px 7px; font-size: 12px; }
+.performer-chords .slot-btn.bad { text-decoration: line-through; }
+.performer-chords .voicing { font-weight: 650; color: var(--accent); margin-left: 4px; }
+.pattern-editor { margin-top: 8px; }
+.pe-toolbar button { padding: 2px 8px; }
+.pe-toolbar .link { border: none; background: none; color: var(--accent); text-decoration: underline; padding: 0 2px; }
+.pe-state { font-size: 12px; color: var(--faint); }
+.pe-state.dirty { color: var(--warn); font-weight: 600; }
+.pe-fields { gap: 4px 10px; font-size: 12px; }
+.pe-field { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); }
+.pe-field.bad { color: var(--bad); }
+.pe-field.bad input, .pe-field.bad select { border-color: var(--bad); }
+.pe-number { width: 4.5em; }
+.pe-issues { margin: 6px 0; padding-left: 18px; font-size: 12px; }
+.pe-issues .bad { color: var(--bad); }
+.pe-issues .warn { color: var(--warn); }
+.pe-scroll { overflow-x: auto; }
+.pattern-grid.editable tr > th:first-child { width: 7em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pattern-grid.editable .pe-head input { margin: 0 3px 0 0; vertical-align: middle; }
+.pattern-grid.editable td { cursor: pointer; user-select: none; }
+.pattern-grid.editable td.manual-note { cursor: default; }
+.pattern-grid.editable td:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.pattern-grid.editable td.now:hover { background: color-mix(in srgb, var(--accent) 32%, transparent); }
+.pattern-grid .beat { border-left-color: var(--faint); }
+.pattern-grid tr.relative th { color: var(--info); }
+.pattern-grid tr.bad th, .pattern-grid tr.bad td { border-top-color: var(--bad); border-bottom-color: var(--bad); }
+.pattern-grid tr.bad th { color: var(--bad); }
+.pe-confirm { max-width: 420px; }
+.pe-confirm p { margin: 8px 0 12px; }
+.grid-pad.control .pad-name { font-size: 11px; line-height: 1.1; overflow-wrap: anywhere; text-align: center; }
+
+/* --- the sequencer (lab.js sequencerFullPart: ?view=sequencer, or the Performer's Sequencer button) -------------
+   The pattern editor alone across the page: the controls on top, the grid filling the width (a column per step,
+   32 at most), its cells and marks sized by the window so the playhead and the hits read from a distance. */
+.sequencer-full {
+  display: flex; flex-direction: column; gap: 10px; min-height: 100vh; min-height: 100dvh; background: var(--bg);
+  padding: max(10px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+}
+.sequencer-full .seq-name { font-size: clamp(14px, 2.2vmin, 22px); font-weight: 600; }
+.sequencer-full .seq-body { display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.sequencer-full .performer-controls, .sequencer-full .performer-tempo, .sequencer-full .pe-fields { font-size: 14px; gap: 6px 14px; }
+.sequencer-full .performer-chords .type-btn, .sequencer-full .performer-chords .slot-btn { font-size: 14px; padding: 4px 10px; }
+.sequencer-full .pe-scroll { overflow-x: visible; }
+.pattern-grid.large { font-size: clamp(14px, calc(60vw / (var(--steps, 16) + 6)), 34px); margin-top: 12px; }
+.pattern-grid.large th, .pattern-grid.large td { height: clamp(30px, 6.5vh, 72px); padding: 0; }
+.pattern-grid.large tr > th:first-child { width: 8.5em; font-size: clamp(13px, 1.8vmin, 20px); }
+.pattern-grid.large tr:first-child th { height: auto; font-size: clamp(12px, 1.6vmin, 18px); padding: 4px 0; }
+.pattern-grid.large .now { background: color-mix(in srgb, var(--accent) 34%, transparent); }
+.pattern-grid.large .bar { border-left-width: 3px; }
+.pattern-grid.large tr.manual .manual-note { font-size: clamp(12px, 1.6vmin, 18px); }
+
+/* the key (2026-10-29): the session's key beside the chord types; the key's own chord types marked */
+.key-choice { gap: 6px; font-size: 12px; }
+.key-choice select { font-size: 12px; }
+.key-choice .link { border: none; background: none; color: var(--accent); text-decoration: underline; padding: 0 2px; }
+.performer-chords .type-btn.key-type { font-style: italic; }
+.pe-notice { color: var(--warn); margin: 4px 0; }
+.pe-duration { align-self: center; }

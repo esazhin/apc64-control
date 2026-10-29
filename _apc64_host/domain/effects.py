@@ -212,6 +212,7 @@ class PlaySourceKind(StrEnum):
     NOTES = "notes"                       # the APC64's Notes port (Note, Chord, Step and Drum views)
     SESSION_BINDING = "session_binding"   # the DAW port: a Session-view pad or button binding (a trigger)
     INPUT = "input"                       # any other MIDI input, named by its port (a keyboard, the MPC)
+    PERFORMER = "performer"               # notes a module played for the unit's port (the lab's performer, §2.10)
 
 
 @dataclass(frozen=True)
@@ -237,15 +238,16 @@ class PlaySource:
 
     @property
     def played(self) -> bool:
-        """Notes from here are played notes (harmony input), not Session-view triggers (d50)."""
-        return self.kind is not PlaySourceKind.SESSION_BINDING
+        """Notes from here are played notes (harmony input), not Session-view triggers (d50) nor the notes a
+        performer made of them (the harmony follows what is held, contract 2 §2.10)."""
+        return self.kind not in (PlaySourceKind.SESSION_BINDING, PlaySourceKind.PERFORMER)
 
     def __str__(self) -> str:
         return str(self.port)
 
 
 _UNIT_PORT_NAMES = {PlaySourceKind.CUSTOM: "APC64 Custom", PlaySourceKind.NOTES: "APC64 Notes",
-                    PlaySourceKind.SESSION_BINDING: "APC64 DAW"}
+                    PlaySourceKind.SESSION_BINDING: "APC64 DAW", PlaySourceKind.PERFORMER: "performer"}
 NOTE_ENDED = "note_ended"                  # a PlayEvent kind: the host ended a held note (contract 2 s2.c9)
 ENDED_BY_WINDOW_SHIFT = "ended by window shift"
 

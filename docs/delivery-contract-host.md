@@ -32,6 +32,11 @@
 >   and repaints a requested Session view itself. The replica's Session, Note, Chord, Step and Custom buttons
 >   now switch the unit through it (`POST /api/control/view <x>/press`; 409 while not held); Project stays the
 >   unit's own.
+> - **Amendment 2026-10-28, the performer** (contract 2 §2.10), additive seams: a module may take what is played on
+>   the Notes or Custom port instead of the router (`take_played`; the held note's play event is still published)
+>   and play notes back through the layout's routing rule (`NotePlayer.perform`, events from a `PERFORMER` play
+>   source that is not harmony input); the sequencer can listen to a port's MIDI clock with arrival times. Without
+>   such a module, routing is unchanged.
 >
 > [README.md](../README.md), [docs/api.md](api.md) and [PROTOCOL-SPEC.md](../PROTOCOL-SPEC.md) describe the
 > current state.

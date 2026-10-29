@@ -1,0 +1,13 @@
+# 1-2-3 over a manual bass: strings 1, 2 and 3 arpeggiate the notes you hold there, while strings 4, 5 and 6 are
+# yours: what you press there passes straight through, as played. Hold the high strings and play an alternating
+# bass by hand (5 + 123, 6 + 123, 5 + 123 …); change the chord (Am → C) and the pattern goes on over the new notes.
+name: 1-2-3 + bass
+description: Arpeggio 1-2-3 over a manual bass
+meter: 4/4          # beats per bar / beat unit
+step: 1/8           # 1/4, 1/8, 1/16, 1/8t, 1/16t
+length: 8           # steps, up to 32
+lanes:              # lane: one cell per step; . rest, x hit, X accent; spaces and | ignored
+  1: . . . x | . . . x
+  2: . x . . | . x . .
+  3: . . x . | . . x .
+manual: [4, 5, 6]   # strings played by hand, passed through as played

@@ -4,9 +4,11 @@
 device at all. Ports are names; a device's pattern resolves as the sequencer adapter does it (exact name, any
 case, else the one name containing it; none or several → MISSING). Every send is recorded in `sent`;
 deliver() plays a message into the listeners of a port (feedback, MIDI-learn); plug()/unplug() change
-presence like a port appearing or vanishing (d61).
+presence like a port appearing or vanishing (d61). listen_realtime()/deliver_realtime() do the same for MIDI clock
+bytes with their arrival times (the performer's clock input, contract 2 §2.10).
 """
 import threading
+import time
 from typing import Callable
 
 from ..application.ports import PortDirection, PortInfo, SendResult
@@ -17,8 +19,9 @@ DEFAULT_PORTS = ("MPC Live III MIDI 1", "Bitwig Studio In", "USB MIDI Interface 
 
 
 class _Listener:
-    def __init__(self, owner: "MemoryPorts", pattern: str, callback: Callable[[MidiMessage], None]):
+    def __init__(self, owner: "MemoryPorts", pattern: str, callback: Callable, realtime: bool = False):
         self.owner, self.pattern, self.callback = owner, pattern, callback
+        self.realtime = realtime
         self.cancelled = False
 
     def cancel(self) -> None:
@@ -72,11 +75,30 @@ class MemoryPorts:
             self._listeners.append(listener)
         return listener
 
+    def listen_realtime(self, port: str, callback: Callable[[int, float], None]) -> _Listener:
+        """MIDI clock bytes from `port`: callback(status, time)."""
+        listener = _Listener(self, str(port), callback, realtime=True)
+        with self._lock:
+            self._listeners.append(listener)
+        return listener
+
     # --- the simulated world --------------------------------------------------------------------------
+    def deliver_realtime(self, port: str, status: int, at: float | None = None) -> int:
+        """A clock (0xF8), Start, Continue or Stop byte arriving on `port` at `at` (default: now)."""
+        at = time.monotonic() if at is None else float(at)
+        with self._lock:
+            listeners = [l for l in self._listeners if l.realtime and not l.cancelled]
+        heard = 0
+        for listener in listeners:
+            if self.resolve(listener.pattern) == port:
+                listener.callback(int(status), at)
+                heard += 1
+        return heard
+
     def deliver(self, port: str, message: MidiMessage) -> int:
         """Plays `message` as arriving on `port`; returns how many listeners heard it."""
         with self._lock:
-            listeners = [l for l in self._listeners if not l.cancelled]
+            listeners = [l for l in self._listeners if not l.cancelled and not l.realtime]
         heard = 0
         for listener in listeners:
             if self.resolve(listener.pattern) == port:

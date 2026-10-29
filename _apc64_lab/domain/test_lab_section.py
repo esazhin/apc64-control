@@ -93,7 +93,7 @@ def test_scheme_parameters_and_unknown_keys():   # d5, d18, A15's scheme
     assert messages(lab(TONNETZ_C + "  scheme: rainbow\n")) == [
         'tonnetz-c.yaml line 5: no colour scheme "rainbow"; available: fifths']
     assert messages(lab(TONNETZ_C + "  rows: 4\n")) == [
-        "tonnetz-c.yaml line 5: unknown key 'rows'; the lab section takes generator, scheme, colours, strips and "
+        "tonnetz-c.yaml line 5: unknown key 'rows'; the lab section takes generator, scheme, colours, strips, performer and "
         "the tonnetz parameters: base, channel"]
     assert messages(lab(TONNETZ_C + "  channel: 17\n")) == [
         "tonnetz-c.yaml line 5, channel: 17 is outside 1–16; channels are 1–16"]

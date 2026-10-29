@@ -81,6 +81,9 @@
           },
           "description": "Optional (§2.7 q6): strips 1-8 by number or range. Without it the unit's strips are written back exactly as read."
         },
+        "performer": {
+          "$ref": "#/$defs/performer"
+        },
         "base": {
           "description": "A generator parameter (see the tonnetz branch)."
         },
@@ -152,6 +155,7 @@
                 "scheme",
                 "colours",
                 "strips",
+                "performer",
                 "base",
                 "channel",
                 "scale",
@@ -216,6 +220,7 @@
                 "scheme",
                 "colours",
                 "strips",
+                "performer",
                 "base",
                 "column",
                 "row",
@@ -305,6 +310,7 @@
                 "scheme",
                 "colours",
                 "strips",
+                "performer",
                 "tuning",
                 "frets",
                 "fret_marks",
@@ -356,6 +362,7 @@
                 "scheme",
                 "colours",
                 "strips",
+                "performer",
                 "base",
                 "channel",
                 "scale",
@@ -522,6 +529,134 @@
           "description": "Output bitmask: 7 = all outputs (factory), 0 = silent; the single bits are [TBD]."
         }
       }
+    },
+    "performer": {
+      "type": "object",
+      "required": [
+        "pattern"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pattern": {
+          "type": "string",
+          "description": "A pattern in patterns/: its file name without .yaml (travis) or its name (docs/performer-format.md)."
+        },
+        "latch": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "enum": [
+                "on",
+                "off"
+              ]
+            }
+          ],
+          "default": "off",
+          "description": "On: what was held keeps playing after release; the unit's Play toggles it."
+        },
+        "play": {
+          "type": "string",
+          "enum": [
+            "all",
+            "pressed"
+          ],
+          "description": "Overrides the pattern's play mode: all (every string plays at its hits, an unpressed one open) or pressed (only pressed strings)."
+        },
+        "tempo": {
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 20,
+              "maximum": 300
+            },
+            {
+              "const": "clock"
+            }
+          ],
+          "default": 100,
+          "description": "BPM (quarter notes a minute), or clock: follow the MIDI clock of the 'clock' input."
+        },
+        "clock": {
+          "type": "string",
+          "description": "The MIDI input that sends the clock (with tempo: clock), as 'apc64 ports' lists it, or auto: the first input that sends one."
+        },
+        "addressing": {
+          "type": "string",
+          "enum": [
+            "strings",
+            "voices"
+          ],
+          "description": "strings: lane k is string k (a generator with a string per channel, the guitar; its default); voices: the k-th held note from the top (the default elsewhere)."
+        },
+        "chords": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "enum": [
+              "key",
+              "key 7",
+              "maj",
+              "min",
+              "7",
+              "maj7",
+              "m7",
+              "sus2",
+              "sus4",
+              "dim",
+              "aug",
+              "6",
+              "m6",
+              "dim7",
+              "m7b5",
+              "7sus4",
+              "add9",
+              "5",
+              "mM7",
+              "maj7#5",
+              "7b5",
+              "7#5",
+              "mM7b5",
+              "b5",
+              7,
+              6,
+              5
+            ]
+          },
+          "default": [
+            "maj",
+            "min",
+            "7",
+            "maj7",
+            "m7",
+            "sus2",
+            "sus4",
+            "dim"
+          ],
+          "description": "The chord types of the type pads, in order (a guitar with 6 strings or fewer: the top row; 7 or 8 strings: Shift + a pad in the column). With one chosen, a single note pressed is the root of that chord, voiced on the strings; key and key 7: the key's own triad and seventh from that root (the key: the scheme's scale)."
+        },
+        "slots": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": "The patterns of the slot pads, in order, ~ for an empty one (a guitar with 6 strings or fewer: the bottom row; 7 strings: the top row; 8 strings: Shift + a pad on the top row)."
+        }
+      },
+      "description": "Optional (contract 2 §2.10): a performer pattern played over what is held; with it Play toggles the latch and Stop stops the pattern. Do not bind play or stop on a page then."
     }
   }
 }

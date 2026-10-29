@@ -61,8 +61,10 @@ class LabCli:
     name = "lab"
     help = "the layout lab: generated layouts, harmony, project memory and global settings (docs/lab-api.md)"
 
-    def __init__(self, compile_offline: Callable[[str, str], dict] | None = None):
+    def __init__(self, compile_offline: Callable[[str, str], dict] | None = None,
+                 pattern_offline: Callable[[str, str], dict] | None = None):
         self.compile_offline = compile_offline
+        self.pattern_offline = pattern_offline
 
     # --- the parser ------------------------------------------------------------------------------------
     def register(self, sub, common) -> None:
@@ -81,6 +83,9 @@ class LabCli:
         add("activate", "make a layout live; a generated one is written to slot 0 after one session backup",
             ("name", {"help": "layout file name or display name"}))
         add("leave", "leave the generated layout or preview: slot 0 is restored from the session backup")
+        add("key", "the key of the active generated layout for the session (its scale overlay; not the file): show it, "
+            "or TONIC [SCALE] (C major, F# dorian), none (chromatic), layout (the file's again)",
+            ("words", {"nargs": "*", "metavar": "WORD"}))
         add("tweak", "change one lab field of the active (or named) generated layout, saved to its file",
             ("field", {"help": "base, scheme, a generator parameter, or colours.C"}), ("value", {}),
             ("--layout", {"help": "the generated layout (default: the active one)"}))
@@ -113,6 +118,23 @@ class LabCli:
                                                                         "help": "follow the APC64 only"}))
         add("slot", "read one slot 0–24 from the unit: its pads and strips", ("n", {}))
         add("dismiss-recovery", "dismiss a pending slot-0 recovery (its backup stays listed)")
+        add("performer", "the performer on the active generated layout: show it, or: on | off | stop | pattern NAME | "
+            "latch on|off | play all|pressed|pattern | tempo BPM | tempo clock PORT|auto | type NAME|off | slot N | "
+            "revert NAME (drop its unsaved edit) | new (the session's unsaved new pattern again)",
+            ("words", {"nargs": "*", "metavar": "WORD"}))
+        add("patterns", "the performer patterns in patterns/ (valid and invalid)")
+        add("pattern", "show one pattern as its grid", ("name", {"help": "file name (travis) or name"}))
+        add("validate-pattern", "validate a pattern file (any path); never applies it", ("path", {"help": "the YAML file"}))
+        add("write-pattern", "write a pattern file (any path) into patterns/, validated first; the text it replaces "
+            "is kept as a version", ("path", {"help": "the YAML or JSON file"}),
+            ("--id", {"help": "the pattern's file name in patterns/ (default: the file's own name)"}),
+            ("--new", {"action": "store_true", "help": "refuse to replace an existing pattern"}))
+        add("delete-pattern", "delete a pattern from patterns/ (kept as a version; refused while a layout uses it)",
+            ("name", {"help": "file name (travis) or name"}))
+        add("pattern-versions", "the versions kept of a pattern (each text a write replaced), newest first",
+            ("name", {"help": "file name (travis)"}))
+        add("restore-pattern", "write a kept version of a pattern back", ("name", {"help": "file name (travis)"}),
+            ("version", {"help": "as pattern-versions lists it (a unique start is enough)"}))
 
     # --- running ---------------------------------------------------------------------------------------
     def run(self, args, transport, out, err, as_json: bool) -> int:
@@ -238,6 +260,26 @@ class _Run:
     def c_leave(self):
         return self.simple("POST", "/api/lab/leave", {})
 
+    def c_key(self):
+        words = [w.strip() for w in self.a.words if w.strip()]
+        if not words:
+            def lines(d):
+                key = (d.get("active") or {}).get("key")
+                if key is None:
+                    return ["key: no generated layout is active"]
+                now = f"{key['tonic']} {key['scale'].replace('-', ' ')}" if key["tonic"] else "none (chromatic)"
+                return [f"key: {now}" + (f" for the session (the file: {key['file'] or 'none'})" if key["session"]
+                                          else " (the layout's file)")]
+            return self.simple("GET", "/api/lab", None, lines)
+        head = words[0].lower()
+        if head == "layout" and len(words) == 1:
+            body = {"layout": True}
+        elif head == "none" and len(words) == 1:
+            body = {"tonic": None}
+        else:
+            body = {"tonic": words[0], "scale": "-".join(words[1:]) or "major"}
+        return self.simple("POST", "/api/lab/key", body)
+
     def c_tweak(self):
         body = {"field": self.a.field, "value": _value(self.a.value)}
         if self.a.layout:
@@ -362,3 +404,160 @@ class _Run:
 
     def c_dismiss_recovery(self):
         return self.simple("POST", "/api/lab/recovery/dismiss", {})
+
+    # --- the performer (§2.10) -------------------------------------------------------------------------
+    def c_performer(self):
+        words = [w.strip() for w in self.a.words if w.strip()]
+        if not words:
+            return self.simple("GET", "/api/lab/performer", None, lambda d: list(performer_lines(d)))
+        head, rest = words[0].lower(), words[1:]
+        if head in ("on", "off") and not rest:
+            body = {"enabled": head == "on"}
+        elif head == "stop" and not rest:
+            return self.simple("POST", "/api/lab/performer/stop", {})
+        elif head == "pattern" and rest:
+            body = {"pattern": " ".join(rest)}
+        elif head == "latch" and len(rest) == 1 and rest[0].lower() in ("on", "off"):
+            body = {"latch": rest[0].lower() == "on"}
+        elif head == "play" and len(rest) == 1 and rest[0].lower() in ("all", "pressed", "pattern"):
+            body = {"play": None if rest[0].lower() == "pattern" else rest[0].lower()}
+        elif head == "tempo" and len(rest) >= 2 and rest[0].lower() == "clock":
+            body = {"clock": " ".join(rest[1:])}
+        elif head == "tempo" and len(rest) == 1:
+            try:
+                body = {"bpm": float(rest[0])}
+            except ValueError:
+                raise ValueError(f"'{rest[0]}' is not a tempo; write e.g. 'tempo 96' or 'tempo clock <PORT>'") from None
+        elif head == "type" and len(rest) == 1:
+            body = {"chord_type": None if rest[0].lower() == "off" else rest[0]}
+        elif head == "slot" and len(rest) == 1 and rest[0].isdigit():
+            body = {"slot": int(rest[0])}
+        elif head == "revert" and rest:
+            body = {"revert": " ".join(rest)}
+        elif head == "new" and not rest:
+            body = {"new_pattern": True}
+        else:
+            raise ValueError("write: on | off | stop | pattern NAME | latch on|off | play all|pressed|pattern | "
+                             "tempo BPM | tempo clock PORT|auto | type NAME|off | slot N | revert NAME | new")
+        return self.simple("POST", "/api/lab/performer", body)
+
+    def c_patterns(self):
+        def line(row):
+            if not row["valid"]:
+                return f"{row['id']}  invalid: {row['error']}"
+            return f"{row['id']}  {row['name']}  {row['meter']} · {row['step']} · {row['length']} steps · play {row['play']}"
+        return self.simple("GET", "/api/lab/patterns", None, lambda d: [line(r) for r in d] or ["no patterns in patterns/"])
+
+    def c_pattern(self):
+        return self.simple("GET", f"/api/lab/patterns/{quote(self.a.name, safe='')}", None, pattern_lines)
+
+    def c_validate_pattern(self):
+        path = Path(self.a.path).expanduser()
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError as error:
+            self.complain(f"cannot read {self.a.path}: {error.strerror or error}")
+            return EXIT_REFUSED
+        try:
+            status, data = self.t.request("POST", "/api/lab/patterns/validate", {"text": text, "file": path.name})
+        except Exception as error:
+            if type(error).__name__ != "ServiceDown" or self.cli.pattern_offline is None:
+                raise
+            data = self.cli.pattern_offline(text, path.name)
+        if self.as_json:
+            self.say(json.dumps(data, ensure_ascii=False, indent=2))
+        elif data.get("valid"):
+            self.say(data.get("summary") or "valid", *[f"warning: {w['text']}" for w in data.get("warnings") or ()])
+        else:
+            self.complain(*[i["text"] for i in data.get("issues") or ()] or [data.get("problem") or "invalid"])
+        return EXIT_OK if data.get("valid") else EXIT_REFUSED
+
+    def c_write_pattern(self):
+        path = Path(self.a.path).expanduser()
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError as error:
+            self.complain(f"cannot read {self.a.path}: {error.strerror or error}")
+            return EXIT_REFUSED
+        body = {"id": self.a.id or path.stem, "text": text, "create": bool(self.a.new)}
+        return self.simple("POST", "/api/lab/patterns/save", body, lambda d: [d["message"], *[
+            f"warning: {w}" for w in d.get("warnings") or ()]])
+
+    def c_delete_pattern(self):
+        return self.simple("POST", "/api/lab/patterns/delete", {"id": self.a.name})
+
+    def c_pattern_versions(self):
+        return self.simple("GET", f"/api/lab/patterns/{quote(self.a.name, safe='')}/versions", None,
+                           lambda d: [v["version"] for v in d["versions"]] or [f"no versions of {d['id']} are kept"])
+
+    def c_restore_pattern(self):
+        return self.simple("POST", "/api/lab/patterns/restore", {"id": self.a.name, "version": self.a.version})
+
+
+def pattern_lines(p: dict) -> list[str]:
+    """A pattern as its grid: one row per lane (manual ones named), the strum row, a | at every bar."""
+    bar = p.get("bar") or 0
+
+    def row(cells):
+        return " ".join(("| " if k and bar and k % bar == 0 else "") + c for k, c in enumerate(cells))
+    lines = [f"{p['name']}  {p['meter']} · {p['step']} · {p['length']} steps · play {p['play']}"]
+    if p.get("description"):
+        lines.append(f"  {p['description']}")
+    for lane in p["lanes"]:
+        lines.append(f"  {lane['lane']:>2}: " + ("manual" if lane["manual"] else row(lane["cells"])))
+    if p.get("strum"):
+        lines.append("  strum: " + row(p["strum"]))
+    lines += [f"warning: {w}" for w in p.get("warnings") or ()]
+    return lines
+
+
+def clock_text(tempo: dict) -> str:
+    """What the clock is doing, as the page says it."""
+    chosen = "auto" if tempo.get("clock") == "auto" else tempo.get("clock")
+    following = tempo.get("following")
+    if tempo.get("measured"):
+        text = f"following {following}: {tempo['measured']:.1f} BPM"
+    elif tempo.get("stopped"):
+        text = f"the clock of {following} stopped; keeping {tempo.get('bpm', 0):.1f} BPM"
+    else:
+        text = (f"no clock heard from {following or 'any input'} yet (the MPC sends its clock while its sequencer "
+                "plays, to the outputs its sync settings send clock to)")
+    heard = [port for port in tempo.get("heard") or () if port != following]
+    return f"clock {chosen}: {text}" + (f"; also heard: {', '.join(heard)}" if heard else "")
+
+
+def performer_lines(d: dict):
+    if not d.get("available"):
+        yield f"performer: {d.get('message') or 'no generated layout is active'}"
+        return
+    pattern = d.get("pattern")
+    tempo = d.get("tempo") or {}
+    speed = (clock_text(tempo) if tempo.get("source") == "clock" else f"{tempo.get('bpm', 0):g} BPM")
+    yield (f"performer: {'on' if d['enabled'] else 'off'} · {d['name']} · {d['addressing']}"
+           f" · latch {'on' if d['latch'] else 'off'} · play {d.get('play') or '-'} · {speed}")
+    yield ("pattern: " + (f"{pattern['name']} ({pattern['id'] or 'new'}"
+                          + (", edited, not saved)" if pattern.get("edited") else ")") if pattern else "none")
+           + (f" · step {d['step']}/{d['length']}" if d.get("running") else " · stopped"))
+    edits = d.get("edits") or ()
+    if edits:
+        yield "unsaved edits (kept until the service restarts): " + ", ".join(
+            f"{e['name']} (new)" if e.get("new") else e["id"] for e in edits)
+    if d.get("controls"):
+        yield f"unit: {d['controls']}"
+    chords = d.get("chords") or {}
+    key = d.get("key")
+    if chords.get("available"):
+        yield ("key: " + (f"{key['tonic']} {key['scale'].replace('-', ' ')}" + ("" if key["chords"] else
+               " (the key's chords need a seven-note scale)") if key else "none (chromatic)"))
+    if chords.get("available") and d.get("from_layout"):
+        voicing = d.get("voicing")
+        yield ("chord type: " + (chords.get("selected") or "off") + " (" + ", ".join(chords.get("types") or ()) + ")"
+               + (f" · voicing {voicing['symbol']} {voicing['shape']}" if voicing else ""))
+    slots = [slot for slot in d.get("slots") or () if slot]
+    if slots:
+        yield "slots: " + " · ".join(("*" if d.get("slot") == slot["slot"] else "") + f"{slot['slot']} {slot['name']}"
+                                     for slot in slots)
+    if d.get("pads"):
+        yield f"pads: {d['pads']}"
+    if d.get("message"):
+        yield f"message: {d['message']}"

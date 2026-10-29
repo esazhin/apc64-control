@@ -1,0 +1,11 @@
+# Arpeggio: an eighth-note arpeggio from the A string up and back, 5-3-2-1-2-3-2-3. With play: all (the default) a
+# string you do not press rings open, as on a guitar: an open A minor (x02210) still plays all four strings.
+name: Arpeggio 8ths
+meter: 4/4
+step: 1/8
+length: 8
+lanes:
+  1: . . . x . . . .
+  2: . . x . x . x .
+  3: . x . . . x . x
+  5: X . . . . . . .      # the bass on beat 1, accented

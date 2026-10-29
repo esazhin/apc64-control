@@ -22,14 +22,14 @@ apc64 = "_apc64_host.presentation.cli:main"
 lab = "_apc64_lab.composition:lab_cli"
 
 [tool.setuptools.packages.find]
-include = ["_apc64_host*", "_apc64_lab*"]
+include = ["_apc64_host*", "_apc64_lab*", "performer*"]
 
 [tool.setuptools.package-data]
 "_apc64_host" = ["presentation/static/*"]
 "_apc64_lab" = ["presentation/static/*"]
 
 [tool.pytest.ini_options]
-testpaths = ["_apc64_host", "_apc64_lab"]
+testpaths = ["_apc64_host", "_apc64_lab", "performer"]
 markers = ["live: needs the real APC64 (APC64_LIVE=1)"]
 addopts = "-m 'not live'"
 # fastapi's TestClient still uses httpx; starlette 1.x warns about it (test-only, harmless)

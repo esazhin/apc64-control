@@ -1,0 +1,15 @@
+# Travis pick: the thumb alternates the bass on the beats, the root string (R) on 1 and 3 and its alternate bass (A)
+# on 2 and 4, while the fingers fill the off-beats. R and A follow the chord you hold: on E the low E and the D
+# string, on C the A and D strings, on D the D and G strings. Unpressed strings ring open (play: all), except those
+# below the chord's root, so a C never rings the open low E.
+name: Travis pick
+meter: 4/4
+step: 1/8
+length: 8
+lanes:
+  1: x . . . . . . x      # a pinch with the bass on beat 1, then the last off-beat
+  2: . . . x . . . .
+  3: . x . . . x . .
+  R: X . . . x . . .      # the thumb on the root string: beats 1 (accented) and 3
+  A: . . x . . . x .      # the thumb on the alternate bass: beats 2 and 4
+swing: 54                 # a little lilt on the off-beats

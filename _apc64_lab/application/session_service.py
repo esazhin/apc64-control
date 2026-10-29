@@ -19,6 +19,11 @@ The LabSession aggregate decides; this service does the I/O and talks to the hos
   the page names the backup to restore (A43), and the open-session marker stays so the next take offers it (a8).
 - A marker left by a session that never ended (a crash, an unplug) is a pending recovery: the lab does not take
   slot 0 again until slot 0 is restored from that backup or the recovery is dismissed (a8).
+- The key (2026-10-29): a layout's key is its scale overlay (scheme: scale, its scale and root). set_key changes it
+  for the session, not the file: the layout's scheme played as 'scale' with that scale and tonic, or as 'fifths'
+  (no key: chromatic), kept per layout while the service runs (a reload of the file keeps it; reset_key goes back
+  to the file's). The pads are written again at the same window. Every publish hands the key of the layout playing
+  to the performer (on_scale), which plays its chords in key from it.
 
 Threads: hooks and actions arrive on the host's loop and never block (they decide and hand records to the
 writer). The writer's own thread does the slot I/O. on_release runs inside the session's release and may block:
@@ -29,21 +34,25 @@ import hashlib
 import logging
 import threading
 import time
+from dataclasses import replace
 from datetime import datetime
 from typing import Callable, Iterable, Iterator
 
 from _apc64_host.domain.effects import UnitView
+from _apc64_host.domain.issues import DomainInvariantError
 from _apc64_host.domain.layout import UnitPortRole
 from _apc64_host.domain.oled import OledText
 from _apc64_host.domain.unit_status import ReleaseReason
 
 from ..domain.generators import describe_of
-from ..domain.harmony.spelling import pc_name
+from ..domain.harmony.scales import closest_scale, find_scale
+from ..domain.harmony.spelling import parse_pitch_class, pc_name
 from ..domain.lab_section import LabDefinition
 from ..domain.memory import (
     EDIT_BUFFER, BackupId, OutcomeCode, OutcomeKind, Slot, WriteOutcome,
 )
 from ..domain.note_target import NOT_ROUTED_TEXT, NoteTarget
+from ..domain.performer_pads import with_controls
 from ..domain.records import ProjectRecord
 from ..domain.session import (
     CUSTOM_VIEW_OFF, PRESS_CUSTOM, RESTORED_MESSAGE, EdgeHit, Ended, EndReason, Ignored, LabSession, NeedBackup,
@@ -233,7 +242,9 @@ class SessionService:
                  publisher: LabStatePublisher | None = None, control: UnitControl | None = None,
                  held_notes: Callable[[], Iterable[int]] = tuple, index: DefinitionIndex | None = None,
                  target: NoteTarget | None = None, wall: Callable[[], datetime] = datetime.now,
-                 threaded: bool = True, settle: float = SETTLE, on_key: Callable[[dict | None], None] | None = None):
+                 threaded: bool = True, settle: float = SETTLE, on_key: Callable[[dict | None], None] | None = None,
+                 on_end_notes: Callable[[tuple], None] | None = None, controls: Callable | None = None,
+                 on_scale: Callable | None = None):
         self._writer, self._backups, self._registry, self._link = writer, backups, registry, link
         self._publisher = publisher or NullPublisher()
         self._control = control
@@ -242,6 +253,11 @@ class SessionService:
         self.target = target
         self._wall = wall
         self._on_key = on_key                   # the harmony tracker's set_key: the active layout's key spelling
+        self._on_end_notes = on_end_notes       # the performer's end_held: the notes a window shift ended (§2.10)
+        self._controls = controls               # the performer's control pads: {pad index: (pad, its label)}
+        self._on_scale = on_scale               # the performer's set_key(layout id, the key's ScaleOverlay or None)
+        self._keys: dict[str, tuple] = {}       # layout id → (scheme, scheme params): the session's key (set_key)
+        self._files: dict[str, LabDefinition] = {}   # layout id → its definition as the file says it
         self._lock = threading.RLock()
         self._session = LabSession()
         self._layout = None                     # the engine's layout (host or generated)
@@ -315,6 +331,7 @@ class SessionService:
                                "scheme": layout.definition.scheme,
                                "scheme_params": dict(layout.definition.scheme_params)}
                 if layout.definition is not None else None,
+                "key": self._key_json(str(layout.layout_id), layout.definition) if layout.generated else None,
                 **self._grid_extras(layout.definition, record, window.transposition())}
 
     def _grid_extras(self, definition: LabDefinition | None, record, transposition: int) -> dict:
@@ -332,13 +349,17 @@ class SessionService:
             except Exception:   # a nicety for the page: never in the way of the state
                 log.exception("lab: the pad grid's labels failed")
         names = dict(overlay.names) if overlay is not None else {}
+        controls = self._control_pads(definition, labels=True)
 
         def name(i, pad):
             if pad.silent:
                 return None
+            if i in controls:
+                return controls[i]
             return (own[i] if own and own[i] else None) or names.get(pad.note % 12) or pc_name(pad.note)
         pads = [{"pad": str(pos).removeprefix("pad "), "note": pad.note, "rest": pad.rest.to_hex(), "silent": pad.silent,
-                 "name": name(i, pad)} for i, (pos, pad) in enumerate(_pads(record))] if record is not None else []
+                 "name": name(i, pad), **({"control": True} if i in controls else {})}
+                for i, (pos, pad) in enumerate(_pads(record))] if record is not None else []
         return {"pads": pads, "rows": list(rows) if rows else None,
                 "scale": overlay.to_json() if overlay is not None else None,
                 "neck": {**neck.to_json(), "first": transposition} if neck is not None else None}
@@ -360,6 +381,14 @@ class SessionService:
             self._publisher.publish(self.state())
         except Exception:
             log.exception("lab: publishing the lab state failed")
+        if self._on_scale is not None:
+            with self._lock:
+                wanted = self._wanted
+            try:
+                if wanted is not None:
+                    self._on_scale(wanted.layout_id, self._overlay(wanted.definition))
+            except Exception:
+                log.exception("lab: handing the layout's key to the performer failed")
         if self._on_key is not None:
             try:
                 self._on_key(self.key())
@@ -555,11 +584,115 @@ class SessionService:
         comment = describe_of(generator, path.split(".", 1)[1], value) if generator is not None else None
         return self._link.tweak(layout_id, path, value, comment)
 
+    # === the key (2026-10-29) =============================================================================
+    def set_key(self, tonic, scale=None) -> dict:
+        """The key of the generated layout playing, for the session: `tonic` a note name and `scale` a scale of the
+        library (default major), or tonic None for none (chromatic: the fifths scheme). The file is not changed;
+        DomainInvariantError for a name it refuses or without a generated layout."""
+        if tonic is None:
+            override = ("fifths", ())
+        else:
+            pc = parse_pitch_class(str(tonic)) if str(tonic).strip() else None
+            if pc is None:
+                raise DomainInvariantError("tonic", f"'{tonic}' is not a note name",
+                                           "write C, C♯ (or C#), D♭ (or Db) … B, without an octave")
+            found = find_scale(scale or "major")
+            if found is None:
+                near = closest_scale(scale)
+                raise DomainInvariantError("scale", f'no scale "{scale}"', (f"did you mean {near}? " if near else "")
+                                           + "apc64 lab list shows the scales")
+            override = ("scale", (("scale", found.key), ("root", pc)))
+        return self._rekey(override)
+
+    def reset_key(self) -> dict:
+        """The layout's key as its file says it again."""
+        return self._rekey(None)
+
+    def _rekey(self, override) -> dict:
+        with self._lock:
+            wanted = self._wanted
+            if wanted is None or wanted.definition is None:
+                raise DomainInvariantError("layout", "no generated layout is active", "activate one first")
+            layout_id = wanted.layout_id
+            if override is None:
+                self._keys.pop(layout_id, None)
+            else:
+                self._keys[layout_id] = override
+            playing = self._session_layout(layout_id, wanted.name, self._files.get(layout_id, wanted.definition))
+            self._wanted = playing
+            decision = None
+            if self._session.active and self._session.layout is not None \
+                    and self._session.layout.layout_id == layout_id:
+                decision = self._session.reloaded(playing, self._held_notes())   # the same window, repainted
+            file_text = self._key_text(self._files.get(layout_id))
+            now_text = self._key_text(playing.definition)
+        if decision is not None:
+            self._handle(decision)
+        self.publish()
+        if override is None:
+            message = f"key {file_text}, as the layout's file says" if file_text else "no key, as the layout's file says"
+        else:
+            told = f"the layout's file says {file_text}" if file_text else "the layout's file has no key"
+            message = (f"key {now_text} for the session ({told})" if now_text
+                       else f"no key for the session: chromatic ({told})")
+        return {**self.state().to_json(), "message": message}
+
+    def _keyed(self, layout_id: str, definition: LabDefinition) -> LabDefinition:
+        """The definition with the session's key, if one was set for that layout."""
+        override = self._keys.get(layout_id)
+        if override is None or definition is None:
+            return definition
+        return replace(definition, scheme=override[0], scheme_params=override[1])
+
+    def _overlay(self, definition):
+        try:
+            return definition.overlay(self._registry.schemes()) if definition is not None else None
+        except Exception:   # a nicety: never in the way of the state
+            return None
+
+    def _key_text(self, definition) -> str | None:
+        """'C major', 'F♯ harmonic minor', or None (no key)."""
+        overlay = self._overlay(definition)
+        if overlay is None:
+            return None
+        return f"{dict(overlay.names).get(overlay.root) or pc_name(overlay.root)} {overlay.key.replace('-', ' ')}"
+
+    def _key_json(self, layout_id: str, definition) -> dict:
+        overlay = self._overlay(definition)
+        return {"tonic": (dict(overlay.names).get(overlay.root) or pc_name(overlay.root)) if overlay else None,
+                "scale": overlay.key if overlay else None, "session": layout_id in self._keys,
+                "file": self._key_text(self._files.get(layout_id))}
+
     # === internals =========================================================================================
     def _session_layout(self, layout_id: str, name: str, definition: LabDefinition) -> SessionLayout:
+        self._files[layout_id] = definition
+        definition = self._keyed(layout_id, definition)
         generators, schemes = self._registry.generators(), self._registry.schemes()
-        return SessionLayout.of_grid(layout_id, name, lambda t: definition.grid(generators, schemes, t), definition,
-                                     definition.window_spec(generators))
+        span = definition.grid(generators, schemes, 0).span()       # the notes the window moves (not the controls)
+
+        def render(t):
+            grid = definition.grid(generators, schemes, t)
+            return with_controls(grid, self._control_pads(definition))
+        return SessionLayout(layout_id, name, definition, render, span, window_spec=definition.window_spec(generators))
+
+    def _control_pads(self, definition, labels: bool = False) -> dict:
+        """{pad index: PadAssignment} of the performer's control pads ({pad index: label} with `labels`)."""
+        if self._controls is None or definition is None:
+            return {}
+        try:
+            found = self._controls(definition) or {}
+        except Exception:   # the control pads are the performer's; never in the way of the layout
+            log.exception("lab: the performer's control pads failed")
+            return {}
+        return {i: pair[1 if labels else 0] for i, pair in found.items()}
+
+    def repaint(self) -> None:
+        """The performer's selection changed: slot 0 written again at the same window (latest wins)."""
+        with self._lock:
+            decision = self._session.repaint()
+        self._handle(decision)
+        if not isinstance(decision, Ignored):
+            self.publish()
 
     def _activate(self, playing: SessionLayout) -> None:
         with self._lock:
@@ -620,9 +753,23 @@ class SessionService:
             oled = self._session.oled()
         self._link.resting(oled)
 
+    def flash(self, text: str) -> None:
+        """A brief message on the OLED's row 2 (the performer's 'Latch on'), then the window again (FLASH_FOR)."""
+        with self._lock:
+            if not self._session.active:
+                return
+            oled = self._session.oled()
+        self._rest(oled, OledText(oled.rows[0], str(text)))
+
     def _submit(self, write: Write) -> None:
         self._link.end_notes(write.end_notes)
-        self._rest(write.oled)
+        if self._on_end_notes is not None and write.end_notes:
+            try:
+                self._on_end_notes(tuple(write.end_notes))
+            except Exception:
+                log.exception("lab: the performer could not end the held notes")
+        if not write.quiet:
+            self._rest(write.oled)
         self.slot0.submit(write.record)
         if write.full_backup:
             self.slot0.background(self._full_backup())

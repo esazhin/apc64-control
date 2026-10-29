@@ -71,7 +71,7 @@ slots takes 26 reads.
   note's spelling for the page's pad grid: the generator's own (each `modes` row in its mode), else the scale
   overlay's where the note is in the scale, else the fixed table.
 - `rows` is the generator's 8 row names, bottom first, or null: the `modes` explorer gives
-  `["Locrian", "Phrygian", "Aeolian", "Dorian", "Mixolydian", "Ionian", "Lydian", "Chromatic"]`.
+  `["Ionian", "Dorian", "Phrygian", "Lydian", "Mixolydian", "Aeolian", "Locrian", ""]` (row 8 is dark).
 - `scale` is the `scale` scheme's overlay, or null:
   `{"key": "dorian", "name": "Dorian", "root": 2, "root_name": "D", "pcs": [0, 2, 4, 5, 7, 9, 11], "names": {"2": "D", …}}`.
 - `window` is the window as the page shows it: the step kinds Tempo cycles, the current one and row 2's text. A
@@ -80,7 +80,9 @@ slots takes 26 reads.
   `{"steps": ["Fret", "Page"], "step": "Fret", "position": 3, "label": "Fret 3-10", "lowest": 0, "highest": 17,
   "pages": [0, 8, 16, 17], "shown": 8, "unit": "Frets"}`. `label` is the page's window line (the step kind);
   with a `unit`, the OLED's row 2 (`oled`) reads `Frets 3-10` instead, the kind and the neck's end flashing there
-  for about a second (`Step: Page`, `Neck end`).
+  for about a second (`Step: Page`, `Neck end`). A key window (the `modes` explorer: Semitone and Fifth steps round
+  the twelve keys) adds `"circular": true`, `key_root` (the pitch class at position 0) and `key` (`"Db"`); its
+  `label` and row 2 read `Key Db`.
 - `neck` is a guitar layout's fretboard, or null: the strings highest first, each with its open note, letter and the
   channel it sends on, the number of frets, how many are on the pads, and `first`, the fret in column 1 (the window):
   `{"strings": [{"string": 1, "open": 64, "name": "E", "channel": 1}, …, {"string": 6, "open": 40, "name": "E",
@@ -141,6 +143,20 @@ generator or scheme parameter (`scale`, `root`, the guitar's `tuning` preset or 
 - `409 {"problem": "layout changed, reload"}`
 - `409 {"problem": "no generated layout is active; activate one first"}`
 - `400` with the layout issue, when the new value does not compile
+
+### `POST /api/lab/key {tonic, scale?} | {tonic: null} | {layout: true}`
+
+The key of the generated layout playing, for the session (2026-10-29): the layout's scheme played as `scale` with
+that scale (default `major`, any of the library's) and tonic, `tonic: null` for none (the fifths scheme: chromatic),
+or `layout: true` for the file's again. The file is not changed; the pads are written again at the same window; the
+choice is kept for that layout while the service runs (a reload of the file keeps it). The key is what the
+performer's `key` and `key 7` chord types play in. `active.key` in the state above says it: `{"tonic": "E",
+"scale": "dorian", "session": true, "file": "C major"}` (`tonic` null: no key; `file` the file's key, or null).
+
+- `200` the lab state with `message`: `key E dorian for the session (the layout's file says C major)`, `no key for
+  the session: chromatic (the layout's file says C major)`, `key C major, as the layout's file says`
+- `400 no generated layout is active` (fix `activate one first`), `400 no scale "dorain"` (fix `did you mean
+  dorian? …`), `400 'H' is not a note name`
 
 The encoder and Tempo are the host's routes: `POST /api/control/encoder/move {"value": ±steps}`, and
 `POST /api/control/tempo/press` then `/release`.
@@ -335,13 +351,151 @@ One backup and one write for all the changes. Fields already at their value are 
 - `400 LED level 60%: levels are 25, 50, 75 or 100%`
 - `400 no setting 'brightness'` (the fix lists the fields)
 
+## The performer
+
+A pattern played over what is held on the active generated layout (contract 2 §2.10; the format:
+[`performer-format.md`](performer-format.md); the guide: [`lab-guide.md`](lab-guide.md) section 12). The routes change
+the session only, never the layout file. With no generated layout active, the performer routes answer
+`409 no generated layout is active` (fix: `activate a generated layout first (apc64 lab activate …)`).
+
+### `GET /api/lab/performer`
+
+Also pushed on the `/ws` `lab` topic as kind `performer`, at every change and at every step while it plays:
+
+```json
+{"kind": "performer", "available": true, "layout": "guitar-picker", "name": "Guitar picker", "from_layout": true,
+ "enabled": true, "addressing": "strings",
+ "lanes": [{"lane": 1, "label": "1 E", "open": 64}, …, {"lane": 6, "label": "6 E", "open": 40}],
+ "pattern": {"id": "arpeggio-manual-bass", "name": "1-2-3 + bass", "description": "Arpeggio 1-2-3 over a manual bass",
+             "meter": "4/4", "step": "1/8", "length": 8, "play": "all", "bar": 8,
+             "lanes": [{"lane": 1, "manual": false, "cells": "...x...x"}, …, {"lane": 4, "manual": true, "cells": ""}, …],
+             "strum": null, "data": {…the canonical pattern data…}, "warnings": [], "hash": "3f2a…",
+             "edited": false, "new": false},
+ "patterns": [{"id": "arpeggio", "name": "Arpeggio 8ths", "meter": "4/4", "step": "1/8", "length": 8, "play": "all",
+               "valid": true, "file": "arpeggio.yaml", "edited": false}, …],
+ "edits": [{"id": "travis", "name": "Travis pick", "new": false}], "pattern_revision": 12,
+ "latch": false, "play": "all", "play_override": null,
+ "tempo": {"source": "bpm", "bpm": 96.0, "clock": null, "measured": null, "following": null, "stopped": false,
+           "heard": []},
+ "running": true, "step": 3, "length": 8,
+ "controls": "Play: latch on/off · Stop: stop the pattern",
+ "timing": {"ticks": 412, "mean_ms": 0.08, "p99_ms": 0.21, "max_ms": 0.6}, "message": null}
+```
+
+- `available`: a generated layout is active; `from_layout`: it has a `performer:` block (then `controls` says what
+  the unit's Play and Stop do; without one they stay unbound and the performer is off until turned on here).
+- `addressing`: `strings` (lane k is string k, for a generator with a string per channel) or `voices`.
+- `step` is the playhead, 1-based, while `running`; `play` is the mode in force (`play_override` is the session's,
+  `null` for the pattern's own). With a clock (`tempo.source` `clock`): `tempo.clock` the input chosen or `auto`,
+  `following` the input whose clock sets the tempo (with `auto`, the first that sent one), `measured` its tempo now
+  (smoothed over four beats, held within 0.2 BPM, to 0.1; `null` while none is heard), `stopped` true once the clock
+  followed went quiet (`bpm`, the tempo it gave, is kept), `heard` the inputs a clock came from in the last 5 s.
+- `timing`: how late the performer's timer woke for its due events (it then hands them to the host's engine).
+
+- Chord types and slots (Phase 2): `chords` `{"types": ["maj", "min", …], "selected": "m7" | null, "available":
+  true}` (available on a layout with a lane per string), `slots` the block's pattern slots (`{"slot": 1, "pattern":
+  "travis", "id": "travis", "name": "Travis pick", "valid": true}` or `null` for an empty one), `slot` the slot playing
+  (1–8 or `null`), `pads` where the control pads are (`top row: chord types · bottom row: pattern slots`; on 7 and 8
+  strings Shift + pad), `voicing` the chord voiced now (`{"root": "A", "string": 5, "chord": "m7", "symbol": "Am7",
+  "shape": "x02010", "notes": [{"string": 1, "note": 64}, …]}`) or `null`.
+- `pattern.hash` is the hash of its file's text (the `base` of a save; for a kept edit, the file's hash when the edit
+  began); `pattern.edited` is true while the pattern playing is a kept, unsaved edit (`pattern_data` below), `new`
+  when it is the session's new pattern (its `id` is `null`). `edits` lists every kept edit (the new one with `id`
+  `null`); `patterns[].edited` and `slots[].edited` mark them. `pattern_revision` counts the changes of the pattern
+  playing (a choice by any route, an edit, a save, a revert): a page rebuilds its draft when it moved. `lanes` and `pattern.lanes` end with `R` and `A`, the
+  lanes that follow the chord.
+
+### `POST /api/lab/performer {enabled?, pattern?, latch?, play?, bpm?, clock?, pattern_data?, edits?, revert?, new_pattern?, chord_type?, slot?}`
+
+Any of them, for the session: `enabled` true/false; `pattern` an id (`travis`) or a name (`Travis pick`); `latch`
+true/false (a pattern with a kept edit plays the edit: `pattern Travis pick (edited, not saved)`); `play` `all`,
+`pressed` or `null` (the pattern's own); `bpm` 20–300 (the internal tempo, which stops following a clock); `clock` a
+MIDI input to follow (its 24-ppqn clock sets the speed), or `auto` (every input but the APC64's; the first that sends
+a clock is followed); `pattern_data` a pattern as JSON data (the page's editor sends every edit) with `edits`, the id
+of the pattern it edits (`null` for a new one; required with `pattern_data`): it plays from the next step without a
+restart and is kept, unsaved, for the session (`playing Travis pick as edited (not saved)`; equal to its file:
+`playing Travis pick as its file`, no edit kept); an edit of a pattern other than the one playing is refused
+`409 this edit is of "travis", but "waltz" plays now` (`code: stale`, fix `the editor shows what plays now: make
+the edit there again`); invalid data is refused with every issue, as a save below; `revert` an id: its kept edit
+is dropped and, if it plays, its file plays (`travis: the unsaved edit dropped`); `new_pattern: true` plays the
+session's new pattern again (`400 no new pattern is kept` without one);
+`chord_type` a chord type's name (`m7`) or `null` (off: what is fretted plays), as the type pads
+(`chord type m7: one note held is its root`); `slot` 1–8, the pattern of that slot (`400 slot 3 holds no pattern`,
+fix `slots: 1 1-2-3 + bass, 2 Travis pick, …`). Answers the state above plus `message`:
+
+- `pattern Waltz 3/4; play pressed; tempo 90 BPM; latch on`
+- `400 no pattern "polka"` (fix: `available: arpeggio, arpeggio-manual-bass, strum, travis, waltz`, field `pattern`)
+- `400 '500' is not a tempo` (fix: `write a BPM 20–300 (quarter notes a minute)`)
+- `400 unknown key 'tempo'` with `allowed`
+
+### `POST /api/lab/performer/stop`
+
+The pattern stops now and every note it started ends (the latched notes go): `pattern stopped`. As the unit's Stop.
+
+### `GET /api/lab/patterns`
+
+Every file in `patterns/`, valid or not: `[{"id": "travis", "name": "Travis pick", "meter": "4/4", "step": "1/8",
+"length": 8, "play": "all", "valid": true, "file": "travis.yaml"}, {"id": "broken", "name": "broken", "valid": false,
+"file": "broken.yaml", "error": "broken.yaml line 4, lane 1: 4 steps; length is 8; …"}]`.
+
+### `GET /api/lab/patterns/{name}`
+
+One pattern as the `pattern` object above (its lanes as written); `404 no pattern "polka"` with `allowed`; an
+invalid file answers its issues (`400`).
+
+### `GET /api/lab/patterns/{name}` (editing)
+
+The answer also carries `file`, `text` (the file as written) and `hash` (send it back as `base`).
+
+### `POST /api/lab/patterns/save {id, text | data, base?, create?, edits?}`
+
+Writes `patterns/<id>.yaml` (or the id's existing `.json`): `text` as given (an agent's file), or `data` written in
+the canonical form (every default shown, rows in the grid notation with a `|` at every bar) under a short header
+comment. Validated first: nothing invalid is written. `base`: the hash the writer read; a file changed since is
+refused. `create: true` refuses an existing id (New, Save as). The text replaced is kept as a version (below). The
+file is written as the host writes layouts (a temporary file, one rename). `edits` (the editor's Save and Save as):
+the id of the pattern whose kept edit this writes (`null`: the new pattern); that edit is dropped and, if it was
+playing, the written file plays from its next step. Without `edits` (an agent's write) a kept edit of that pattern
+stays, and its later Save is refused as stale. A pattern playing unedited plays the written file from its next
+step.
+
+- `{"id": "my-pick", "file": "my-pick.yaml", "hash": "3f2a…", "created": true, "pattern": {…}, "warnings": [],
+  "message": "created patterns/my-pick.yaml (My pick)"}`
+- `400 'My Pick!' is not a pattern file name` (fix: `a pattern's file name is 1–40 lower-case letters, digits and -,
+  e.g. my-pick`)
+- `400` an invalid pattern: `problem` (the first issue's text) and every issue in `issues`: `{field, path, problem,
+  fix, text, line, severity}`, e.g. `{"field": "lane 2", "path": ["lanes", "2"], "text": "pattern.yaml, lane 2: 7
+  steps; length is 8; …", "line": null}` for data, the line for text
+- `409 patterns/travis.yaml exists` (`code: exists`, with `create`) · `409 patterns/travis.yaml changed on disk since
+  it was read` (`code: stale`, fix `reload it, then make the change again`)
+
+### `POST /api/lab/patterns/delete {id, base?}`
+
+`deleted patterns/my-pick.yaml; kept as version 20261028T120000.000Z-3f2a…`. `409 Guitar picker plays travis.yaml
+(the layout's performer block)` (`code: in_use`) while a layout's performer block names it (its pattern or a slot);
+`404 no pattern "polka"`. A performer playing it goes on with the first valid pattern.
+
+### `GET /api/lab/patterns/{name}/versions`, `POST /api/lab/patterns/restore {id, version}`
+
+Every text a save replaced, or a delete removed, is kept under the service's state directory (`pattern-versions/<id>/`,
+outside the repository): `{"id": "travis", "versions": [{"version": "20261028T120000.000Z-3f2a1b4c5d6e", "at": …,
+"hash": …}]}`, newest first. Restore writes one back (validated; the text it replaces is kept in turn): `restored
+patterns/travis.yaml from version 20261028T1200`. A unique start of the version is enough.
+
+### `POST /api/lab/patterns/validate {text, file}` or `{data}`
+
+`{"valid": true, "issues": [], "warnings": [], "summary": "travis.yaml: Travis pick, 4/4 in 1/8 steps, 8 steps, 5
+lanes", "pattern": {…}}` (for `data`, its issues without lines, as a save), or `400` with the first issue's `problem`, `fix`, `line`, `field` and `text` and every
+issue in `issues` (`{file, line, field, problem, fix, severity, text}`), e.g. `travis.yaml line 7, lane 2: 7 steps;
+length is 8; write one cell per step: . (rest), x (hit) or X (accent); spaces and | are ignored`.
+
 ## The `apc64 lab` command
 
 The command is mounted in `apc64` (also `python -m _apc64_host lab …`). Each command calls the route shown and
 prints its `message`. A refusal prints the `problem`, then the `fix` when the problem does not already say it, on
 stderr, and exits 1. `--json` prints the API's JSON instead. When the service is not running, every command says
-`service not running on port 5058` and exits 2. The exception is `apc64 lab validate`: it then compiles the file
-here and says `(ports not checked)`.
+`service not running on port 5058` and exits 2. The exceptions are `apc64 lab validate`, which then compiles the
+file here and says `(ports not checked)`, and `apc64 lab validate-pattern`, which compiles the pattern here.
 
 | command | API | example output |
 |---|---|---|
@@ -350,6 +504,7 @@ here and says `(ports not checked)`.
 | `apc64 lab activate NAME` | `POST /api/lab/activate` | `activated Tonnetz C` |
 | `apc64 lab leave` | `POST /api/lab/leave` | `slot 0 restored; the unit shows the project as unsaved, nothing was saved` |
 | `apc64 lab tweak FIELD VALUE [--layout NAME]` | `POST /api/lab/tweak` | `saved lab.base = D2; the layout reloads` |
+| `apc64 lab key [TONIC [SCALE] \| none \| layout]` | `GET /api/lab` / `POST /api/lab/key` | `key: C major (the layout's file)` / `key E dorian for the session (the layout's file says C major)` |
 | `apc64 lab push ENTRY SLOT [--offset N]` | `POST /api/lab/push` | `pushed to slot 7; takes effect when project 7 is next loaded` |
 | `apc64 lab preview ENTRY` | `POST /api/lab/preview` | `previewing Live set B in slot 0; leave to restore slot 0` |
 | `apc64 lab backup [--all \| --slot N \| --globals]` | `POST /api/lab/backup` | `backed up slots 0–24 and the global settings as set-2026-10-24T20-15` (the default is `--all`) |
@@ -366,6 +521,19 @@ here and says `(ports not checked)`.
 | `apc64 lab inputs [PORT …] [--none]` | `GET`/`POST /api/lab/harmony/inputs` | `harmony follows the APC64 and Keystation 49 MIDI 1` |
 | `apc64 lab slot N` | `GET /api/lab/slots/{n}` | `slot 7` / `  pad r1c1: note 48 ch 1 rest #FFFFFF pressed #FF0000 aftertouch` / … |
 | `apc64 lab dismiss-recovery` | `POST /api/lab/recovery/dismiss` | `recovery dismissed; slot0-… stays listed` |
+| `apc64 lab performer` | `GET /api/lab/performer` | `performer: on · Guitar picker · strings · latch off · play all · 96 BPM` / `pattern: 1-2-3 + bass (arpeggio-manual-bass) · step 3/8` / `unit: Play: latch on/off · Stop: stop the pattern` |
+| `apc64 lab performer on\|off\|stop` | `POST /api/lab/performer` / `POST /api/lab/performer/stop` | `performer on` / `pattern stopped` |
+| `apc64 lab performer pattern NAME` | `POST /api/lab/performer` | `pattern Travis pick` |
+| `apc64 lab performer latch on\|off` · `play all\|pressed\|pattern` · `tempo BPM` · `tempo clock PORT\|auto` | `POST /api/lab/performer` | `latch on` / `play pressed` / `tempo 96 BPM` / `tempo from the MIDI clock of MPC Live III MIDI 1` / `tempo from the MIDI clock of the first input that sends one` |
+| `apc64 lab performer revert NAME` · `new` | `POST /api/lab/performer` | `travis: the unsaved edit dropped` / `pattern My pick (new, not saved)` |
+| `apc64 lab performer type NAME\|off` · `slot N` | `POST /api/lab/performer` | `chord type m7: one note held is its root` / `pattern Travis pick` |
+| `apc64 lab patterns` | `GET /api/lab/patterns` | `travis  Travis pick  4/4 · 1/8 · 8 steps · play all` |
+| `apc64 lab pattern NAME` | `GET /api/lab/patterns/{name}` | `Waltz 3/4  3/4 · 1/4 · 6 steps · play all` / `   1: . x x \| . x x` / … / `  strum: . d d \| . d d` |
+| `apc64 lab validate-pattern PATH` | `POST /api/lab/patterns/validate` | `travis.yaml: Travis pick, 4/4 in 1/8 steps, 8 steps, 5 lanes`, or one issue per line (exit 1); offline it compiles the file here |
+| `apc64 lab write-pattern PATH [--id ID] [--new]` | `POST /api/lab/patterns/save` | `created patterns/my-pick.yaml (My pick)` / `saved patterns/travis.yaml (Travis pick)`, or one issue per line (exit 1) |
+| `apc64 lab delete-pattern NAME` | `POST /api/lab/patterns/delete` | `deleted patterns/my-pick.yaml; kept as version 20261028T120000.000Z-3f2a1b4c5d6e` |
+| `apc64 lab pattern-versions NAME` | `GET /api/lab/patterns/{name}/versions` | `20261028T120000.000Z-3f2a1b4c5d6e`, newest first |
+| `apc64 lab restore-pattern NAME VERSION` | `POST /api/lab/patterns/restore` | `restored patterns/travis.yaml from version 20261028T1200` |
 
 A typical agent session:
 
@@ -388,6 +556,7 @@ These keys go in `config.local`, or the environment, next to the host's:
 | `APC64_LAB_TARGET` | empty | the default note target for generated layouts: `<port> ch <1–16> [aftertouch pass\|pressure\|drop]`. A bad value stops the service at start, naming the key |
 | `APC64_LAB_BACKUPS_DIR` | `backups` | unit-memory backups: dated raw files, git-ignored |
 | `APC64_LAB_LIBRARY_DIR` | `library` | captured and imported projects (JSON; your own data, git-ignored here) |
+| `APC64_LAB_PATTERNS_DIR` | `patterns` | the performer's patterns (YAML or JSON, tracked in git; read when asked) |
 
 With `--simulate`, the lab keeps its files under `<state dir>/simulated/`, so a simulated unit never mixes its
 backups with the real one's.

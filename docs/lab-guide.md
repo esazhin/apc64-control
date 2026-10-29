@@ -16,6 +16,7 @@ While a generated layout is active:
 - A generator may bring its own steps instead: the guitar moves by **Fret** or **Page** (Tempo toggles them) and
   the OLED shows the frets on the pads, `Guitar` / `Frets 3-10` (section 3).
 - **Shift + encoder** still browses and loads host layouts.
+- With a performer (section 12), **Play** toggles the latch and **Stop** stops the pattern.
 
 Every write to the unit is backed up first, and slot 0 is restored when you leave the layout.
 
@@ -106,16 +107,21 @@ The Wicki–Hayden keyboard is hexagonal: each row is offset half a key, the fif
 up-left. On the square grid the fifth stays up-right but the fourth is straight up, so it is an approximation;
 every scale and chord still has one shape in every key.
 
-**`modes`**: the modes explorer. Rows 1–7, bottom to top, are the seven parallel modes of one root by brightness,
-darkest first: Locrian, Phrygian, Aeolian, Dorian, Mixolydian, Ionian, Lydian. Each row plays its mode from the root
-(column 1) to the octave (column 8), so a column is one scale degree in every mode.
+**`modes`**: the modes explorer. Rows 1–7, bottom to top, are the seven parallel modes of one root in the order of
+the major scale's modes: Ionian, Dorian, Phrygian, Lydian, Mixolydian, Aeolian, Locrian. Each row plays its mode
+from the root (column 1) to the octave (column 8), so a column is one scale degree in every mode. Row 8 is dark.
 
-- Each row raises exactly one note of the row below it (♭5, ♭2, ♭6, ♭3, ♭7, then 4 → ♯4). That note keeps the
-  scheme's full colour; the root and the octave are white (pressed red); the other notes are the scheme's colour,
-  dimmed. Locrian, which has no row below, stresses its ♭5, the note Phrygian raises.
-- Row 8 is a chromatic reference: the eight semitones from the root to the fifth (1 ♭2 2 ♭3 3 4 ♯4 5), in the
-  scheme's colours, to compare a row with the notes it leaves out.
-- The page names the rows and spells each one in its mode (C Locrian: C D♭ E♭ F G♭ A♭ B♭).
+- The notes where a mode differs from Ionian (the major scale) keep the scheme's full colour: Dorian's ♭3 and ♭7,
+  Lydian's ♯4, Locrian's ♭2 ♭3 ♭5 ♭6 ♭7. The root and the octave are white (pressed red); the notes a mode shares
+  with Ionian are the scheme's colour, dimmed (so Ionian's row is dimmed but for its root and octave).
+- **Its own window: the key.** The encoder moves the key, the root of every row: by a **Semitone**, or after Tempo
+  by a **Fifth** (round the circle of fifths: C G D A …). The twelve keys go round: a step up from B comes back to C
+  (an octave lower, so the pads stay near the base). The OLED's row 2 names the key, `Key Db`; Tempo flashes `Step:
+  Fifth` or `Step: Semitone`. The colours follow the key (the pads look the same in every key) and the page spells
+  each row in its mode of the key from the key's root as the key is named (C, D♭, D, E♭, E, F, G♭, G, A♭, A, B♭,
+  B), each letter once, whatever accidentals that takes: every row starts on the same name (E♭ Phrygian: E♭ F♭ G♭
+  A♭ B♭ C♭ D♭; E♭ Locrian: E♭ F♭ G♭ A♭ B𝄫 C♭ D♭). The key's own name never needs a double accidental (the OLED's `Key Gb` is G♭).
+- The page names the rows (Ionian … Locrian).
 
 | parameter | range | default | meaning |
 |---|---|---|---|
@@ -130,8 +136,9 @@ lab:
   scheme: fifths
 ```
 
-Here every row starts on 50 (D2): the bottom row plays D Locrian, D E♭ F G A♭ B♭ C D, and the Dorian row
-(row 4) D E F G A B C D, with its B (the note it raises over Aeolian) at full colour in column 6.
+Here every row starts on 50 (D2): the bottom row plays D Ionian, D E F♯ G A B C♯ D, and the Dorian row (row 2)
+D E F G A B C D, with its F and C (the notes it lowers from Ionian) at full colour in columns 3 and 7. Five encoder
+detents right show `Key G`; Tempo, then one detent right, `Key D` again (G up a fifth).
 
 **`guitar`**: a guitar (or bass) neck. Rows are strings, columns are frets.
 
@@ -426,7 +433,7 @@ tonnetz-c.yaml line 3, base: 110 puts pad r8c8 at note 138; the highest base is 
 tonnetz-c.yaml line 3: no generator "tonetz"; available: guitar, isomorphic, modes, tonnetz
 tonnetz-c.yaml line 4: no colour scheme "rainbow"; available: fifths, root-highlight, scale
 tonnetz-c.yaml line 6, colour C: 300 is outside 0–255; write each of red, green and blue as 0–255
-tonnetz-c.yaml line 4: unknown key 'colour'; the lab section takes generator, scheme, colours, strips and the tonnetz parameters: base, channel
+tonnetz-c.yaml line 4: unknown key 'colour'; the lab section takes generator, scheme, colours, strips, performer and the tonnetz parameters: base, channel
 tonnetz-c.yaml line 5, strip 9: no such strip; strips are 1–8, e.g. '3' or '1-8'
 tonnetz-c.yaml line 5, strip 1-4: a strip takes cc, lsb, channel, bar, indicator, bipolar, outputs; write e.g. '{cc: 20, channel: 1, bar: red}'
 tonnetz-c.yaml line 2: the lab section names no generator; add 'generator: <name>'; available: guitar, isomorphic, modes, tonnetz
@@ -551,15 +558,16 @@ range playable: 36 to 92.
 `layouts/modes-c.yaml`, the modes explorer from C2:
 
 ```yaml
-name: Modes C
+name: Modes
 lab:
   generator: modes
   base: 48
   scheme: fifths
 ```
 
-Row 1 plays C Locrian (48 49 51 53 54 56 58 60), row 6 C Ionian (48 50 52 53 55 57 59 60), row 7 C Lydian and row 8
-the chromatic reference 48–55. The Lydian row's F♯ (column 4) is at full colour, the note it raises over Ionian.
+Row 1 plays C Ionian (48 50 52 53 55 57 59 60), row 4 C Lydian with its F♯ (column 4) at full colour, row 7 C
+Locrian (48 49 51 53 54 56 58 60); row 8 is dark. The OLED reads `Key C`; one detent right, `Key Db`, and every row
+starts on 49.
 
 `layouts/guitar.yaml`, a 6-string neck in E standard:
 
@@ -589,6 +597,7 @@ The **Lab** choice beside the surface shows:
 - the encoder and Tempo buttons, and Leave;
 - the base, tuning (a guitar layout's presets) and scheme tweaks: one line of the file, which hot-reloads at the
   same window;
+- the performer (section 12): on/off, pattern, play mode, latch, tempo or clock, Stop, the pattern as a grid;
 - the harmony views and their input choice;
 - the 24 slots, the backups and the library: push, preview, back up, restore, capture and import;
 - the global settings. A device-mode or sync change asks for the confirmation the service requires.
@@ -630,3 +639,205 @@ bookmark it, or open it on a tablet or a second screen on the network. Both stay
 
 Bulk edits (`apc64 lab bulk-edit 5 "all pads channel 3"`) are made by the agent. The page shows their results:
 read the slot, or open the library.
+
+## 12. The performer: patterns over what you hold
+
+A generated layout can carry a **performer**: a pattern that plays automatic strumming or fingerpicking over the
+notes you hold. The pattern starts the moment you press a note, so you time the chord changes; the notes go to the
+layout's note target (section 5), like the pads. The format of a pattern, and the exact rules, are in
+[`performer-format.md`](performer-format.md); the patterns live in `patterns/`.
+
+```yaml
+name: Guitar picker
+lab:
+  generator: guitar
+  tuning: e-standard
+  performer:
+    pattern: arpeggio-manual-bass   # a file in patterns/ (its name without .yaml) or the pattern's name
+    latch: off                      # on: the last chord keeps playing after you let go
+    tempo: 96                       # BPM, quarter notes a minute
+```
+
+`layouts/guitar-picker.yaml` is this layout. The block's keys:
+
+| key | value | default | meaning |
+|---|---|---|---|
+| `pattern` | a pattern's file name or name, required | | what plays |
+| `latch` | `on`, `off` | `off` | releasing keeps the last held notes playing until Stop or a new chord |
+| `play` | `all`, `pressed` | the pattern's | `all`: every string plays at its hits, one you do not press rings open; `pressed`: only pressed strings play |
+| `tempo` | 20–300, or `clock` | 100 | the speed in BPM, or the MIDI clock of `clock` |
+| `clock` | a MIDI input, as `apc64 ports` lists it, or `auto` | | with `tempo: clock`: the input that sends the clock (the MPC can); `auto` follows the first input that sends one |
+| `addressing` | `strings`, `voices` | `strings` for the guitar, else `voices` | how lanes map to what is held |
+
+**Strings are lanes.** The guitar sends each string on its own channel (section 3), so the performer knows which
+string a note is on: lane 1 of a pattern is string 1 (the high E), lane 6 the low E. On other layouts lane 1 is the
+highest note you hold, lane 2 the next (`voices`); `addressing: strings` there is refused.
+
+**Play: all or pressed.** With `all` (the default) every string plays at its hits, and a string you do not press
+rings open, as on a guitar: an open A minor (x02210) presses only three strings, yet a 5-3-2-1 arpeggio plays four
+notes, the A string open. With `pressed` only the strings you press play. Either way the timing never moves: a
+missing note leaves its step silent. Pressing starts the pattern and letting go of everything stops it one step later
+(an open string is not a press); that last step plays nothing, so an ending never rings the open strings. Letting go
+of a chord string by string rings nothing open either; a single finger lifted from a chord you keep holding (C →
+Cmaj7) rings its open string from the next hit after about a tenth of a second.
+
+**Manual strings.** A pattern may leave strings to you (`manual: [4, 5, 6]`): what you press there passes straight
+through, as played, with its aftertouch. With `arpeggio-manual-bass`, hold A minor on strings 1-3 and play an
+alternating bass by hand on strings 5 and 6: 5 + 123, 6 + 123 …; change to C and play 5 + 123, 4 + 123. The 1-2-3
+pattern goes on over the new notes without restarting.
+
+**On the unit.** In Custom view only Shift, Tempo, Play, Stop and the encoder reach the host. With a performer block,
+**Play** toggles the latch and **Stop** stops the pattern at once, all its notes off; the OLED's row 2 says so for a
+second (`Latch on`, `Latch off`, `Stopped`; the pattern's name when it changes). The encoder and Tempo stay the
+window (frets and pages). Because the section owns Play and Stop then, a page binding of `play` or `stop` is refused:
+
+```text
+guitar-picker.yaml line 10, play: the lab section's performer toggles the latch with Play; remove this play binding, or the performer block
+```
+
+**On the page.** The Lab panel's **Performer** section, under the active layout: On/Off, the pattern, the play mode,
+Latch, Stop, the tempo in BPM (it applies as you type or click its arrows; no Set button) or the clock of an input
+(with the tempo it measures and what the clock is doing), and the pattern as a grid, a row
+per string (manual strings marked), the playing step lit. A choice there lasts for the session; the layout file's
+block sets them again at the next activation. On a generated layout without a block, On turns a performer on for
+the session; the unit's Play and Stop then stay unbound. `apc64 lab performer …` does the same from the command line
+([`lab-api.md`](lab-api.md)).
+
+**What the harmony views show.** What you hold, as without the performer (the chord, the trail, the dots on the neck),
+not the notes the pattern plays. The replica's played-notes row shows what sounds.
+
+**Tempo from the MPC.** `tempo: clock` and `clock: <the MPC's port>` follow its MIDI clock (24 ticks a quarter
+note): the clock sets the speed, the pattern still starts when you press (it is not locked to the MPC's bars).
+`clock: auto` (or **auto** in the page's clock list) listens to every input and follows the first that sends a
+clock, so you need not know which of the MPC's ports carries it. The MPC sends its clock **only while its sequencer
+plays**, and only to the outputs its sync settings send clock to: turn on MIDI clock output there and press Play on
+the MPC. The page says what it hears: `no clock heard from MPC Live III MIDI 1 yet …`, `following MPC Live III MIDI
+1: 98.0 BPM`, and when the MPC stops, `the clock stopped; keeping 98.0 BPM` (the pattern goes on at that tempo). It
+also names the other inputs a clock was heard from lately, which helps when trying the ports one by one. The tempo is
+measured over four beats and held, so a clock jittering over USB reads steady (125.0, not 124.6 … 125.4); a real
+tempo change is followed within about a beat.
+
+**Writing a pattern.** One file in `patterns/`, checked with `apc64 lab validate-pattern patterns/my-pick.yaml`:
+
+```text
+my-pick.yaml line 9, lane 2: 7 steps; length is 8; write one cell per step: . (rest), x (hit) or X (accent); spaces and | are ignored
+```
+
+A wrong block in the layout is refused at its line like any lab field:
+
+```text
+guitar-picker.yaml line 6: no pattern "travs"; did you mean travis? available: arpeggio, arpeggio-manual-bass, strum, travis, waltz
+guitar-picker.yaml line 7: '400' is not a tempo; write a BPM 20–300 (quarter notes a minute), or 'tempo: clock' with 'clock: <MIDI input>'
+guitar-picker.yaml line 7: tempo: clock names no clock input; add 'clock: <MIDI input>', e.g. the MPC's port as 'apc64 ports' lists it
+```
+
+### Chord-aware lanes: R and A, and no wrong bass
+
+With `play: all` an unpressed string rings open, but never **below the chord's root string**: the root is the
+chord the held notes make (the harmony views' chord; with the open strings that would ring when the notes alone make
+none), the root string the lowest string sounding it. So a C (x32010) never rings the open low E, a D (xx0232) leaves
+the A and low E strings silent, and E, G, F and Em keep the low E. A pressed string below the root still plays.
+
+A pattern may write two lanes that follow the chord instead of a fixed string: **`R`**, the root string, and **`A`**,
+its alternate bass (root on string 6 or 5: string 4; on 4: string 3; otherwise the next string up). The shipped
+Travis pick plays its thumb on R and A, so it is right on every chord (on E the low E and the D string, on C the A and
+D strings, on D the D and G strings). A string R or A covers at a step plays once. On the page R and A are the last
+two rows of the grid. (`docs/performer-format.md` section 10.)
+
+### Chord types and pattern slots on the pads
+
+```yaml
+name: Guitar picker
+lab:
+  generator: guitar
+  tuning: e-standard
+  performer:
+    pattern: arpeggio-manual-bass
+    chords: [maj, min, 7, maj7, m7, sus2, sus4, dim]                         # the top row, left to right
+    slots: [arpeggio-manual-bass, travis, arpeggio, strum, waltz, ~, ~, ~]   # the bottom row (~: an empty pad)
+```
+
+On a guitar with 6 strings or fewer the strings use rows 2–7, and the performer puts its **control pads** on the free
+rows: the top row chooses a **chord type** (amber; the chosen one bright), the bottom row a **pattern slot** (blue;
+the one playing bright; an empty slot is dark and silent). They send notes 0–15 on channel 16, which the host takes
+and never forwards (a layout whose strings use channel 16 would be refused). On 7 strings the top row holds the
+slots and **Shift + a pad** chooses the chord type of its column; on 8 strings Shift + a pad chooses the chord type
+of its column, Shift + a pad on the top row the slot. Shift alone and Shift + encoder (the layout browser) work as
+before. `chords` takes 1–8 types from `maj min 7 maj7 m7 sus2 sus4 dim aug 6 m6 dim7 m7b5 7sus4 add9 5` (default the
+first eight); `slots` 1–8 patterns.
+
+A chosen chord type **stays chosen** until another is chosen, or the same pad again (off: what you fret plays). With
+a type chosen, **one note** pressed on a pattern string is the **root**: the chord is voiced on the strings from that
+note on its string (C on the A string as `maj`: x32010; A on the A string as `m7`: x02010; F on the low E: 133211 —
+CAGED by the root's string, open strings in the open position) and the pattern plays it from that press. Two notes or
+more play as fretted. A type changed while the root is held re-voices it (the strings that change end at once, the
+next hits play the new notes). Manual strings stay yours. The harmony views and the neck show the voicing (its notes
+as dots on their strings); the OLED flashes the chord (`Am7`) or `Type off`, and a slot's pattern name. The page's
+Performer section shows the type and the slot and chooses them too (`apc64 lab performer type m7`, `… slot 2`).
+
+```text
+guitar-picker.yaml line 7, chords: no chord type 'min7b5'; did you mean m7b5? chord types: key, key 7, maj, min, 7, maj7, m7, sus2, sus4, dim, aug, 6, m6, dim7, m7b5, 7sus4, add9, 5, mM7, maj7#5, 7b5, 7#5, mM7b5, b5
+```
+
+### Chords in key
+
+```yaml
+name: Picker in key
+lab:
+  generator: guitar
+  tuning: e-standard
+  scheme: scale
+  scale: major
+  root: C
+  performer:
+    pattern: travis
+    chords: [key, key 7, maj, min, 7, m7, sus4, dim]
+```
+
+The **key** is the layout's scale: `scheme: scale` with its `scale` and `root` (section 4). The pads light in key,
+the notes of the scale in their colours and every other note dark, so you see what is in key. Without a scale (the
+`fifths` scheme) there is no key: playing is free, chromatic.
+
+Two chord types play **the key's own chords**: **`key`**, the triad the key stacks on the note you press (in C
+major: C, Dm, Em, F, G, Am, Bdim), and **`key 7`**, its seventh (Cmaj7, Dm7, Em7, Fmaj7, G7, Am7, Bm7b5); the
+chord is named by its intervals, so a harmonic minor key gives its mM7, maj7#5 and dim7 too. It is **strict**: a
+note out of key plays nothing (no borrowing), and the key's chords need a seven-note scale (a pentatonic key has
+none). Two notes or more play as fretted, as with every type; type off plays what you fret. `layouts/guitar-picker-
+key.yaml` is this layout (with the picker's slots, Travis pick first, so a root on a bass string is voiced too);
+`layouts/guitar-picker.yaml` stays the one where every chord type is yours to choose.
+
+The page's **Key** (beside the chord types) changes the key for the session, not the file: none (chromatic), or a
+tonic and one of the seven modes, harmonic or melodic minor; the pads are written again at once, and **file** goes
+back to the layout's key. `apc64 lab key E dorian`, `apc64 lab key none` and `apc64 lab key layout` do the same.
+A layout listing `key` without a scale is warned (`key and key 7 need a key: this scheme lights no scale; …`); the
+key's chord pads then flash `No key` on the OLED until a Key is chosen (`No 7-note key` for a pentatonic one).
+
+### Editing patterns on the page
+
+The Performer section's grid is the pattern, editable: a click on a cell cycles `·` → `●` hit → `◉` accent → `·`, the
+strum row `↓` down → `↑` up → none, and a string's box makes it manual (passed through as played). Beside it: meter,
+step, length (bar lines and beat lines follow the meter), swing, spread, the pattern's play mode, name and
+description. Every edit plays at once, from the next step, without a restart, and the pattern is marked unsaved.
+The length shows its duration in the meter (`8 steps = 1 bar`, `12 steps = 1 ½ bars`). A new **step** re-grids the
+pattern, keeping its duration and every hit at its time: 1/8 → 1/16 doubles the cells (a hit on step k moves to
+2k, the strum row and R and A too); 1/16 → 1/8 halves them, a hit between the new steps moving to the nearest
+(a tie: the earlier) and two hits on one step merging (an accent wins); a triplet step re-grids by time, the length
+rounded to whole steps when the duration does not divide. Past 32 steps the pattern is cut to 32. The editor says
+what moved, merged, was rounded or cut (`2 hits between the new steps moved to the nearest step`, `cut to 32 steps:
+2 bars of 1/16; 2 hits after them were dropped`).
+The service **keeps the unsaved edits of each pattern** while you choose others (the list, the slot buttons, the
+unit's slot pads): come back and the edit plays and shows again; the list and the slot buttons mark it ●. The edits
+last while the service runs: a restart of the service drops them. The editor always shows what plays: a slot chosen
+on the unit shows its pattern here at once. **Save** writes `patterns/<name>.yaml` in the canonical form (checked
+first, every issue shown by its row or field; refused if the file changed on disk since it was read), and the edit
+is gone; **Save as** writes it under another file name, which then plays; **Revert** drops the edit and plays the
+file; **New** and **Duplicate** make a new pattern, kept too until saved (one at a time: a second New asks before it
+replaces it); **Delete** asks in the panel's own overlay. **Sequencer** (beside the Performer's `?`) opens the
+editor alone across the page, the grid large enough to read from a distance (its cells fill the width, up to 32
+steps) with everything needed while playing above it: the pattern list, the slots, the chord types, the tempo or
+clock, latch, play mode and Stop, and the editor's toolbar and fields; **Full screen** there uses the browser's,
+and Esc or **Leave** goes back. **New tab ↗** opens it at `?view=sequencer`, a tab of its own (or a tablet beside
+the unit). It is the same editor on the same state: an edit there is the panel's, and every tab follows what plays.
+Every text a save replaces (or a delete removes) is kept outside the repository (`apc64 lab
+pattern-versions travis`, `apc64 lab restore-pattern travis <version>`). Agents write patterns with `apc64 lab
+write-pattern my-pick.yaml` (or `POST /api/lab/patterns/save` with the text or the data).

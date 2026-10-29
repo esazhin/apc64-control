@@ -1,0 +1,20 @@
+# Picker in key: the guitar picker (guitar-picker.yaml) in C major. The pads light in key: the notes of C major in
+# their colours (C white), every other note dark. The top row's first two pads play chords in key: 'key', the key's
+# own triad on the note you press (D: Dm, G: G, B: Bdim), 'key 7' its seventh (D: Dm7, G: G7, B: Bm7b5); a note out
+# of key plays nothing. The others are fixed types as in the picker. Two notes or more play as fretted. The pattern
+# is Travis pick, every string the pattern's, so a root on a bass string is voiced too. Change the key here (scale,
+# root), or for the session with the page's Key.
+name: Picker in key
+lab:
+  generator: guitar
+  tuning: e-standard
+  frets: 24
+  scheme: scale
+  scale: major                      # the key's scale: major, dorian … (a seven-note scale for the key's chords)
+  root: C                           # the key's tonic
+  performer:
+    pattern: travis                 # patterns/travis.yaml: the thumb on the chord's root and alternate bass
+    latch: off                      # on: the last chord keeps playing after release
+    tempo: 96                       # BPM, or 'clock' with 'clock: <MIDI input>' to follow the MPC's clock
+    chords: [key, key 7, maj, min, 7, m7, sus4, dim]   # the top row's pads, left to right
+    slots: [travis, strum, arpeggio, waltz, arpeggio-manual-bass, ~, ~, ~]   # the bottom row's (~: empty)

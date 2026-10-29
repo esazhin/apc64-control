@@ -8,7 +8,7 @@ Rows: A32, A33, A34, A35, A40, A41 (engine side)."""
 from _apc64_host.application.conftest import RecordingConnection
 from _apc64_host.application.engine import EngineOk, HeldUnit
 from _apc64_host.application.modules import collect
-from _apc64_host.application.ports import HostModuleBase, LayoutLoader, ModuleDisplay, NoteEnder
+from _apc64_host.application.ports import HostModuleBase, LayoutLoader, ModuleDisplay, NoteEnder, NotePlayer
 from _apc64_host.application.test_engine import MPC_PORT, GateDouble, Rig, jam
 from _apc64_host.domain.conftest import encoder_cc, layout, note, page
 from _apc64_host.domain.controls import (
@@ -114,7 +114,7 @@ def test_the_engine_is_constructed_with_the_modules():
                         stream=rig.stream, library=rig.library, learn=rig.learn, calibration=rig.calibration,
                         clock=rig.clock, store=rig.store, modules=collection)
     assert engine._modules is collection
-    for protocol in (ModuleDisplay, NoteEnder, LayoutLoader):
+    for protocol in (ModuleDisplay, NoteEnder, LayoutLoader, NotePlayer):
         assert isinstance(engine, protocol)
 
 
@@ -341,3 +341,68 @@ def test_a_released_unit_stops_led_output_and_release_reason_reaches_no_engine_h
     assert frames and not rig.engine.held
     assert not any(c[0] == "on_release" for c in rig.module.calls)   # the session calls on_release (T15)
     assert ReleaseReason.UNPLUG  # the reasons the session passes
+
+
+# --- the performer's seams (contract 2 §2.10): take_played and NotePlayer.perform ------------------------------
+class Taker(Lab):
+    """Takes every Custom-port note and aftertouch, and plays its own notes back through perform()."""
+
+    def __init__(self):
+        super().__init__()
+        self.taken = []
+
+    def take_played(self, played):
+        if played.role is not UnitPortRole.CUSTOM or isinstance(played.message, ControlChange):
+            return None
+        self.taken.append(played.message)
+        return "played by the performer"
+
+
+def test_a_taken_note_is_not_routed_but_its_held_event_is_published():
+    rig = rig_on_tonnetz(module=Taker())
+    rig.watch.take()
+    rig.custom_port(bytes.fromhex("92 30 26 A2 30 46 82 30 00 B0 10 40"))   # string 3 (channel 3), then a strip CC
+    assert rig.module.taken == [NoteOn(3, 48, 38), PolyAftertouch(3, 48, 70), NoteOff(3, 48, 0)]
+    assert rig.targets.sent == [(MPC_PORT, ControlChange(1, 16, 64))]        # only the CC is routed
+    events = [e for e in rig.watch.take() if e.kind in ("note_on", "aftertouch", "note_off")]
+    assert [(e.kind, e.note, e.channel, e.reason, e.sent, e.port.kind, e.port.played) for e in events] == [
+        ("note_on", 48, 3, "played by the performer", (), PlaySourceKind.CUSTOM, True),
+        ("aftertouch", 48, 3, "played by the performer", (), PlaySourceKind.CUSTOM, True),
+        ("note_off", 48, 3, "played by the performer", (), PlaySourceKind.CUSTOM, True)]
+
+
+def test_perform_routes_like_the_unit_with_the_performer_source():
+    rig = rig_on_tonnetz(module=Taker())
+    rig.watch.take()
+    rig.engine.perform([NoteOn(5, 45, 90), NoteOn(1, 64, 100)])
+    rig.engine.perform([NoteOff(5, 45)])
+    assert rig.targets.sent == [(MPC_PORT, NoteOn(1, 45, 90)), (MPC_PORT, NoteOn(1, 64, 100)),
+                                (MPC_PORT, NoteOff(1, 45))]              # the rule's channel, as for a pad
+    events = rig.watch.take()
+    assert [(e.kind, e.note, e.channel, e.port.kind, e.port.played) for e in events] == [
+        ("note_on", 45, 5, PlaySourceKind.PERFORMER, False), ("note_on", 64, 1, PlaySourceKind.PERFORMER, False),
+        ("note_off", 45, 5, PlaySourceKind.PERFORMER, False)]
+    assert [(p.note, p.velocity) for p in rig.engine.snapshot().played] == [(64, 100)]   # the played-notes row
+
+
+def test_a_window_shift_ends_performed_notes_and_absorbs_their_later_note_off():
+    rig = rig_on_tonnetz(module=Taker())
+    rig.engine.perform([NoteOn(2, 60, 90)])
+    rig.engine.end_notes([60])
+    rig.engine.perform([NoteOff(2, 60)])                                  # the performer's own off: absorbed
+    assert [m for _, m in rig.targets.sent] == [NoteOn(1, 60, 90), NoteOff(1, 60)]
+
+
+def test_without_a_taker_custom_notes_route_as_before():
+    rig = rig_on_tonnetz()
+    rig.custom_port(bytes.fromhex("92 30 26"))
+    assert rig.targets.sent == [(MPC_PORT, NoteOn(1, 48, 38))]
+
+
+def test_a_failing_take_played_leaves_the_note_to_the_router():
+    class Broken(Lab):
+        def take_played(self, played):
+            raise RuntimeError("boom")
+    rig = rig_on_tonnetz(module=Broken())
+    rig.custom_port(bytes.fromhex("90 30 26"))
+    assert rig.targets.sent == [(MPC_PORT, NoteOn(1, 48, 38))]

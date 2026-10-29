@@ -17,6 +17,8 @@ from _apc64_host.notation.grammar import TOP_KEYS
 from ..domain.bulk_edit import NAMED_COLOURS
 from ..domain.generators import DEFAULT_SCHEME, ParamKind, ParamSpec
 from ..domain.lab_section import OWN_KEYS, STRIP_KEYS
+from ..domain.performer_block import ADDRESSING, KEYS as PERFORMER_KEYS, MAX_BPM, MIN_BPM, PLAY_MODES
+from performer import CHORD_TYPES, DEFAULT_TYPES, KEY_TYPES
 
 SCHEMA_PATH = Path(__file__).resolve().parents[2] / "docs" / "lab.schema.json"
 HOST_SCHEMA = "layout.schema.json"
@@ -83,6 +85,35 @@ def generate(listing: dict | None = None) -> dict:
                     "description": "Output bitmask: 7 = all outputs (factory), 0 = silent; the single bits are [TBD]."},
     }}
     assert set(strip["properties"]) == set(STRIP_KEYS), "the strip keys follow lab_section.STRIP_KEYS"
+    switch = {"oneOf": [{"type": "boolean"}, {"type": "string", "enum": ["on", "off"]}]}
+    performer = {"type": "object", "required": ["pattern"], "additionalProperties": False, "properties": {
+        "pattern": {"type": "string", "description": "A pattern in patterns/: its file name without .yaml (travis) or "
+                                                     "its name (docs/performer-format.md)."},
+        "latch": {**switch, "default": "off", "description": "On: what was held keeps playing after release; the "
+                                                              "unit's Play toggles it."},
+        "play": {"type": "string", "enum": list(PLAY_MODES), "description": "Overrides the pattern's play mode: all "
+                 "(every string plays at its hits, an unpressed one open) or pressed (only pressed strings)."},
+        "tempo": {"oneOf": [{"type": "number", "minimum": MIN_BPM, "maximum": MAX_BPM}, {"const": "clock"}],
+                  "default": 100, "description": "BPM (quarter notes a minute), or clock: follow the MIDI clock of "
+                                                 "the 'clock' input."},
+        "clock": {"type": "string", "description": "The MIDI input that sends the clock (with tempo: clock), as "
+                                                   "'apc64 ports' lists it, or auto: the first input that sends one."},
+        "addressing": {"type": "string", "enum": list(ADDRESSING), "description": "strings: lane k is string k "
+                       "(a generator with a string per channel, the guitar; its default); voices: the k-th held note "
+                       "from the top (the default elsewhere)."},
+        "chords": {"type": "array", "minItems": 1, "maxItems": 8, "uniqueItems": True,
+                   "items": {"type": ["string", "integer"], "enum": [*KEY_TYPES, *CHORD_TYPES, *[
+                       int(n) for n in CHORD_TYPES if n.isdigit()]]},
+                   "default": list(DEFAULT_TYPES), "description": "The chord types of the type pads, in order (a guitar "
+                   "with 6 strings or fewer: the top row; 7 or 8 strings: Shift + a pad in the column). With one "
+                   "chosen, a single note pressed is the root of that chord, voiced on the strings; key and key 7: "
+                   "the key's own triad and seventh from that root (the key: the scheme's scale)."},
+        "slots": {"type": "array", "minItems": 1, "maxItems": 8, "items": {"type": ["string", "null"]},
+                  "description": "The patterns of the slot pads, in order, ~ for an empty one (a guitar with 6 strings "
+                  "or fewer: the bottom row; 7 strings: the top row; 8 strings: Shift + a pad on the top row)."},
+    }, "description": "Optional (contract 2 §2.10): a performer pattern played over what is held; with it Play "
+                      "toggles the latch and Stop stops the pattern. Do not bind play or stop on a page then."}
+    assert set(performer["properties"]) == set(PERFORMER_KEYS), "the performer keys follow performer_block.KEYS"
     own = {
         "generator": {"type": "string", "enum": [g["name"] for g in generators],
                       "description": "Required: which generator fills the 64 pads."},
@@ -95,6 +126,7 @@ def generate(listing: dict | None = None) -> dict:
                    "additionalProperties": {"$ref": "#/$defs/strip"},
                    "description": "Optional (§2.7 q6): strips 1-8 by number or range. Without it the unit's strips "
                                   "are written back exactly as read."},
+        "performer": {"$ref": "#/$defs/performer"},
     }
     assert set(own) == set(OWN_KEYS), "the lab section's own keys follow lab_section.OWN_KEYS"
     params: dict = {}
@@ -139,7 +171,7 @@ def generate(listing: dict | None = None) -> dict:
         "additionalProperties": False,
         "properties": {"name": {"type": "string", "description": "Display name (the OLED shows 14 characters)."},
                        "lab": {"$ref": "#/$defs/lab"}, **host},
-        "$defs": {"lab": lab, "colour": colour, "strip": strip},
+        "$defs": {"lab": lab, "colour": colour, "strip": strip, "performer": performer},
     }
 
 

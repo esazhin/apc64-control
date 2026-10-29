@@ -21,6 +21,7 @@ DEFAULTS = {
     "APC64_LAB_TARGET": "",
     "APC64_LAB_BACKUPS_DIR": "backups",
     "APC64_LAB_LIBRARY_DIR": "library",
+    "APC64_LAB_PATTERNS_DIR": "patterns",
 }
 _TRUE, _FALSE = {"1", "true", "yes", "on"}, {"0", "false", "no", "off", ""}
 
@@ -84,6 +85,7 @@ class Config:
     lab_target: str = ""
     lab_backups_dir: Path | None = None
     lab_library_dir: Path | None = None
+    lab_patterns_dir: Path | None = None   # the performer's patterns (contract 2 §2.10); None = the repository's
     # the listen address: '::' = every IPv6 and IPv4 address (dual-stack, a28); `serve --host` overrides it
     http_host: str = "::"
 
@@ -113,5 +115,6 @@ class Config:
             lab_target=" ".join(values["APC64_LAB_TARGET"].split()),
             lab_backups_dir=_directory("APC64_LAB_BACKUPS_DIR", values["APC64_LAB_BACKUPS_DIR"].strip(), base),
             lab_library_dir=_directory("APC64_LAB_LIBRARY_DIR", values["APC64_LAB_LIBRARY_DIR"].strip(), base),
+            lab_patterns_dir=_directory("APC64_LAB_PATTERNS_DIR", values["APC64_LAB_PATTERNS_DIR"].strip(), base),
             http_host=host,
         )

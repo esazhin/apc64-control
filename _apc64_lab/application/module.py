@@ -8,13 +8,16 @@ capability: it asks the writer for its scoped writes. check_scoped_writes() refu
 at construction and wherever the lab is composed.
 
 Hooks delegate to the services and never block, except on_release (the session's release may wait briefly).
-Shift + encoder stays the host's browser: the 'lab:' section binds only the base-layer encoder and Tempo (inv12).
+Shift + encoder stays the host's browser: the 'lab:' section binds only the base-layer encoder and Tempo (inv12),
+and with a performer block Play and Stop (§2.10). take_played hands Custom-port playing to the performer, which
+takes it only while it plays a pattern (and, on a guitar layout with a performer block, its control pads' notes on
+channel 16 and Shift + pad commands always; Phase 2).
 """
 from _apc64_host.application.ports import HostModuleBase
 from _apc64_host.domain.controls import PadPos
 from _apc64_host.domain.outbound import SysexCommand, WriteCapability
 
-from ..domain.lab_section import INTERVAL_CYCLE, LAB_MODULE, SECTION, WINDOW_SHIFT
+from ..domain.lab_section import INTERVAL_CYCLE, LAB_MODULE, PERFORMER_LATCH, PERFORMER_STOP, SECTION, WINDOW_SHIFT
 from .guarded_writer import GuardedWriter
 from .ports import HostLink
 
@@ -38,9 +41,11 @@ class LabModule(HostModuleBase):
     name = LAB_MODULE
 
     def __init__(self, link: HostLink, writer: GuardedWriter, session, compiler, tracker=None, *,
-                 router=None, panel: str | None = None, cli_commands: tuple = (), on_bind: tuple = ()):
+                 router=None, panel: str | None = None, cli_commands: tuple = (), on_bind: tuple = (),
+                 performer=None):
         self._link, self._writer, self.session, self.compiler = link, writer, session, compiler
         self.tracker = tracker
+        self.performer = performer
         self._router, self._panel, self._cli = router, panel, tuple(cli_commands)
         self._on_bind = tuple(on_bind)          # composition callbacks given the host ports (the hub)
         check_scoped_writes(self)
@@ -62,8 +67,12 @@ class LabModule(HostModuleBase):
         return self._cli
 
     def actions(self):
-        return {WINDOW_SHIFT: lambda event: self.session.on_action(WINDOW_SHIFT, event),
-                INTERVAL_CYCLE: lambda event: self.session.on_action(INTERVAL_CYCLE, event)}
+        actions = {WINDOW_SHIFT: lambda event: self.session.on_action(WINDOW_SHIFT, event),
+                   INTERVAL_CYCLE: lambda event: self.session.on_action(INTERVAL_CYCLE, event)}
+        if self.performer is not None:
+            actions[PERFORMER_LATCH] = lambda event: self.performer.play_button()
+            actions[PERFORMER_STOP] = lambda event: self.performer.stop_button()
+        return actions
 
     def layout_sections(self):
         return {SECTION: self.compiler}
@@ -80,13 +89,23 @@ class LabModule(HostModuleBase):
         self.session.on_held(unit)
 
     def on_layout_loaded(self, layout, section) -> None:
+        if self.performer is not None:      # first: the session's first write paints the performer's control pads
+            self.performer.on_layout_loaded(layout, section)
         self.session.on_layout_loaded(layout, section)
 
     def on_pad_mode(self, view) -> None:
         self.session.on_view(view)
+        if self.performer is not None:
+            self.performer.on_view(view)
 
     def on_release(self, reason) -> None:
+        if self.performer is not None:
+            self.performer.on_release()
         self.session.end(reason)
+
+    def take_played(self, played):
+        """Custom-port playing for the performer while it plays a pattern, else None (the router has it)."""
+        return self.performer.take_played(played) if self.performer is not None else None
 
     def led_filter(self, led):
         """No pad LED is drawn while a generated layout plays in Custom view (§2.7 a4: cleanliness only)."""

@@ -10,6 +10,9 @@ contract §7, s4/s25/s33/s45/s65/s82/s89, d59, d61, a14).
   direct send to an unconnected one fails with ENODEV.
 - Feedback: our 'apc64-host in' port is connected from each listened port; listeners follow their port by
   name when it vanishes and reappears (d61).
+- Realtime (contract 2 §2.10): listen_realtime hears a port's MIDI clock, Start, Continue and Stop bytes, each
+  with its arrival time (time.monotonic), straight on the reader thread rather than through `dispatch`: the
+  performer measures the clock's tempo from those times.
 - System Announce (port start/exit, subscribe/unsubscribe) refreshes the port snapshot: presence changes are
   reported per port name, and subscribers of the APC64's ports are reported as that role's holder (s4.c4),
   so the session notices a freed port without ever probe-opening it (§7.1).
@@ -20,6 +23,7 @@ loop.call_soon_threadsafe).
 import errno
 import logging
 import threading
+import time
 from dataclasses import dataclass, field
 from typing import Callable
 
@@ -42,6 +46,7 @@ _ANNOUNCE = (PortStartEvent, PortExitEvent, PortChangeEvent, PortSubscribedEvent
              ClientStartEvent, ClientExitEvent)
 _ROLE_WORDS = {"daw": UnitPortRole.DAW, "notes": UnitPortRole.NOTES, "custom": UnitPortRole.CUSTOM}
 _ROLE_BY_CABLE = {0: UnitPortRole.DAW, 1: UnitPortRole.NOTES, 3: UnitPortRole.CUSTOM}   # PROTOCOL-SPEC §1
+REALTIME = frozenset({0xF8, 0xFA, 0xFB, 0xFC})   # clock, start, continue, stop
 
 log = logging.getLogger(__name__)
 
@@ -65,8 +70,9 @@ class _Snapshot:
 
 
 class _Listener:
-    def __init__(self, owner: "AlsaSequencer", pattern: str, callback: Callable[[MidiMessage], None]):
+    def __init__(self, owner: "AlsaSequencer", pattern: str, callback: Callable, realtime: bool = False):
         self.owner, self.pattern, self.callback = owner, pattern, callback
+        self.realtime = realtime              # callback(status, time) for clock bytes, else callback(MidiMessage)
         self.address: Address | None = None
         self.cancelled = False
 
@@ -190,7 +196,14 @@ class AlsaSequencer:
 
     # --- FeedbackInputs ------------------------------------------------------------------------------------
     def listen(self, port: str, callback: Callable[[MidiMessage], None]) -> _Listener:
-        listener = _Listener(self, port, callback)
+        return self._listen(_Listener(self, port, callback))
+
+    def listen_realtime(self, port: str, callback: Callable[[int, float], None]) -> _Listener:
+        """The port's clock, Start, Continue and Stop: callback(status byte, time.monotonic()) on the reader thread."""
+        return self._listen(_Listener(self, port, callback, realtime=True))
+
+    def _listen(self, listener: _Listener) -> _Listener:
+        port = listener.pattern
         if not self.open():
             return listener
         with self._lock:
@@ -251,12 +264,26 @@ class AlsaSequencer:
                     log.exception("sequencer: event handling failed")
 
     def _deliver(self, event: MidiBytesEvent) -> None:
-        message = decode(bytes(event.midi_bytes))
-        if message is None or event.source is None:
+        raw = bytes(event.midi_bytes)
+        if event.source is None:
             return
         source = Address(event.source)
+        if len(raw) == 1 and raw[0] in REALTIME:
+            at = time.monotonic()
+            with self._lock:
+                callbacks = [l.callback for l in self._listeners if l.realtime and l.address == source and not l.cancelled]
+            for callback in callbacks:
+                try:
+                    callback(raw[0], at)
+                except Exception:
+                    log.exception("sequencer: realtime callback failed")
+            return
+        message = decode(raw)
+        if message is None:
+            return
         with self._lock:
-            callbacks = [l.callback for l in self._listeners if l.address == source and not l.cancelled]
+            callbacks = [l.callback for l in self._listeners
+                         if not l.realtime and l.address == source and not l.cancelled]
         for callback in callbacks:
             self._call(callback, message)
 

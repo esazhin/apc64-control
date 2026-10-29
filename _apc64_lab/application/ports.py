@@ -224,6 +224,41 @@ class GeneratorSource(Protocol):
         ...
 
 
+# --- the performer (§2.10) ---------------------------------------------------------------------------------
+@runtime_checkable
+class PatternSource(Protocol):
+    """The pattern files (patterns/): read when asked, so a saved or fixed file is seen at once."""
+
+    def ids(self) -> list[str]:
+        """Every pattern's id (its file name without .yaml, .yml or .json), sorted."""
+        ...
+
+    def read(self, pattern_id: str) -> str | None: ...
+
+    def file_name(self, pattern_id: str) -> str:
+        """The file's name, for issues ('travis.yaml')."""
+        ...
+
+    def parse(self, text: str, file: str) -> tuple:
+        """(JSON-compatible data or None, {path tuple: line}, syntax issues as LayoutIssues)."""
+        ...
+
+
+@runtime_checkable
+class PerformerTimer(Protocol):
+    """The performer's clock and scheduler (infrastructure: a thread on the monotonic clock). start(tick) has
+    tick(now) called at each time it returns (None: until wake()); wake() asks again at once, after an input."""
+
+    def now(self) -> float: ...
+    def start(self, tick: Callable[[float], float | None]) -> None: ...
+    def wake(self) -> None: ...
+    def stop(self) -> None: ...
+
+    def timing(self) -> dict:
+        """How late the ticks came: {ticks, mean_ms, max_ms, p99_ms} over the latest ones."""
+        ...
+
+
 # --- settings the lab remembers ---------------------------------------------------------------------------
 @runtime_checkable
 class LabSettingsStore(Protocol):
@@ -286,6 +321,14 @@ class NullPublisher:
 
 
 # --- the host, bound late ---------------------------------------------------------------------------------
+# The reasons the performer takes a note with (contract 2 §2.10): a note the harmony views count as held, one they
+# leave to the performer's own display (a voiced root: the voicing is shown instead), and a control pad's
+TAKEN = "played by the performer"
+TAKEN_VOICED = "voiced by the performer"
+TAKEN_CONTROL = "a performer control"
+NOT_HELD_REASONS = (TAKEN_VOICED, TAKEN_CONTROL)
+
+
 class HostLink:
     """The host ports a lab service may call (HostPorts from HostModule.bind), and no-ops before bind.
 
@@ -311,6 +354,13 @@ class HostLink:
         notes = tuple(notes)
         if notes and self.ports.notes is not None:
             self.ports.notes.end_notes(notes)
+
+    def perform(self, messages) -> None:
+        """Notes routed as if played on the unit's Custom port (the performer's, §2.10); dropped before bind."""
+        player = getattr(self.ports, "player", None)
+        messages = tuple(messages)
+        if messages and player is not None:
+            player.perform(messages)
 
     def load(self, layout_id):
         return self.ports.loader.load(layout_id) if self.ports.loader is not None else None
@@ -343,6 +393,13 @@ class HostLink:
     def views(self):
         """The host's ViewRequester (the engine), or None before bind."""
         return getattr(self.ports, "views", None)
+
+    def shift_held(self) -> bool:
+        """Whether the unit's Shift is held now (the engine's navigation state, read on the loop); False before
+        bind. In Custom view Shift reaches the host while the pads' notes still come on the Custom port, so Shift +
+        a pad can be a command (the performer's chord types and slots on 7 and 8 strings)."""
+        nav = getattr(getattr(self.ports, "views", None), "nav", None)
+        return bool(getattr(nav, "shift", False))
 
     # time and the loop
     def call_later(self, seconds: float, callback: Callable[[], None]):

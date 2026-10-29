@@ -241,7 +241,7 @@ test('the pad grid draws the layout in its own geometry: names, held pads, the c
 });
 
 test('with a scale overlay the notes outside it are dimmed; the modes explorer names its rows', () => {
-  const rows = ['Locrian', 'Phrygian', 'Aeolian', 'Dorian', 'Mixolydian', 'Ionian', 'Lydian', 'Chromatic'];
+  const rows = ['Ionian', 'Dorian', 'Phrygian', 'Lydian', 'Mixolydian', 'Aeolian', 'Locrian', ''];
   const scale = { key: 'dorian', name: 'Dorian', root: 2, root_name: 'D', pcs: [0, 2, 4, 5, 7, 9, 11], names: {} };
   const view = padGridView(withPads(FOURTHS, { rows, scale }), EMPTY);
   const outside = new Set(byClass(view, 'out-of-scale').map((p) => p.props.data.pc));
@@ -385,4 +385,15 @@ test('displayed names use the context spelling; lookups keep the fixed names (E 
   assert.equal(textOf(key), 'G♯');                                   // held: as spelled now
   assert.ok(hasClass(key, 'held'));                                  // found through the fixed name A♭
   assert.equal(textOf(byData(circle, 'key', 'major').find((n) => n.props.data.pc === 1)), 'D♭');   // not held: the key's
+});
+
+test('the performer\'s control pads show their names, never a note, an octave or a chord ring', () => {
+  const pads = Array.from({ length: 64 }, (_, i) => ({ pad: `r${Math.floor(i / 8) + 1}c${(i % 8) + 1}`, note: 40 + (i % 8),
+    rest: '#00FF00', silent: false, name: 'E' }));
+  pads[56] = { pad: 'r8c1', note: 0, rest: '#FFAA00', silent: false, name: 'maj', control: true };
+  const grid = padGridModel({ active: { pads } });
+  const tree = padGridView(grid, { held: [{ note: 0 }], chord_tones: [0], chord_root: 0 });
+  const control = findAll(tree, (n) => n.props?.data?.pad === 'r8c1')[0];
+  assert.ok(hasClass(control, 'control') && !hasClass(control, 'chord-tone') && !hasClass(control, 'held'));
+  assert.equal(textOf(control), 'maj');
 });

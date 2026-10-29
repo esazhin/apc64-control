@@ -59,9 +59,26 @@ The lab is the **Lab** choice beside the surface on the same page, plus `apc64 l
   - Shift + encoder still browses layouts. Leaving the layout (or releasing the unit) restores slot 0.
   - Examples: `layouts/tonnetz-c.yaml`, `layouts/fourths.yaml`, `layouts/thirds-grid.yaml`,
     `layouts/wicki-hayden.yaml` (a square approximation), `layouts/janko.yaml`, `layouts/fifths-grid.yaml`,
-    `layouts/modes-c.yaml`, and the guitar necks `layouts/guitar.yaml` (6 strings, E standard),
+    `layouts/modes-c.yaml` (the seven modes of a key, Ionian to Locrian; the encoder moves the key), and the guitar
+    necks `layouts/guitar.yaml` (6 strings, E standard),
     `layouts/guitar-7.yaml` (B standard) and `layouts/guitar-8.yaml` (F♯ standard), each string on its own MIDI
     channel.
+- **Performer:** automatic strumming and fingerpicking over what you hold. A pattern is a step matrix with a row
+  per string (up to 32 steps, a meter, strum marks, swing, accents); it starts the moment you press a note and plays
+  over the chord you hold, a string you do not press ringing open. Strings marked manual pass straight through, so
+  you can play an alternating bass by hand under a 1-2-3 arpeggio. The unit's Play toggles the latch and Stop
+  stops it; the tempo is a BPM or the MPC's MIDI clock (or `auto`: whichever input sends one, smoothed). Patterns are short files in `patterns/` (Travis pick, a
+  waltz, arpeggios, a down-up strum), in a documented, language-neutral format
+  ([`docs/performer-format.md`](docs/performer-format.md)); `layouts/guitar-picker.yaml` uses one. Lanes `R` and
+  `A` follow the chord (its root string and alternate bass), and strings below the root stay silent, so a Travis
+  pick is right on every chord. **Chord types:** choose one on the free top row of pads (maj, min, 7, maj7, m7,
+  sus2, sus4, dim) and a single note you press becomes that chord, voiced on the strings; the bottom row chooses
+  the pattern (on 7 and 8 strings, Shift + pad). **Chords in key:** with the layout's scale as the key (lit on the
+  pads; the page's Key changes it for the session), the types `key` and `key 7` play the key's own triad or seventh
+  on the note you press, and a note out of key plays nothing (`layouts/guitar-picker-key.yaml`, C major). The Lab
+  panel edits patterns FL-style, a click per cell, playing
+  each edit at once, keeping each pattern's unsaved edits for the session and saving to `patterns/`. The engine is a pure, standard-library package,
+  [`performer/`](performer/README.md) (patterns, engine, chord-aware lanes, voicings), for reuse elsewhere.
 - **Harmony views:** what is played, live, following the active layout: the Tonnetz lattice with its triads for a
   Tonnetz layout, the neck for a guitar layout (the frets on the pads boxed, each played note on its string and
   its other places ringed), otherwise a large pad grid in the layout's own shape (note names, held notes, chord
@@ -214,6 +231,7 @@ APC64_LAYOUTS_DIR=/tmp/apc64-layouts .venv/bin/python -m _apc64_host serve --sim
 | `APC64_LAB_TARGET` | empty | the lab's default note target, e.g. `MPC Live III MIDI 1 ch 2 aftertouch pass` (empty: notes are only shown unless a layout routes them) |
 | `APC64_LAB_BACKUPS_DIR` | `backups` | unit-memory backups (git-ignored) |
 | `APC64_LAB_LIBRARY_DIR` | `library` | captured and imported projects (git-ignored: your own data) |
+| `APC64_LAB_PATTERNS_DIR` | `patterns` | the performer's patterns (tracked) |
 
 Relative directories are under the repository. The `apc64` command reaches the service at
 `http://127.0.0.1:$APC64_HTTP_PORT`; set `APC64_URL` in the environment to reach one on another machine.
@@ -233,6 +251,8 @@ apc64 lab validate layouts/tonnetz-d.yaml  # a generated layout (works offline t
 apc64 lab activate "Tonnetz D"             # slot 0, after one backup; play it in Custom view
 apc64 lab harmony                          # chord, triads, hints, trail
 apc64 lab backup && apc64 lab push "Tonnetz D" 7 && apc64 lab globals led_level=100
+apc64 lab validate-pattern patterns/my-pick.yaml && apc64 lab write-pattern patterns/my-pick.yaml   # a pattern
+apc64 lab performer pattern my-pick && apc64 lab performer type m7      # the performer: pattern, chord type
 ```
 Lab reference: [`docs/lab-api.md`](docs/lab-api.md).
 
@@ -262,12 +282,19 @@ backup, library and settings files, and plugin discovery. `presentation/` holds 
 publisher, the schema and the panel. `generators/` holds the plugins, and `composition.py` is build_lab. The host
 core never imports the lab; `_apc64_host/__main__.py` registers it.
 
+`performer/` is the performer's pure core (pattern format, engine, MIDI clock follower, chord types and voicings),
+standard library only and free of anything APC64; the lab drives it (`application/performer_service.py`, a timer thread in
+`infrastructure/performer_timer.py`) through two additive host seams: a module may take Custom-port playing
+(`take_played`) and play notes back through the layout's routing (`NotePlayer.perform`).
+
 ## Documents
 
 - [`docs/layout-guide.md`](docs/layout-guide.md), [`docs/layout.schema.json`](docs/layout.schema.json): writing layouts.
 - [`docs/api.md`](docs/api.md): the HTTP API, the WebSocket and the `apc64` command.
 - [`docs/lab-guide.md`](docs/lab-guide.md), [`docs/lab.schema.json`](docs/lab.schema.json),
   [`docs/lab-api.md`](docs/lab-api.md): the layout lab.
+- [`docs/performer-format.md`](docs/performer-format.md), [`docs/performer.schema.json`](docs/performer.schema.json):
+  the performer's pattern format and engine rules; [`performer/README.md`](performer/README.md): the package.
 - [`PROTOCOL-SPEC.md`](PROTOCOL-SPEC.md), [`NOTES-daw-mode.md`](NOTES-daw-mode.md): the APC64's protocol as observed.
 - [`fixtures/README.md`](fixtures/README.md): the captures the tests replay (serial numbers masked).
 - [`docs/delivery-contract-host.md`](docs/delivery-contract-host.md) and

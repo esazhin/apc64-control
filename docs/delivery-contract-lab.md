@@ -31,6 +31,18 @@
 > - **Amendment 2026-10-27, after the guitar live test** (§2.9): the trail takes every named chord (d57), notes
 >   are spelled from their chord or key (a25), the host assumes the view it asked for and the page's view buttons
 >   switch the unit (d21, d22), and the guitar pads mark the inlay frets.
+> - **Amendment 2026-10-28, the performer, Phase 1** (§2.10): strumming and fingerpicking patterns played over what
+>   is held (a pure, reusable `performer/` package, a language-neutral pattern format, a layout's `performer:`
+>   block, Play = latch and Stop on the unit, a Performer section on the page), through two additive host seams.
+> - **Amendment 2026-10-28, the performer, Phase 2** (§2.10, "Phase 2"): the page's step-matrix editor (saved to
+>   `patterns/`, versions kept), chord-aware lanes R and A with no string ringing below the chord's root, and chord
+>   types: a single root voiced on the strings, chosen on the guitar's free rows (channel 16) or Shift + pad.
+> - **Amendment 2026-10-29, keys and the modes layout** (§2.10, "Keys and the modes layout"): the modes explorer
+>   from Ionian to Locrian with a key window, and a strict key in the performer (the layout's scale; chords in key).
+> - **Amendment 2026-10-29, the performer after its first live use** (§2.10, "After the first live use"): unsaved
+>   edits kept per pattern for the session, held notes partitioned again at every pattern change, every hit played
+>   after a change of step, no open string rung when a chord is let go of, the tempo applied as it changes, a
+>   smoothed MIDI clock and a clock choice `auto`, and a sequencer view of its own (`?view=sequencer`).
 >
 > [README.md](../README.md), [docs/lab-guide.md](lab-guide.md), [docs/lab-api.md](lab-api.md) and
 > [PROTOCOL-SPEC.md](../PROTOCOL-SPEC.md) describe the current state; contract 1 is
@@ -447,6 +459,222 @@ Where this section conflicts with d21, d22, d57, a25 or §2.8 above, this sectio
   while the host holds the unit (contract 1 amended likewise, d43); the host repaints a requested Session view;
   a lab session reacts as to the unit's own button. Not held: refused with a plain message. Project, Overview and
   Drum are not requested.
+
+### 2.10 Amendment (2026-10-28): the performer, Phase 1 — binding; agreed with the stakeholder
+Where this section conflicts with §2.8's "out of scope" (the performer, strum and arpeggio patterns, MIDI clock) or
+with q7's "nothing is sent" for played notes, this section wins for a layout whose performer is on; every other
+layout plays exactly as before.
+
+- **What it is.** The performer turns what is held into a timed sequence sent to the layout's note target: automatic
+  strumming and fingerpicking. Phase 1 takes **fretted** input (the notes held on the strings). Phase 2 adds **chord
+  types** (one root pad + a chord-type pad → a voicing built on the strings), the page's step-matrix editor, control
+  pads on the free rows, Shift + pad selection and pattern slots on pads.
+- **Abstraction (binding).** The core is a top-level package `performer/`: standard library only, importing nothing
+  from `_apc64_*`, with no MIDI port, thread or wall clock; it is driven by explicit times (inputs with `t`,
+  `advance_to(t)`, `next_time()`) and is deterministic (humanize from a seeded generator). Its own tests and README;
+  a test enforces the isolation. The lab application may import it like the standard library.
+- **The format (binding).** [`performer-format.md`](performer-format.md) is the language-neutral specification and
+  [`performer.schema.json`](performer.schema.json) its schema; the canonical form is JSON-compatible data (a YAML file
+  is that data), so a JavaScript port reads the same files. A pattern: `name`, `meter` (beats/unit, default 4/4),
+  `step` (1/4, 1/8, 1/16, 1/8t, 1/16t; default 1/8), `length` 1–32 (default: the rows' count), `lanes` (lane 1–16 →
+  a row of `.` rest, `x` hit, `X` accent; spaces and `|` ignored), `strum` (`d`/`u`/`.` per step) with `spread` ms
+  (15), `swing` 50–75 % (50), `play` all|pressed (all), `gate` ring|steps (ring), `velocity` {hit 100, accent 127},
+  `humanize` {timing ms, velocity} (none), `manual` lanes, `description`, `format: 1`. Every refusal names its place
+  (a file line) and a fix, all at once, in the project's error text; a long name, a length that is not whole bars and
+  `spread` without `strum` are warnings.
+- **Lanes and addressing.** A pattern addresses lanes 1…N. `strings` (the default for a generator with a string per
+  channel, the guitar): lane k is string k, string 1 the highest, the arrival channel giving the string. `voices`
+  (the default elsewhere): lane k is the k-th held note from the top. `strings` on a generator without per-string
+  channels is refused at its line.
+- **Play mode (stakeholder change, 2026-10-28; replaces an earlier `unheld: rest|open`).** `all` (the default):
+  every pattern lane plays at its hits, a string with nothing pressed its open note (from the tuning: fret 0), as on
+  a guitar where open strings are not fretted (an open A minor x02210 still plays a 5-3-2-1 pattern whole); with
+  `voices` there is no open string and an unheld voice rests. `pressed`: only lanes with a pressed note play. In both
+  the grid is fixed: a missing note leaves its step silent and never moves a later step. The mode is the pattern's
+  default; the layout's block and the page/API override it live.
+- **Engine rules (binding, the spec's section 6).** Start at step 1 exactly at the first press on a pattern lane,
+  step 1's hits at once; only a press starts it (an open string is not a press). A change of what is held does not
+  restart it. One note per lane: every hit ends the lane's note; a press of another note on a lane ends its note at
+  once; a release never cuts a note. Catch: a press within 30 ms after its lane's hit plays that hit again with the
+  new note (a chord pressed finger by finger sounds whole). All pattern lanes released: it stops one step later
+  (grace), its notes off; a later press restarts at step 1. Latch: releases keep the last held notes until Stop or
+  the first press after everything was released. Manual lanes: presses, releases and aftertouch pass through at
+  once, one note per lane, never starting or stopping it. Velocity: `round(cell × press / 127)` (an open string: the
+  latest pattern-lane press). Tempo: BPM in quarter notes; a change applies from that moment, phase locked to the
+  press; a pattern changed while running keeps its place in beats. Quantized start: out of scope.
+- **The layout's block.** Under `lab:`, `performer:` with `pattern` (an id or a name, checked against `patterns/`),
+  `latch`, `play`, `tempo` (20–300 or `clock`), `clock` (the MIDI input) and `addressing`. With it the performer is
+  on at activation and the section binds Play (`performer_latch`) and Stop (`performer_stop`) on the base layer; a
+  page binding of either is refused at its line. Without it, the layout plays as before; the page can turn a
+  performer on for the session (Play and Stop then stay unbound).
+- **Unit controls.** In Custom view only Shift, Tempo, Play, Stop and the encoder reach the host (NOTES-daw-mode).
+  **Play toggles the latch; Stop stops the pattern now**, all its notes off (and the latched notes go). Encoder and
+  Tempo stay the window. The OLED's row 2 flashes `Latch on`, `Latch off`, `Stopped`, `Performer off` and the
+  pattern's name (≤ 14 characters) for about a second, through the session's flash (a host transient, such as the
+  layout name for 2 s after a load, covers it).
+- **Host seams (additive, contract 1 amended likewise).** `HostModuleBase.take_played(played) → reason | None`: a
+  module may take a note or aftertouch from the Notes or Custom port instead of the router; the engine still publishes
+  the held note's play event (the reason, nothing sent). `NotePlayer.perform(messages)` (the engine, `HostPorts.player`):
+  messages routed as if played on the unit's port — the layout's rule, the rule's channel, its aftertouch policy —
+  their play events from a new `PERFORMER` source that is not harmony input. The sequencer gains realtime listening
+  (clock, Start, Continue, Stop with arrival times). Without a module that takes them, notes route exactly as before.
+- **Wiring.** Custom-port notes of the active generated layout → the performer (lane from the arrival channel) → the
+  layout's note target (the rule's channel). A release whose press the performer never saw goes to the router; a
+  window shift ends the held notes in the host (d47) and in the performer, whose later unit releases are taken and
+  send nothing. Leaving Custom view, the layout or the unit ends every note it started.
+- **Harmony.** The harmony views follow **what is held** (as before), not the pattern's notes; the replica's
+  played-notes row shows what sounds.
+- **Timing.** An infrastructure timer thread on the monotonic clock calls the engine at its next due time (it waits
+  on a condition until 2 ms before, then sleeps in 0.2 ms slices) and hands the events to the host's engine queue;
+  inputs play out at once. Measured in the simulated run (212 events at 96–100 BPM, A minor then C with a bass by
+  hand, a strum, the latch): the timer woke 0.06 ms late on average (max 0.08 ms); from an event's due time to the
+  send at the target, 0.23 ms mean, 0.38 ms p99, 6.2 ms max (the host's event loop busy once). Live on the real
+  sequencer: to be measured. MIDI clock: read from a chosen ALSA input
+  (`tempo: clock`), its tempo the mean of the last 24 tick intervals; the clock sets the speed only (smoothed and
+  held since 2026-10-29: "After the first live use" below).
+- **Page.** A Performer section in the Lab panel under the active layout: on/off, pattern, play mode, latch, Stop,
+  tempo (BPM or a clock input, with the measured tempo), what Play and Stop do, and the pattern as a read-only grid
+  with the playing step lit, live from the `lab` topic's kind `performer` (published at every change and step). The
+  state carries the pattern's canonical `data`, so the Phase 2 editor edits and saves the same data.
+- **API and CLI.** `GET/POST /api/lab/performer`, `POST /api/lab/performer/stop`, `GET /api/lab/patterns`,
+  `GET /api/lab/patterns/{name}`, `POST /api/lab/patterns/validate`; `apc64 lab performer …`, `patterns`, `pattern`,
+  `validate-pattern` (offline too). Session choices never change the layout file. Patterns: `patterns/`
+  (`APC64_LAB_PATTERNS_DIR`), read when asked; five ship (Travis pick, waltz 3/4, an eighth-note arpeggio, the
+  down-up strum, the 1-2-3 over a manual bass) and `layouts/guitar-picker.yaml` uses one.
+- **Phase 2 plugs in** at: the page's grid (cells editable; `POST` of pattern data, saved through a writing
+  PatternSource), chord types (a voicing builder feeding `Performer.press` per string from a root and a type, on the
+  free rows' pads taken through `take_played`), and Shift + pad / pattern slots (more module actions).
+
+**Phase 2 (2026-10-28) — binding; as built.** Everything musical stays in `performer/` (and the language-neutral spec);
+the device and the page stay in the lab.
+
+- **Chord-aware lanes (spec section 10).** The chord held has a root (the caller's recognition: the lab passes the
+  harmony core's chord of the held notes, then of the held notes with the open strings that would ring; the core's
+  default `chord_root` matches the same templates); the root string is the lowest string sounding it (pressed, or open
+  where nothing is pressed and the open string is the root's pitch class; a manual string only when pressed), else the
+  lowest pressed string. In `play: all` an unpressed string **below the root string stays silent** (a pressed one
+  plays): E, Am, C, D, G, A, Em, Dm and F (133211) sound no wrong bass. Lanes **`R`** (the root string) and **`A`**
+  (root on 6 or 5 → 4, on 4 → 3, otherwise the next string up; on 1 none) beside 1…N; with voices R is the lowest held
+  voice, A the second lowest. A string an R or A hit covers at a step plays once, at the louder level. The chord is
+  read when each hit is due; catch (30 ms) re-plays every lane a late press changes (an open string the new root
+  mutes ends, an R/A hit moves). `set_muted` marks strings that never ring open; `press_chord` holds several presses
+  before the first hit. `patterns/travis.yaml` plays its thumb on R and A; `arpeggio-manual-bass` is unchanged.
+- **Voicings (spec section 11).** `build_voicing(opens, root, string, type, frets)`: the root on its string at its
+  fret is the bass (lower strings muted, nothing below it); every higher string a chord tone or muted; a 4-fret span;
+  open strings in the open position (fretted notes at fret ≤ 3); one hand (a barre at the lowest fret, never across an
+  open string, or one finger per string there with the root open; ≤ 4 fingers). Ranked: the chord without its fifth,
+  fewest inner mutes, most strings, most open strings, the fifth, the CAGED shape of the root's string (E on 6, A on 5,
+  D on 4), fewest notes below the root's fret, fewest fingers, lowest frets; with the root open, CAGED before the open
+  strings. Sixteen types (`maj min 7 maj7 m7 sus2 sus4 dim` the default eight, plus aug, 6, m6, dim7, m7b5, 7sus4,
+  add9, 5). Tested in E standard (the usual chords and barre shapes), drop D, 7 and 8 strings.
+- **Control pads.** The block gains `chords` (1–8 types, default the eight) and `slots` (1–8 patterns, `~` empty).
+  A guitar with ≤ 6 strings: the top row the chord types, the bottom row the slots; 7 strings: the top row (free
+  there) the slots, the types on Shift + pad; 8 strings: Shift + pad in column c = type c, Shift + top-row pad = slot
+  c. The pads send notes 0–7 (types) and 8–15 (slots) on the **reserved channel 16**, outputs on, no aftertouch; the
+  lab takes them (`take_played`, reason "a performer control") and never forwards them; a string on channel 16 is
+  refused at the block's line. Colours: the types amber, the slots blue, the selected one bright, an empty slot
+  silent; a selection rewrites slot 0 at the same window, quietly (no held note ended, the OLED kept), latest wins.
+  Shift is read from the engine's navigation state on the loop; a Shift + pad note and its later release are taken.
+  The pads are painted by the session's render (the window never moves them); the page's pad grid shows them by name.
+- **Behaviour.** A chosen type latches until another or the same again (off). With a type, **one** note held on a
+  pattern string is the root: its voicing is what the engine holds (pressed together, its muted strings marked) and
+  the pattern starts on that press; two or more notes are fretted; a type changed with the root held re-voices (the
+  strings that change end at once). Manual strings stay manual (a press there is never a root). The engine's holding
+  is kept in step with the player's by one diff, so fretted playing reaches it press for press as in Phase 1. The
+  harmony views show the voicing: a root press is not counted (reason "voiced by the performer") and the voicing's
+  notes are a separate source with their strings' channels (dots on the neck), never ended at a window shift. OLED:
+  the chord (`Am7`), `Type m7` with no root, `Type off`, and a slot's pattern name (14 characters).
+- **The editor.** The Lab panel's grid is editable (cells `.`→`x`→`X`, strum `.`→`d`→`u`, a manual box per string,
+  meter, step, length with bar and beat lines, swing, spread, play, name, description); every edit plays from the
+  next step without a restart (`POST /api/lab/performer {pattern_data}`); Save, Save as, New, Duplicate, Revert,
+  Delete; Delete and leaving unsaved changes ask in the panel's own overlay. The playhead is marked on the drawn grid
+  (nothing redraws per step). Writes: `POST /api/lab/patterns/save {id, text | data, base?, create?}` (validated
+  first; data written as canonical YAML with a header comment; a stale base or an existing id with `create`
+  refused), `POST /api/lab/patterns/delete` (refused while a layout's block names the pattern),
+  `GET /api/lab/patterns/{name}/versions`, `POST /api/lab/patterns/restore`; the file written by temp + rename,
+  every replaced or deleted text kept under the state directory's `pattern-versions/`. CLI `write-pattern`,
+  `delete-pattern`, `pattern-versions`, `restore-pattern`, `performer type NAME|off`, `performer slot N`.
+- **Ordering.** The lab's `on_layout_loaded` runs the performer before the session, so the session's first write
+  paints the control pads of the new layout.
+
+**After the first live use (2026-10-29) — binding; as built.** From the stakeholder's report on the unit (switching
+slots between 1-2-3 + bass and the waltz with an edited pattern, the tempo field, the MPC's clock).
+
+- **What is held, across a pattern change.** The lab keeps one record of what the player holds on every string; a
+  press on a manual string goes to the engine at once, the pattern strings through the one diff. Every pattern change
+  (a choice by any route, an edit, a save, a revert, a delete) partitions that record again: a held string that became
+  manual has its pattern note ended and stays silent until plucked again (its release sends nothing more); one that
+  became a pattern string has its manual note ended and the pattern plays the held note from its next hit. Every
+  release finds its note, so nothing sticks and the pattern stops one step after all is let go (latch off). A
+  randomized test drives presses, releases, aftertouch, switches between patterns with different manual strings,
+  steps and lengths, and chord types, and checks that nothing is left held or sounding.
+- **Every hit after a change of step.** A hit's identity is its pattern change and its step (the engine counts the
+  changes), so a coarser step (1/8 → 1/4 halves the step numbers) never skips a hit as already played.
+- **Unsaved edits, per pattern, for the session.** `POST /api/lab/performer {pattern_data, edits}` names the pattern
+  it edits (`null`: a new one); an edit of a pattern other than the one playing is refused (`409`, code `stale`)
+  instead of playing over it. The service keeps every edit (not across a restart of the service): choosing a pattern
+  by any route (the page's list or slot buttons, the unit's slot pads, the API, the CLI) plays its kept edit, marked
+  edited; Save (`POST /api/lab/patterns/save {…, edits}`) writes and drops it and its file plays (Save as: the new
+  file plays); `revert: <id>` drops it and the file plays; Delete drops it; a file changed on disk keeps the edit and
+  refuses its Save as stale (the base hash). One new, never-saved pattern is kept too (`new_pattern: true` plays it
+  again); the page asks before a New would replace it. An edit equal to its file is the file. The state lists the
+  kept edits (`edits`), marks them in `patterns` and `slots` (`edited`) and counts the changes of the pattern playing
+  (`pattern_revision`); the page's draft is rebuilt from the state whenever that count moved other than by its own
+  edit, so the page always shows and edits what plays. The page marks kept edits with ●; choosing another pattern no
+  longer asks to discard. CLI: `apc64 lab performer revert NAME`, `apc64 lab performer new`.
+- **The tempo field** applies as it changes (250 ms after the last keystroke or arrow click, at once on Enter or on
+  leaving it), without a Set button; a refused value is shown and not applied. While a clock sets the tempo the field
+  is disabled and shows the clock's tempo.
+- **Letting go (the spec's rules 5 and 11).** "Extra bass notes at the end": the grace step after the last release
+  rang every open string (the root unknown with nothing held), a chord let go of string by string rang each released
+  string open and, as its root moved, the bass strings below the old root, and a voicing's muted strings were unmuted
+  when its root was let go. Now the grace plays nothing (it only keeps the time, so a quick re-press goes on in phase
+  and catch still plays a hit that fell just before it); a string released while others are held stays silent until
+  the settle time (120 ms, `Performer(settle=…)`) passed without another release, the chord's root kept as it was
+  before meanwhile, and rings open from its next hit only if the others are still held then (a lifted finger, meant);
+  a change of the muted strings made while nothing is held waits for the next press. Latch is unchanged. Tested with
+  the strum and Travis patterns let go of at random moments (mid-strum too) and staggered 0–100 ms apart.
+- **The sequencer view.** The pattern editor has a view of its own across the page, as the harmony full view
+  does (the host page's module view: `?view=sequencer`, the Performer's Sequencer button, the Fullscreen API
+  toggle, Esc or Leave): the grid large (its cells fill the width up to 32 steps), the playhead, and the controls
+  needed while editing and playing (pattern list with the edited marks, slots, chord types, tempo or clock, latch,
+  play mode, Stop, the editor's toolbar and fields). It is the same editor, draft and state as the panel's, which
+  steps aside while it shows; every tab follows the service's state.
+- **The MIDI clock.** `ClockFollower` (still pure) reads the least-squares slope of the last 96 ticks (four beats; a
+  provisional reading after 6 intervals that firms up), and holds the tempo it gives until the reading moves more than
+  0.2 BPM (or twice its own standard error, while few ticks are in); a real change (the one-beat reading 2 % away for
+  12 ticks in a row) is followed at once from those ticks. The engine gets a tempo only when the held value changes;
+  it is shown to one decimal. The clock choice **`auto`** (page, API, CLI, `clock: auto` in the block) listens to
+  every input but the APC64's, inputs plugged in later too, and follows the first that sends a clock (another once
+  it went quiet). `tempo` in the state gains `following` (the input followed), `stopped` (its clock went quiet; the
+  tempo it gave is kept) and `heard` (inputs a clock came from in the last 5 s); the page says which: no clock heard
+  yet (the MPC sends its clock while its sequencer plays, to the outputs its sync settings send clock to), following
+  it with its tempo, or stopped.
+
+**Keys and the modes layout (2026-10-29) — binding; as built.** The stakeholder's decisions (2026-10-29).
+
+- **The modes layout.** Rows 1–7, bottom to top: Ionian, Dorian, Phrygian, Lydian, Mixolydian, Aeolian, Locrian,
+  parallel modes of one root, each root to octave; the chromatic row goes and row 8 is dark. The notes in which a
+  mode differs from Ionian keep the scheme's full colour, the shared ones are dimmed, root and octave white. Its own
+  window, a key window (WindowSpec `circular` with `key_root`): Tempo toggles Semitone / Fifth, the encoder walks
+  the key (by fifths round the circle), the twelve keys wrapping round; OLED row 2 `Key Db` (ASCII), Tempo flashing
+  the step kind. Spelling (each row in its mode of the key, from the key's root as the key is named, each letter
+  once: E♭ Locrian E♭ F♭ G♭ A♭ B𝄫 C♭ D♭) and colours (each note coloured
+  as at the first key) follow the key. `layouts/modes-c.yaml` keeps its id, named `Modes`.
+- **The key (strict).** The key is the layout's scale overlay (scheme `scale`, its `scale` and `root`); the pads
+  light in key (in-key notes in their colours, out-of-key dark); no scale is no key: chromatic. The page's Key (and
+  `POST /api/lab/key`, `apc64 lab key`) is a session change of that scheme, not a second key and not the file: a
+  tonic and a scale, none, or the file's again; kept per layout while the service runs; the pads written again at
+  the same window. Not on the unit (a build decision: the type pads already use the free rows; the page and the CLI
+  set it). The session hands the key of the layout playing to the performer at every publish.
+- **Chords in key.** Chord types `key` (the triad) and `key 7` (the seventh) stacked in thirds from the root
+  pressed in a seven-note key (`performer.diatonic_chord`), named from their intervals; the chord types gain the
+  qualities seven-note scales give (mM7, maj7#5, 7b5, 7#5, mM7b5, b5), voiced by the builder as any type. Strict: an
+  off-key root plays nothing; without a key, or with a scale of another size, they are refused (the page disables
+  them), and a key taken away lets go of them. Fretted playing (type off, or two notes held) is unchanged. A block
+  listing them under a scheme with no scale is warned. Preset `layouts/guitar-picker-key.yaml` ('Picker in key'):
+  C major, `chords: [key, key 7, maj, min, 7, m7, sus4, dim]`, Travis pick first (every string the pattern's, so a
+  root on a bass string is voiced); `guitar-picker.yaml` unchanged.
 
 ## 3 · Context — execution-ready
 Role: informational — orientation, except §3.5 below.

@@ -101,6 +101,7 @@ class Write:
     end_notes: tuple[int, ...] = ()
     full_backup: bool = False
     prompt_custom: bool = False   # the unit is not (known to be) in Custom view: show 'Press Custom' if it stays so
+    quiet: bool = False           # a repaint (the performer's control pads): the OLED and held notes stay as they are
 
 
 @dataclass(frozen=True)
@@ -220,6 +221,17 @@ class LabSession:
             self.window = layout.new_window()   # the new definition does not fit where the window was
         self.layout = layout
         return self._write_current(held)
+
+    def repaint(self) -> Decision:
+        """The same layout and window written again (what render gives has changed: the performer's selected chord
+        type or pattern slot lights its pad); held notes are not ended and the OLED stays."""
+        if not self.active or self.layout is None or not self.layout.generated:
+            return Ignored("no active generated layout")
+        record = self._record()
+        if record == self.last_written:
+            return Ignored("slot 0 holds it already")
+        self.last_written = record
+        return Write(record, self.oled(), (), quiet=True)
 
     def _fresh(self, layout: SessionLayout):
         self.layout, self.window = layout, layout.new_window()

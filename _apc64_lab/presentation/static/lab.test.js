@@ -8,13 +8,16 @@ import { readFileSync } from 'node:fs';
 import { FakeDocument, FakeElement } from '../../../_apc64_host/presentation/static/fake_dom.js';
 import { helpButton as hostHelpButton } from '../../../_apc64_host/presentation/static/help.js';
 import {
-  FLIP_KEY, HARMONY_ADDRESS, HARMONY_HELP, HARMONY_VIEW, LAB_HELP, MAIN_KEY, SLOTS, UNIT_HINT, changedGlobals,
-  createLab, globalsView, harmonyFullPart, harmonySectionView, helpButton, labApi, memoryView, mountPanel,
-  rememberedFlip, rememberedMain, resultView, statusView, unitHint,
+  FLIP_KEY, HARMONY_ADDRESS, HARMONY_HELP, HARMONY_VIEW, LAB_HELP, MAIN_KEY, PERFORMER_HELP, SLOTS, UNIT_HINT,
+  changedGlobals, createLab, globalsView, harmonyFullPart, harmonySectionView, helpButton, labApi, memoryView,
+  clockStatus, mountPanel, performerView, rememberedFlip, rememberedMain, resultView, statusView, unitHint,
 } from './lab.js';
-import { byClass, byData, findAll, hasClass, textOf } from './lab_dom.js';
+import { byClass, byData, findAll, hasClass, mount, textOf } from './lab_dom.js';
+import { markPlayhead } from './performer_editor.js';
 
 const FIXTURE = JSON.parse(readFileSync(new URL('./lab.fixture.json', import.meta.url)));
+// the performer's state as the real service answered it (a guitar layout playing the waltz at step 2; and idle)
+const PERFORMER = JSON.parse(readFileSync(new URL('./performer.fixture.json', import.meta.url)));
 const BUSY = 'busy: push to slot 5 in progress';
 
 // The host's createApi answers {ok, status, data} or {ok: false, status, data, problem}.
@@ -30,7 +33,7 @@ function fakeApi(answers = {}) {
       const data = {
         'GET /api/lab': FIXTURE.lab, 'GET /api/lab/harmony': FIXTURE.harmony,
         'GET /api/lab/backups': FIXTURE.backups, 'GET /api/lab/library': FIXTURE.library,
-        'GET /api/lab/globals': FIXTURE.globals,
+        'GET /api/lab/globals': FIXTURE.globals, 'GET /api/lab/performer': PERFORMER.idle,
         'GET /api/lab/harmony/inputs': { apc64: ['APC64 Custom', 'APC64 Notes'], inputs: [] },
         'GET /api/ports': [{ name: 'Keystation 49 MIDI 1', direction: 'input', present: true },
           { name: 'APC64 Notes', direction: 'input', present: true },
@@ -597,4 +600,102 @@ test('after the WebSocket reconnects the panel fetches its lists again; a change
   listeners.forEach((fn) => fn());
   await mounted.reloaded();
   assert.equal(fetched(), 3);
+});
+
+// --- the performer (§2.10) ------------------------------------------------------------------------------------
+test('the performer shows its controls and the pattern as a grid with the playing step lit', async () => {
+  const { view, actions } = await loaded();
+  const tree = performerView(model({ performer: PERFORMER.playing }), view, actions);
+  const grid = byData(tree, 'part', 'pattern-grid')[0];
+  const rows = findAll(grid, (n) => n.tag === 'tr' && n.props?.data?.lane && n.props.data.lane !== 'strum');
+  assert.deepEqual(rows.map((r) => textOf(findAll(r, (n) => n.tag === 'th')[0])),
+    ['1 E', '2 B', '3 G', '4 D', '5 A', '6 E', 'R root', 'A alt bass']);
+  assert.deepEqual(findAll(rows[0], (n) => n.tag === 'td').map((c) => c.props.data.cell), ['.', 'x', 'x', '.', 'x', 'x']);
+  assert.ok(findAll(grid, (n) => hasClass(n, 'bar')).length > 0);                 // 3/4 in 1/4: a bar line at step 4
+  assert.equal(findAll(grid, (n) => hasClass(n, 'now')).length, 0);              // the playhead is not drawn …
+  const doc = new FakeDocument();
+  const drawn = doc.createElement('div');
+  mount(drawn, tree, doc);
+  markPlayhead(drawn, PERFORMER.playing);                                          // … but marked on the drawn cells
+  const lit = drawn.all((e) => e.classList.contains('now'));
+  assert.ok(lit.length > 0 && lit.every((e) => e.dataset.step === '1' && !e.classList.contains('bar')));
+  assert.match(textOf(byData(tree, 'part', 'performer-status')[0]), /playing · step 2\/6 · a lane per string · Play: latch/);
+  assert.match(textOf(findAll(grid, (n) => n.tag === 'tr' && hasClass(n, 'strum'))[0]), /↓/);
+  const idle = performerView(model({ performer: PERFORMER.idle }), view, actions);
+  assert.match(textOf(idle), /Activate a generated layout to play a pattern over what you hold/);
+});
+
+test('each performer control sends its change, and Stop stops', async () => {
+  const { api, view, actions } = await loaded({ 'POST /api/lab/performer': (body) => ({ ok: true, status: 200,
+    data: { ...PERFORMER.playing, message: 'done' } }) });
+  view.ports = [{ name: 'MPC Live III MIDI 1', direction: 'both', present: true }];
+  const tree = performerView(model({ performer: PERFORMER.playing }), view, actions);
+  clicks(tree, 'performer-on')[0].props.onclick();
+  clicks(tree, 'performer-latch')[0].props.onclick();
+  byData(tree, 'field', 'performer-pattern')[0].props.onchange({ target: { value: 'travis' } });
+  byData(tree, 'field', 'performer-play')[0].props.onchange({ target: { value: '' } });
+  byData(tree, 'field', 'performer-bpm')[0].props.oninput({ target: { value: '90' } });
+  byData(tree, 'field', 'performer-bpm')[0].props.onkeydown({ key: 'Enter' });       // no Set button: Enter applies
+  assert.equal(clicks(tree, 'performer-bpm').length, 0);
+  byData(tree, 'field', 'performer-clock')[0].props.onchange({ target: { value: 'MPC Live III MIDI 1' } });
+  clicks(tree, 'performer-stop')[0].props.onclick();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.deepEqual(api.calls, [
+    ['POST', '/api/lab/performer', { enabled: false }], ['POST', '/api/lab/performer', { latch: true }],
+    ['POST', '/api/lab/performer', { pattern: 'travis' }], ['POST', '/api/lab/performer', { play: null }],
+    ['POST', '/api/lab/performer', { bpm: 90 }], ['POST', '/api/lab/performer', { clock: 'MPC Live III MIDI 1' }],
+    ['POST', '/api/lab/performer/stop', {}]]);
+});
+
+test('the tempo applies as it changes: once after a pause in typing, at once on leaving it; a refusal is shown', async () => {
+  const pending = [];
+  const timers = { set: (fn) => { pending.push(fn); return pending.length; }, clear: (id) => { if (id) pending[id - 1] = null; } };
+  const api = fakeApi({ 'POST /api/lab/performer': (body) => (body.bpm >= 20 && body.bpm <= 300
+    ? { ok: true, status: 200, data: { ...PERFORMER.playing, tempo: { ...PERFORMER.playing.tempo, bpm: body.bpm },
+      message: `tempo ${body.bpm} BPM` } }
+    : refused(400, `'${body.bpm}' is not a tempo; write a BPM 20–300 (quarter notes a minute)`)) });
+  const lab = createLab({ api, timers });
+  const field = () => byData(performerView(model({ performer: PERFORMER.playing }), lab.view, lab.actions), 'field',
+    'performer-bpm')[0];
+  field().props.oninput({ target: { value: '1' } });
+  field().props.oninput({ target: { value: '12' } });
+  field().props.oninput({ target: { value: '120' } });                             // typing (or the arrows)
+  assert.equal(api.calls.length, 0);
+  await Promise.all(pending.filter(Boolean).map((fn) => fn()));                    // the pause: one change
+  assert.deepEqual(api.calls, [['POST', '/api/lab/performer', { bpm: 120 }]]);
+  assert.equal(lab.view.bpm, null);
+  field().props.oninput({ target: { value: '400' } });
+  await field().props.onchange();                                                  // leaving the field: at once
+  assert.deepEqual(api.calls.at(-1), ['POST', '/api/lab/performer', { bpm: 400 }]);
+  assert.equal(lab.view.result.text, "'400' is not a tempo; write a BPM 20–300 (quarter notes a minute)");
+  assert.equal(lab.view.bpm, '400');                                               // not applied: still shown as typed
+  const clocked = { ...PERFORMER.playing, tempo: { source: 'clock', bpm: 98, clock: 'auto', measured: 98.04,
+    following: 'MPC Live III MIDI 1', stopped: false, heard: ['MPC Live III MIDI 1'] } };
+  const tree = performerView(model({ performer: clocked }), lab.view, lab.actions);
+  const bpm = byData(tree, 'field', 'performer-bpm')[0];
+  assert.equal(bpm.props.disabled, true);
+  assert.equal(bpm.props.value, '98');
+  assert.equal(textOf(byData(tree, 'part', 'performer-clock-status')[0]), 'following MPC Live III MIDI 1: 98.0 BPM');
+});
+
+test('the clock says plainly what it is doing', () => {
+  const base = { source: 'clock', bpm: 98, measured: null, stopped: false, heard: [] };
+  assert.equal(clockStatus({ ...base, clock: 'MPC Live III MIDI 1', following: 'MPC Live III MIDI 1' }),
+    'no clock heard from MPC Live III MIDI 1 yet — the MPC sends its clock while its sequencer plays, to the outputs '
+    + 'its sync settings send clock to');
+  assert.match(clockStatus({ ...base, clock: 'auto', following: null }), /^no clock heard from any input yet/);
+  assert.equal(clockStatus({ ...base, clock: 'auto', following: 'MPC Live III MIDI 1', stopped: true,
+    heard: ['MPC Live III MIDI 2'] }), 'the clock stopped; keeping 98.0 BPM · a clock was heard lately from MPC Live III MIDI 2');
+});
+
+test('the performer\'s "?" opens its topic, and its state comes from the topic first', async () => {
+  const opened = [];
+  const lab = createLab({ api: fakeApi(), help: (t) => opened.push(t) });
+  await lab.actions.load();
+  assert.deepEqual(lab.view.performer, PERFORMER.idle);                            // fetched at load
+  const tree = performerView(model({ performer: PERFORMER.playing }), lab.view, lab.actions);
+  findAll(tree, (n) => n.tag === 'button' && hasClass(n, 'help-btn'))[0].props.onclick();
+  assert.deepEqual(opened, [PERFORMER_HELP]);
+  assert.deepEqual(PERFORMER_HELP.items.filter(Array.isArray).map(([term]) => term),
+    ['What it does', 'Strings and lanes', 'Play', 'Latch, Stop', 'Tempo', 'Key', 'Chord types', 'Slots', 'R and A', 'Editing']);
 });

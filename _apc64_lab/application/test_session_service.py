@@ -1,12 +1,15 @@
 """T25: SessionService and Slot0Writer with the real domain and fake ports (s2, s5, s38 collaboration; inv5–inv7,
 inv11; A15, A16, A22, A23, A30, A42, A43, A44; §2.7 a2, a5/q9, q4; a8; d21, d22, d38, d47, d75, d80)."""
 import threading
+
+import pytest
 import time
 from datetime import timedelta
 
 from _apc64_host.application.conftest import ManualClock
 from _apc64_host.domain.controls import PadPos
 from _apc64_host.domain.effects import UnitView
+from _apc64_host.domain.issues import DomainInvariantError
 from _apc64_host.domain.layout import ControlEvent
 from _apc64_host.domain.outbound import WriteCapability
 from _apc64_host.domain.unit_status import ReleaseReason
@@ -41,7 +44,7 @@ class Source:
 
 
 class Rig:
-    def __init__(self, target=None, backups=None, threaded=False, memory=None):
+    def __init__(self, target=None, backups=None, threaded=False, memory=None, controls=None):
         self.events = Events()
         self.memory = memory or FakeMemory(self.events)
         self.memory.events = self.events
@@ -58,7 +61,8 @@ class Rig:
         self.target = target
         self.service = SessionService(self.writer, self.backups, self.registry, self.link, self.publisher,
                                       control=self.memory, held_notes=lambda: tuple(self.held), index=self.index,
-                                      target=target, wall=self.wall, threaded=threaded, settle=0.0 if threaded else 0.03)
+                                      target=target, wall=self.wall, threaded=threaded, settle=0.0 if threaded else 0.03,
+                                      controls=controls)
         self.compiler = LabSectionCompiler(self.registry.generators, self.registry.schemes, target)
 
     def layout(self, text, file):
@@ -482,12 +486,14 @@ def test_the_state_gives_the_pad_grid_its_row_names_and_the_scale_spelled_in_key
     rig = Rig().running()
     rig.load("name: Modes\nlab:\n  generator: modes\n  base: 49\n  scheme: scale\n  scale: locrian\n", "modes.yaml")
     active = rig.service.state().to_json()["active"]
-    assert active["rows"][:2] == ["Locrian", "Phrygian"] and active["rows"][-1] == "Chromatic"
+    assert active["rows"][:2] == ["Ionian", "Dorian"] and active["rows"][-1] == ""
+    assert (active["window"]["label"], active["window"]["key"], active["oled"][1]) == ("Key Db", "Db", "Key Db")
     assert active["scale"]["key"] == "locrian" and active["scale"]["root_name"] == "C♯"
     assert active["definition"]["scheme_params"] == {"scale": "locrian"}
     by_pad = {p["pad"]: p for p in active["pads"]}
-    assert by_pad["r1c2"]["name"] == "D" and by_pad["r1c4"]["name"] == "F♯"   # C♯ Locrian: C♯ D E F♯ G A B
-    assert by_pad["r2c5"]["name"] == "G♯"                       # C♯ Phrygian's 5: each row is spelled in its mode
+    assert by_pad["r7c2"]["name"] == "E𝄫" and by_pad["r7c4"]["name"] == "G♭"   # D♭ Locrian: D♭ E𝄫 F♭ G♭ A𝄫 B𝄫 C♭
+    assert by_pad["r1c2"]["name"] == "E♭" and by_pad["r2c5"]["name"] == "A♭"   # D♭ Ionian, D♭ Dorian: every row
+    #                                                                           from the key's D♭, in its mode
 
 
 def test_the_playing_layouts_key_reaches_the_harmony_views():   # spelling from context (2026-10-27)
@@ -575,3 +581,69 @@ def _wait(condition, seconds=2.0):
             return
         time.sleep(0.001)
     raise AssertionError("timed out")
+
+
+def test_the_performers_control_pads_are_painted_fixed_and_rewritten_on_a_selection():   # §2.10 Phase 2
+    from _apc64_lab.domain.performer_pads import CONTROL_CHANNEL, TYPE_ON, control_pads
+    chosen = {"type": None}
+
+    def controls(definition):
+        pads = control_pads(6, ["maj", "min"], ["travis"], chosen["type"], 0)
+        return {i: (pad, "label") for i, pad in pads.items()}
+    rig = Rig(controls=controls).running()
+    rig.load(GUITAR, "guitar.yaml")
+    top, bottom = rig.slot0.pad(PadPos(8, 1)), rig.slot0.pad(PadPos(1, 1))
+    assert (top.note, top.channel, bottom.note, bottom.channel) == (0, CONTROL_CHANNEL, 8, CONTROL_CHANNEL)
+    assert rig.slot0.pad(PadPos(8, 3)).outputs == 0                      # a third type is not on this layout
+    rig.turn(+3)
+    rig.service.drain()
+    assert rig.slot0.pad(PadPos(8, 1)).note == 0 and rig.slot0.pad(PadPos(2, 1)).note == 41   # the window moved
+    oled, writes = rig.oled, len(rig.memory.writes(0))
+    chosen["type"] = "min"
+    rig.service.repaint()
+    rig.service.drain()
+    assert rig.slot0.pad(PadPos(8, 2)).rest == TYPE_ON and rig.slot0.pad(PadPos(2, 1)).note == 41
+    assert len(rig.memory.writes(0)) == writes + 1 and rig.oled == oled
+    active = rig.service.state().to_json()["active"]
+    assert active["pads"][56]["name"] == "label" and active["pads"][56]["control"]
+
+
+# --- the key: the layout's scale, changed for the session (2026-10-29) -----------------------------------------
+KEYED = "name: Guitar\nlab:\n  generator: guitar\n  scheme: scale\n  scale: major\n  root: C\n"
+
+
+def test_the_pages_key_is_a_session_change_of_the_layouts_scheme_repainting_the_pads():
+    rig = Rig().running()
+    scales = []
+    rig.service._on_scale = lambda layout_id, overlay: scales.append((layout_id, overlay))
+    rig.load(KEYED, "guitar.yaml")
+    assert scales[-1][0] == "guitar" and (scales[-1][1].key, scales[-1][1].root) == ("major", 0)
+    f_sharp = rig.slot0.pad(PadPos(2, 3)).rest                          # F♯ on the low E: out of C major, dark
+    answer = rig.service.set_key("E", "dorian")
+    rig.service.drain()
+    assert answer["message"] == "key E dorian for the session (the layout's file says C major)"
+    assert (scales[-1][1].key, scales[-1][1].root) == ("dorian", 4)
+    assert rig.slot0.pad(PadPos(2, 3)).rest != f_sharp                  # F♯ is in E dorian: lit now
+    active = rig.service.state().to_json()["active"]
+    assert active["key"] == {"tonic": "E", "scale": "dorian", "session": True, "file": "C major"}
+    assert active["scale"]["key"] == "dorian" and rig.tweaks.calls == []   # the file is not changed
+    assert rig.service.set_key(None)["message"] == "no key for the session: chromatic (the layout's file says C major)"
+    rig.service.drain()
+    assert scales[-1][1] is None and rig.service.state().to_json()["active"]["key"]["tonic"] is None
+    rig.load(KEYED.replace("name: Guitar", "name: Guitar 2"), "guitar.yaml")   # a reload keeps the session's key
+    assert scales[-1][1] is None
+    assert rig.service.reset_key()["message"] == "key C major, as the layout's file says"
+    assert (scales[-1][1].key, scales[-1][1].root) == ("major", 0)
+
+
+def test_a_key_is_refused_without_a_generated_layout_or_for_an_unknown_scale_or_tonic():
+    rig = Rig()
+    with pytest.raises(DomainInvariantError):
+        rig.service.set_key("C", "major")
+    rig.running()
+    with pytest.raises(DomainInvariantError) as scale:
+        rig.service.set_key("C", "dorain")
+    assert scale.value.problem == 'no scale "dorain"' and scale.value.fix.startswith("did you mean dorian?")
+    with pytest.raises(DomainInvariantError) as tonic:
+        rig.service.set_key("H", "major")
+    assert tonic.value.field == "tonic"

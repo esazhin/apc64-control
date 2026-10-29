@@ -1,0 +1,18 @@
+# Guitar picker: the 6-string neck in E standard (as guitar.yaml) with a performer. Hold a chord on strings 1-3
+# and the 1-2-3 pattern picks them while strings 4-6 are yours: play an alternating bass there by hand. A string
+# you do not press rings open (unless it is below the chord's root). The top row of pads chooses a chord type
+# (press it again for off): then one note pressed on a string is the root of that chord, voiced on the strings. The
+# bottom row chooses a pattern. The unit's Play toggles the latch, Stop stops the pattern; the page's Performer
+# section chooses another pattern, the tempo or a MIDI clock for the session and edits the patterns.
+name: Guitar picker
+lab:
+  generator: guitar
+  tuning: e-standard
+  frets: 24
+  scheme: fifths
+  performer:
+    pattern: arpeggio-manual-bass   # patterns/arpeggio-manual-bass.yaml
+    latch: off                      # on: the last chord keeps playing after release
+    tempo: 96                       # BPM, or 'clock' with 'clock: <MIDI input>' to follow the MPC's clock
+    chords: [maj, min, 7, maj7, m7, sus2, sus4, dim]   # the top row's pads, left to right
+    slots: [arpeggio-manual-bass, travis, arpeggio, strum, waltz, ~, ~, ~]   # the bottom row's (~: empty)

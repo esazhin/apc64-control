@@ -27,6 +27,8 @@ APC64_LAB_TARGET=
 # hold your unit's data and are git-ignored; relative paths are under the repository
 APC64_LAB_BACKUPS_DIR=backups
 APC64_LAB_LIBRARY_DIR=library
+# the performer's patterns (strums and picks played over what is held, docs/performer-format.md); tracked in git
+APC64_LAB_PATTERNS_DIR=patterns
 
 # The apc64 command finds the service at http://127.0.0.1:$APC64_HTTP_PORT; set APC64_URL in the environment
 # (not here) to reach a service on another machine, e.g. APC64_URL=http://my-audio-pc:5058

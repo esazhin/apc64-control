@@ -236,3 +236,15 @@ def test_no_session_no_writes():
     assert isinstance(session.shift(+1), Ignored) and isinstance(session.cycle_interval(), Ignored)
     assert session.end(EndReason.RELEASE).quiet
     assert session.held_to_end([52, 48, 52]) == (48, 52)
+
+
+def test_a_repaint_writes_the_same_window_again_quietly(factory_frame):
+    from _apc64_lab.domain.performer_pads import control_pads, with_controls
+    session, first = running(factory_frame)
+    assert isinstance(session.repaint(), Ignored)                                   # the same record: nothing to write
+    plain = session.layout.render
+    session.layout = type(session.layout)(session.layout.layout_id, session.layout.name, session.layout.definition,
+                                          lambda t: with_controls(plain(t), control_pads(6, ["maj"], [], "maj")),
+                                          session.layout.span)
+    again = session.repaint()
+    assert isinstance(again, Write) and again.quiet and again.end_notes == ()

@@ -18,6 +18,11 @@ pads on row 2, 'Frets 8-15', whatever the step kind; the step kind and a refused
 (flash_step: 'Step: Page', flash_edge: its `end_text`, 'Neck end'), which the session shows for about a second.
 The page's window line keeps the step kind (label()). Without a unit, row 2 is as before ('Fret 3-10', 'Pg 17-24
 edge'); a LabWindow has no flashes.
+
+A key window (2026-10-29, the modes explorer): a WindowSpec with `key_root` (the pitch class at position 0) is the
+key the pads are in. It is `circular`: the positions wrap within lowest…highest (0…11: a twelfth semitone up is the
+key an octave down, so the keys go round for ever, a Fifth step round the circle of fifths), and row 2 names the key
+('Key Db', ASCII: the OLED has no ♭), as does the page's window line; Tempo flashes the step kind as with a unit.
 """
 from dataclasses import dataclass, field
 
@@ -25,6 +30,8 @@ from _apc64_host.domain.oled import OLED_WIDTH, OledText
 
 from .music import Interval
 from .pads import NoteSpan
+
+KEY_NAMES = ("C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B")   # the OLED's key names (ASCII)
 
 EDGE = " edge"
 
@@ -108,6 +115,8 @@ class WindowSpec:
     shown: int = 0
     unit: str = ""          # row 2 names what is shown: '<unit> a-b' ('Frets 8-15'); the kind and the edge flash
     end_text: str = "end"   # the flash for a refused step when `unit` is set ('Neck end')
+    circular: bool = False  # the positions wrap within lowest…highest (a key window: the keys go round)
+    key_root: int | None = None   # a key window: the key's pitch class at position 0 (row 2 'Key Db')
 
     def __post_init__(self):
         object.__setattr__(self, "steps", tuple(self.steps))
@@ -123,9 +132,20 @@ class WindowSpec:
     def contains(self, position: int) -> bool:
         return self.lowest <= position <= self.highest
 
+    def wrapped(self, position: int) -> int:
+        """A circular window's position folded into lowest…highest (any other: as it is)."""
+        if not self.circular:
+            return position
+        return self.lowest + (position - self.lowest) % (self.highest - self.lowest + 1)
+
+    def key_name(self, position: int) -> str | None:
+        """A key window's key at `position` ('Db'), else None."""
+        return None if self.key_root is None else KEY_NAMES[(self.key_root + position) % 12]
+
     def to_json(self) -> dict:
         return {"steps": [s.label for s in self.steps], "lowest": self.lowest, "highest": self.highest,
-                "pages": list(self.pages), "shown": self.shown, "unit": self.unit or None}
+                "pages": list(self.pages), "shown": self.shown, "unit": self.unit or None,
+                **({"circular": True, "key_root": self.key_root} if self.key_root is not None else {})}
 
 
 @dataclass(frozen=True)
@@ -156,6 +176,8 @@ class StepWindow:
 
     def label(self, short: bool = False) -> str:
         name = (self.kind.short or self.kind.label) if short else self.kind.label
+        if self.spec.key_root is not None:
+            return f"Key {self.spec.key_name(self.position)}"
         if self.spec.shown > 0:
             return f"{name} {self.position}-{self.position + self.spec.shown - 1}"
         return f"{name} {self.position:+d}"
@@ -175,7 +197,7 @@ class StepWindow:
                     return None
                 position = min(ahead) if steps > 0 else max(ahead)
         else:
-            position += steps * self.kind.semitones
+            position = self.spec.wrapped(position + steps * self.kind.semitones)
         return position if self.spec.contains(position) else None
 
     def shifted(self, steps: int, span: NoteSpan | None) -> "StepWindow | Edge":
@@ -202,24 +224,27 @@ class StepWindow:
         full one would not fit ('Pg 17-24 edge')."""
         if self.spec.unit and self.spec.shown > 0:
             return OledText(name, f"{self.spec.unit} {self.shown_range()}")
+        if self.spec.key_root is not None:
+            return OledText(name, self.label())                       # 'Key Db': a refused step is a flash
         row = self.label()
         if edge:
             row = row + EDGE if len(row + EDGE) <= OLED_WIDTH else self.label(short=True) + EDGE
         return OledText(name, row)
 
     def flash_step(self, name: str) -> OledText | None:
-        """The brief message after Tempo when row 2 shows the range: 'Step: Page'."""
-        return OledText(name, f"Step: {self.kind.label}") if self.spec.unit else None
+        """The brief message after Tempo when row 2 shows the range or the key: 'Step: Page', 'Step: Fifth'."""
+        return OledText(name, f"Step: {self.kind.label}") if self.spec.unit or self.spec.key_root is not None else None
 
     def flash_edge(self, name: str) -> OledText | None:
-        """The brief message for a refused step when row 2 shows the range: 'Neck end'."""
-        return OledText(name, self.spec.end_text) if self.spec.unit else None
+        """The brief message for a refused step when row 2 shows the range or the key: 'Neck end'."""
+        return OledText(name, self.spec.end_text) if self.spec.unit or self.spec.key_root is not None else None
 
     def to_json(self) -> dict:
         return {"interval": self.kind.label, "offset": self.position, "counts": {},
                 "transposition": self.transposition(),
                 "window": {**self.spec.to_json(), "step": self.kind.label, "position": self.position,
-                           "label": self.label()}}
+                           "label": self.label(),
+                           **({"key": self.spec.key_name(self.position)} if self.spec.key_root is not None else {})}}
 
 
 def window_for(spec: WindowSpec | None) -> "LabWindow | StepWindow":

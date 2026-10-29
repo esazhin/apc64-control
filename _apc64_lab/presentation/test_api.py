@@ -270,3 +270,16 @@ def test_an_import_through_the_real_services_counts_the_items(real):   # A56
     data = base64.b64encode(file_of(items_of(rig.memory.slots[7].raw)[:580])).decode()
     answer = client.post("/api/lab/import", json={"name": "Short", "data_base64": data})
     assert answer.status_code == 400 and answer.json()["problem"].startswith("580 items, expected 592")
+
+
+# --- the key for the session (2026-10-29) -----------------------------------------------------------------------
+def test_the_key_reaches_the_session_and_a_malformed_one_is_refused():
+    session = Recorder(set_key={"message": "key D dorian for the session (the layout's file says C major)"},
+                       reset_key={"message": "key C major, as the layout's file says"})
+    client, _ = client_for(session=session)
+    assert client.post("/api/lab/key", json={"tonic": "D", "scale": "dorian"}).json()["message"].startswith("key D")
+    client.post("/api/lab/key", json={"tonic": None})
+    client.post("/api/lab/key", json={"layout": True})
+    assert session.calls == [("set_key", ("D", "dorian")), ("set_key", (None, None)), ("reset_key", ())]
+    bad = client.post("/api/lab/key", json={"key": "D"})
+    assert bad.status_code == 400 and bad.json() == {"problem": "unknown key 'key'", "allowed": ["tonic", "scale", "layout"]}

@@ -21,7 +21,9 @@ Amendment (the guitar neck, 2026-10-27), also optional and looked up the same wa
   strings stay apart on the Custom port, where the unit sends only note and channel);
 - a generator's `root(params)`: the layout's root pitch class when it is not its `base` note's (a scheme's root);
 - a generator's `window(params)`: a WindowSpec, its own window steps and transposition range (domain/window.py);
-  without it the window is Octave / Fifth / Third as before;
+  without it the window is Octave / Fifth / Third as before. A key window (its `key_root` set, 2026-10-29: the
+  modes explorer) moves the key: the scheme colours each note as it is at the first key (note − transposition), so
+  the colours follow the key and the picture is the same in every key;
 - a generator's `neck(params)`: a Neck (strings, frets, channels) the page draws as a fretboard.
 
 After the guitar live test (2026-10-27), also optional:
@@ -483,6 +485,8 @@ def generate(generator: PadLayoutGenerator, params: Mapping[str, int], scheme: C
     if moving is not None:
         marks = tuple(w if w is not None else m for w, m in zip(moving, marks))
     root = root_of(generator, params)
+    spec = window_of(generator, params) if transposition else None
+    shift = transposition if spec is not None and spec.key_root is not None else 0   # a key window: relative colours
     channel = params.get("channel", 1)
     channels = channels_of(generator, params) or (None,) * PAD_COUNT
     pads = []
@@ -494,7 +498,7 @@ def generate(generator: PadLayoutGenerator, params: Mapping[str, int], scheme: C
         if not 0 <= note <= 127:
             raise DomainInvariantError("note", f"note {note} is outside 0–127", "move the window back")
         try:
-            rest, pressed = scheme.colour(note, int(root))
+            rest, pressed = scheme.colour(note - shift, int(root))
         except Exception as error:
             raise GeneratorFault(f"scheme {scheme.name}: {error or type(error).__name__}") from error
         if overrides and PitchClass.of(note) in overrides:

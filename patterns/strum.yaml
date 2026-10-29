@@ -1,0 +1,17 @@
+# Strum: the down-up pattern d . d u . u d u on all six strings. Down strums run from the low string to the high
+# one, up strums back, the strings 12 ms apart; the down strum on beat 1 is accented.
+name: Strum d-u
+meter: 4/4
+step: 1/8
+length: 8
+lanes:
+  1: X . x x . x x x
+  2: X . x x . x x x
+  3: X . x x . x x x
+  4: X . x x . x x x
+  5: X . x x . x x x
+  6: X . x x . x x x
+strum: d . d u . u d u    # d down (low to high), u up (high to low), . all at once
+spread: 12                # milliseconds between strings
+velocity: {hit: 90, accent: 120}
+humanize: {timing: 3, velocity: 6}   # a hand is never exact

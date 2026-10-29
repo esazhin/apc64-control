@@ -231,6 +231,13 @@ class HostModuleBase:
         """A Led effect about to be drawn: return it (maybe changed) or None to suppress it (s2.c8)."""
         return led
 
+    def take_played(self, played) -> str | None:
+        """A message played on the unit's Notes or Custom port (PlayedMidi), before the router sees it: a reason
+        (e.g. 'played by the performer') takes it, so it is not routed, and the module plays what it makes of it
+        through the host's NotePlayer; None leaves it to the router (contract 2 §2.10). The host still publishes a
+        play event for a taken note, so the harmony views see what is held."""
+        return None
+
 
 @runtime_checkable
 class ModuleDisplay(Protocol):
@@ -265,6 +272,15 @@ class ViewRequester(Protocol):
     def request_view(self, view) -> bool:
         """Asks the unit for a pad mode (19 00 01 <m>); True when it was sent while held. The unit obeys and does
         not report it, so the host takes the view as reported at once (on_pad_mode follows); 2026-10-27."""
+        ...
+
+
+@runtime_checkable
+class NotePlayer(Protocol):
+    def perform(self, messages, role: UnitPortRole = UnitPortRole.CUSTOM) -> None:
+        """From any thread: MIDI messages routed as if the unit had played them on that port (the layout's routing
+        rule: target, channel, aftertouch), in order, as soon as the engine's queue reaches them; their play events
+        carry the PERFORMER source (contract 2 §2.10)."""
         ...
 
 
@@ -312,3 +328,4 @@ class HostPorts:
     dispatch: Callable | None = None
     inputs: Any = None                # FeedbackInputs: any other MIDI input (§2.7 q7)
     views: ViewRequester | None = None   # the pad-mode request with the view assumed (2026-10-27)
+    player: NotePlayer | None = None     # notes routed as if played on the unit (the performer, §2.10)

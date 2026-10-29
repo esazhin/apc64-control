@@ -41,3 +41,13 @@ def test_backups_are_ignored_by_git():
     checked = subprocess.run(["git", "check-ignore", "-q", "backups/slot7-2026-10-24T12-00.bin"], cwd=ROOT,
                              timeout=30)
     assert checked.returncode == 0
+
+
+def test_the_performer_package_is_part_of_the_project_and_imports_outside_the_repository(tmp_path):   # §2.10
+    setuptools = _project()["tool"]["setuptools"]
+    assert "performer*" in setuptools["packages"]["find"]["include"]
+    assert "performer" in _project()["tool"]["pytest"]["ini_options"]["testpaths"]
+    found = subprocess.run([sys.executable, "-c", "import performer; print(performer.__file__)"],
+                           cwd=tmp_path, capture_output=True, text=True, timeout=60)
+    assert found.returncode == 0, found.stderr
+    assert Path(found.stdout.strip()).resolve() == (ROOT / "performer" / "__init__.py").resolve()

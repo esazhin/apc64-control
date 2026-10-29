@@ -1,6 +1,7 @@
 """Lab dependency direction (contract §7): the lab domain is pure; the host core never imports the lab.
 
-_apc64_lab/domain imports only the standard library, _apc64_host.domain value types and itself.
+_apc64_lab/domain imports only the standard library, _apc64_host.domain value types, the pure performer package
+(§2.10: standard library only itself, shared with other projects) and itself.
 The harmony core (_apc64_lab/domain/harmony) imports only the standard library and itself (§2.7 q7).
 """
 import ast
@@ -39,7 +40,7 @@ def test_the_lab_domain_imports_only_the_stdlib_host_domain_values_and_itself():
         for module in _imports(path, LAB):
             top = module.split(".")[0]
             allowed = (top in STDLIB or module.startswith("_apc64_host.domain")
-                       or module.startswith("_apc64_lab.domain"))
+                       or module.startswith("_apc64_lab.domain") or top == "performer")
             if not allowed:
                 outward.append(f"{path.relative_to(LAB)} imports {module}")
     assert outward == []

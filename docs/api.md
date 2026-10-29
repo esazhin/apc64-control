@@ -333,7 +333,9 @@ From the moment of connecting, one message per event, in order:
  "sent": ["note-off 36 ch 10"], "reason": null}}
 ```
 `kind`: `press`, `release`, `move`, `turn`, `note_on`, `note_off`, `aftertouch`, `nav`, `shift`, `view`,
-`layout`; `source`: `unit` or `replica`. A watcher more than 5 s behind gets
+`layout`; `source`: `unit` or `replica`. While the lab's performer plays a pattern (contract 2 §2.10), a note you play
+on the unit's Custom port shows with `"reason": "played by the performer"` and nothing in `sent`, and the pattern's
+own notes follow as `note_on`/`note_off` events with what was `sent`, as for a pad. A watcher more than 5 s behind gets
 `{"type": "closed", "reason": "too slow", "data": {"reason": "too slow", "text": "stream closed: too slow"}}` and
 the socket closes (code 4000); the unit and the other watchers are unaffected.
 

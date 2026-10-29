@@ -25,7 +25,7 @@ def test_the_apc64_console_script_points_at_the_cli():
 
 def test_pytest_collects_from_the_package_and_deselects_live(pytestconfig):
     options = _project()["tool"]["pytest"]["ini_options"]
-    assert options["testpaths"] == ["_apc64_host", "_apc64_lab"]   # contract 2 T1 adds the lab package
+    assert options["testpaths"] == ["_apc64_host", "_apc64_lab", "performer"]   # contract 2 T1 adds the lab, §2.10 the performer
     assert options["markers"] == ["live: needs the real APC64 (APC64_LIVE=1)"]
     assert options["addopts"] == "-m 'not live'"
     assert pytestconfig.getoption("markexpr") == "not live"

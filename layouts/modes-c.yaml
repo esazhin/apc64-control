@@ -1,9 +1,10 @@
-# Modes C: the modes explorer from C2 (docs/lab-guide.md). Rows 1-7, bottom to top, are C's seven modes by
-# brightness: Locrian, Phrygian, Aeolian, Dorian, Mixolydian, Ionian, Lydian, each from the root (column 1) to the
-# octave (column 8). Each row raises one note of the row below; that note keeps its full colour, the root and octave
-# are white, the rest dimmed. Row 8 is a chromatic reference, C to G. Pads 48 (C2) to 60.
-name: Modes C
+# Modes: the modes explorer from C2 (docs/lab-guide.md). Rows 1-7, bottom to top, are C's seven modes in the order
+# of the major scale's: Ionian, Dorian, Phrygian, Lydian, Mixolydian, Aeolian, Locrian, each from the root (column 1)
+# to the octave (column 8). The notes where a mode differs from Ionian keep their full colour, the root and octave
+# are white, the rest dimmed; row 8 is dark. The encoder moves the key (Tempo: Semitone or Fifth steps, round the
+# circle of fifths); the OLED shows it ('Key Db'). Pads 48 (C2) to 60 in C.
+name: Modes
 lab:
   generator: modes
-  base: 48            # the root: the note on pad r1c1 and every row's first pad (C2 = 48)
+  base: 48            # the root: the note on pad r1c1 and every row's first pad (C2 = 48), the first key
   scheme: fifths

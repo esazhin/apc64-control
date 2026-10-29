@@ -73,12 +73,13 @@ def lab_module(config: Config, adapters: "Adapters"):
             target = NoteTarget.parse(config.lab_target)
         except DomainInvariantError as error:
             raise ConfigError("APC64_LAB_TARGET", f"{error.problem}; {error.fix}") from None
+    patterns = config.lab_patterns_dir or REPO / "patterns"
     if adapters.simulator is not None:       # a simulated unit never mixes its backups with the real unit's
         base = Path(config.state_dir) / "simulated"
-        paths = LabPaths(base / "lab-backups", base / "lab-library", base / "lab-settings.json")
+        paths = LabPaths(base / "lab-backups", base / "lab-library", base / "lab-settings.json", patterns)
     else:
         paths = LabPaths(config.lab_backups_dir or REPO / "backups", config.lab_library_dir or REPO / "library",
-                         Path(config.state_dir) / "lab-settings.json")
+                         Path(config.state_dir) / "lab-settings.json", patterns)
     return build_lab(paths, WriteCapability("lab guarded writer"), target=target)
 
 
@@ -211,7 +212,7 @@ def compose(config: Config, adapters: Adapters, modules=(), *, local_names=None)
     if collection.hooks:
         collection.hooks.bind(HostPorts(display=engine, notes=engine, loader=engine, tweaks=tweaks,
                                         sysex=session.sysex_tap, gate=gate, stream=stream, topics=hub, clock=a.clock,
-                                        dispatch=a.dispatch, inputs=a.midi, views=engine))
+                                        dispatch=a.dispatch, inputs=a.midi, views=engine, player=engine))
     for part in parts:
         naming = getattr(part, "name_layouts", None)
         if callable(naming):

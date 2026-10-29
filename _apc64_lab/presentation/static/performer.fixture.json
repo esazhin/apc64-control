@@ -1,0 +1,731 @@
+{
+ "playing": {
+  "kind": "performer",
+  "available": true,
+  "layout": "guitar-picker",
+  "name": "Guitar picker",
+  "from_layout": true,
+  "enabled": true,
+  "addressing": "strings",
+  "lanes": [
+   {
+    "lane": 1,
+    "label": "1 E",
+    "open": 64
+   },
+   {
+    "lane": 2,
+    "label": "2 B",
+    "open": 59
+   },
+   {
+    "lane": 3,
+    "label": "3 G",
+    "open": 55
+   },
+   {
+    "lane": 4,
+    "label": "4 D",
+    "open": 50
+   },
+   {
+    "lane": 5,
+    "label": "5 A",
+    "open": 45
+   },
+   {
+    "lane": 6,
+    "label": "6 E",
+    "open": 40
+   },
+   {
+    "lane": "R",
+    "label": "R root",
+    "open": null
+   },
+   {
+    "lane": "A",
+    "label": "A alt bass",
+    "open": null
+   }
+  ],
+  "pattern": {
+   "id": "waltz",
+   "name": "Waltz 3/4",
+   "description": null,
+   "meter": "3/4",
+   "step": "1/4",
+   "length": 6,
+   "play": "all",
+   "bar": 3,
+   "lanes": [
+    {
+     "lane": 1,
+     "manual": false,
+     "cells": ".xx.xx"
+    },
+    {
+     "lane": 2,
+     "manual": false,
+     "cells": ".xx.xx"
+    },
+    {
+     "lane": 3,
+     "manual": false,
+     "cells": ".xx.xx"
+    },
+    {
+     "lane": 4,
+     "manual": false,
+     "cells": "......"
+    },
+    {
+     "lane": 5,
+     "manual": false,
+     "cells": "...X.."
+    },
+    {
+     "lane": 6,
+     "manual": false,
+     "cells": "X....."
+    },
+    {
+     "lane": "R",
+     "manual": false,
+     "cells": "......"
+    },
+    {
+     "lane": "A",
+     "manual": false,
+     "cells": "......"
+    }
+   ],
+   "strum": ".dd.dd",
+   "data": {
+    "format": 1,
+    "name": "Waltz 3/4",
+    "meter": "3/4",
+    "step": "1/4",
+    "length": 6,
+    "lanes": {
+     "1": ". x x | . x x",
+     "2": ". x x | . x x",
+     "3": ". x x | . x x",
+     "5": ". . . | X . .",
+     "6": "X . . | . . ."
+    },
+    "strum": ". d d | . d d",
+    "spread": 8,
+    "swing": 50,
+    "play": "all",
+    "gate": "ring",
+    "velocity": {
+     "hit": 100,
+     "accent": 127
+    },
+    "humanize": {
+     "timing": 0,
+     "velocity": 0
+    },
+    "manual": []
+   },
+   "warnings": [],
+   "hash": "ae005df72dac",
+   "edited": false,
+   "new": false
+  },
+  "patterns": [
+   {
+    "id": "arpeggio",
+    "name": "Arpeggio 8ths",
+    "meter": "4/4",
+    "step": "1/8",
+    "length": 8,
+    "play": "all",
+    "valid": true,
+    "file": "arpeggio.yaml",
+    "edited": false
+   },
+   {
+    "id": "arpeggio-manual-bass",
+    "name": "1-2-3 + bass",
+    "meter": "4/4",
+    "step": "1/8",
+    "length": 8,
+    "play": "all",
+    "valid": true,
+    "file": "arpeggio-manual-bass.yaml",
+    "edited": false
+   },
+   {
+    "id": "strum",
+    "name": "Strum d-u",
+    "meter": "4/4",
+    "step": "1/8",
+    "length": 8,
+    "play": "all",
+    "valid": true,
+    "file": "strum.yaml",
+    "edited": false
+   },
+   {
+    "id": "travis",
+    "name": "Travis pick",
+    "meter": "4/4",
+    "step": "1/8",
+    "length": 8,
+    "play": "all",
+    "valid": true,
+    "file": "travis.yaml",
+    "edited": false
+   },
+   {
+    "id": "waltz",
+    "name": "Waltz 3/4",
+    "meter": "3/4",
+    "step": "1/4",
+    "length": 6,
+    "play": "all",
+    "valid": true,
+    "file": "waltz.yaml",
+    "edited": false
+   }
+  ],
+  "latch": false,
+  "play": "all",
+  "play_override": null,
+  "tempo": {
+   "source": "bpm",
+   "bpm": 100.0,
+   "clock": null,
+   "measured": null,
+   "following": null,
+   "stopped": false,
+   "heard": []
+  },
+  "running": true,
+  "step": 2,
+  "length": 6,
+  "controls": "Play: latch on/off · Stop: stop the pattern",
+  "chords": {
+   "types": [
+    "maj",
+    "min",
+    "7",
+    "maj7",
+    "m7",
+    "sus2",
+    "sus4",
+    "dim"
+   ],
+   "selected": null,
+   "available": true
+  },
+  "slots": [
+   {
+    "slot": 1,
+    "pattern": "arpeggio-manual-bass",
+    "id": "arpeggio-manual-bass",
+    "name": "1-2-3 + bass",
+    "valid": true,
+    "edited": false
+   },
+   {
+    "slot": 2,
+    "pattern": "travis",
+    "id": "travis",
+    "name": "Travis pick",
+    "valid": true,
+    "edited": false
+   },
+   null,
+   {
+    "slot": 4,
+    "pattern": "strum",
+    "id": "strum",
+    "name": "Strum d-u",
+    "valid": true,
+    "edited": false
+   }
+  ],
+  "slot": null,
+  "pads": "top row: chord types · bottom row: pattern slots",
+  "voicing": null,
+  "timing": {
+   "ticks": 412,
+   "mean_ms": 0.08,
+   "p99_ms": 0.21,
+   "max_ms": 0.6
+  },
+  "message": null,
+  "edits": [],
+  "pattern_revision": 3
+ },
+ "idle": {
+  "kind": "performer",
+  "available": false,
+  "layout": null,
+  "name": null,
+  "from_layout": false,
+  "enabled": false,
+  "addressing": null,
+  "lanes": [
+   {
+    "lane": 1,
+    "label": "voice 1",
+    "open": null
+   },
+   {
+    "lane": 2,
+    "label": "voice 2",
+    "open": null
+   },
+   {
+    "lane": 3,
+    "label": "voice 3",
+    "open": null
+   }
+  ],
+  "pattern": {
+   "id": "arpeggio-manual-bass",
+   "name": "1-2-3 + bass",
+   "description": "Arpeggio 1-2-3 over a manual bass",
+   "meter": "4/4",
+   "step": "1/8",
+   "length": 8,
+   "play": "all",
+   "bar": 8,
+   "lanes": [
+    {
+     "lane": 1,
+     "manual": false,
+     "cells": "...x...x"
+    },
+    {
+     "lane": 2,
+     "manual": false,
+     "cells": ".x...x.."
+    },
+    {
+     "lane": 3,
+     "manual": false,
+     "cells": "..x...x."
+    },
+    {
+     "lane": 4,
+     "manual": true,
+     "cells": ""
+    },
+    {
+     "lane": 5,
+     "manual": true,
+     "cells": ""
+    },
+    {
+     "lane": 6,
+     "manual": true,
+     "cells": ""
+    }
+   ],
+   "strum": null,
+   "data": {
+    "format": 1,
+    "name": "1-2-3 + bass",
+    "description": "Arpeggio 1-2-3 over a manual bass",
+    "meter": "4/4",
+    "step": "1/8",
+    "length": 8,
+    "lanes": {
+     "1": ". . . x . . . x",
+     "2": ". x . . . x . .",
+     "3": ". . x . . . x ."
+    },
+    "swing": 50,
+    "play": "all",
+    "gate": "ring",
+    "velocity": {
+     "hit": 100,
+     "accent": 127
+    },
+    "humanize": {
+     "timing": 0,
+     "velocity": 0
+    },
+    "manual": [
+     4,
+     5,
+     6
+    ]
+   },
+   "warnings": [],
+   "new": false
+  },
+  "patterns": [
+   {
+    "id": "arpeggio",
+    "name": "Arpeggio 8ths",
+    "meter": "4/4",
+    "step": "1/8",
+    "length": 8,
+    "play": "all",
+    "valid": true,
+    "file": "arpeggio.yaml",
+    "edited": false
+   },
+   {
+    "id": "arpeggio-manual-bass",
+    "name": "1-2-3 + bass",
+    "meter": "4/4",
+    "step": "1/8",
+    "length": 8,
+    "play": "all",
+    "valid": true,
+    "file": "arpeggio-manual-bass.yaml",
+    "edited": false
+   },
+   {
+    "id": "strum",
+    "name": "Strum d-u",
+    "meter": "4/4",
+    "step": "1/8",
+    "length": 8,
+    "play": "all",
+    "valid": true,
+    "file": "strum.yaml",
+    "edited": false
+   },
+   {
+    "id": "travis",
+    "name": "Travis pick",
+    "meter": "4/4",
+    "step": "1/8",
+    "length": 8,
+    "play": "all",
+    "valid": true,
+    "file": "travis.yaml",
+    "edited": false
+   },
+   {
+    "id": "waltz",
+    "name": "Waltz 3/4",
+    "meter": "3/4",
+    "step": "1/4",
+    "length": 6,
+    "play": "all",
+    "valid": true,
+    "file": "waltz.yaml",
+    "edited": false
+   }
+  ],
+  "latch": false,
+  "play": "all",
+  "play_override": null,
+  "tempo": {
+   "source": "bpm",
+   "bpm": 100.0,
+   "clock": null,
+   "measured": null,
+   "following": null,
+   "stopped": false,
+   "heard": []
+  },
+  "running": false,
+  "step": null,
+  "length": 8,
+  "controls": null,
+  "timing": {
+   "ticks": 0
+  },
+  "message": "no generated layout is active",
+  "edits": [],
+  "pattern_revision": 0
+ },
+ "voiced": {
+  "kind": "performer",
+  "available": true,
+  "layout": "guitar-picker",
+  "name": "Guitar picker",
+  "from_layout": true,
+  "enabled": true,
+  "addressing": "strings",
+  "lanes": [
+   {
+    "lane": 1,
+    "label": "1 E",
+    "open": 64
+   },
+   {
+    "lane": 2,
+    "label": "2 B",
+    "open": 59
+   },
+   {
+    "lane": 3,
+    "label": "3 G",
+    "open": 55
+   },
+   {
+    "lane": 4,
+    "label": "4 D",
+    "open": 50
+   },
+   {
+    "lane": 5,
+    "label": "5 A",
+    "open": 45
+   },
+   {
+    "lane": 6,
+    "label": "6 E",
+    "open": 40
+   },
+   {
+    "lane": "R",
+    "label": "R root",
+    "open": null
+   },
+   {
+    "lane": "A",
+    "label": "A alt bass",
+    "open": null
+   }
+  ],
+  "pattern": {
+   "id": "travis",
+   "name": "Travis pick",
+   "description": null,
+   "meter": "4/4",
+   "step": "1/8",
+   "length": 8,
+   "play": "all",
+   "bar": 8,
+   "lanes": [
+    {
+     "lane": 1,
+     "manual": false,
+     "cells": "x......x"
+    },
+    {
+     "lane": 2,
+     "manual": false,
+     "cells": "...x...."
+    },
+    {
+     "lane": 3,
+     "manual": false,
+     "cells": ".x...x.."
+    },
+    {
+     "lane": 4,
+     "manual": false,
+     "cells": "........"
+    },
+    {
+     "lane": 5,
+     "manual": false,
+     "cells": "........"
+    },
+    {
+     "lane": 6,
+     "manual": false,
+     "cells": "........"
+    },
+    {
+     "lane": "R",
+     "manual": false,
+     "cells": "X...x..."
+    },
+    {
+     "lane": "A",
+     "manual": false,
+     "cells": "..x...x."
+    }
+   ],
+   "strum": null,
+   "data": {
+    "format": 1,
+    "name": "Travis pick",
+    "meter": "4/4",
+    "step": "1/8",
+    "length": 8,
+    "lanes": {
+     "1": "x . . . . . . x",
+     "2": ". . . x . . . .",
+     "3": ". x . . . x . .",
+     "R": "X . . . x . . .",
+     "A": ". . x . . . x ."
+    },
+    "swing": 54,
+    "play": "all",
+    "gate": "ring",
+    "velocity": {
+     "hit": 100,
+     "accent": 127
+    },
+    "humanize": {
+     "timing": 0,
+     "velocity": 0
+    },
+    "manual": []
+   },
+   "warnings": [],
+   "hash": "7cef6af83ab3",
+   "edited": false,
+   "new": false
+  },
+  "patterns": [
+   {
+    "id": "arpeggio",
+    "name": "Arpeggio 8ths",
+    "meter": "4/4",
+    "step": "1/8",
+    "length": 8,
+    "play": "all",
+    "valid": true,
+    "file": "arpeggio.yaml",
+    "edited": false
+   },
+   {
+    "id": "arpeggio-manual-bass",
+    "name": "1-2-3 + bass",
+    "meter": "4/4",
+    "step": "1/8",
+    "length": 8,
+    "play": "all",
+    "valid": true,
+    "file": "arpeggio-manual-bass.yaml",
+    "edited": false
+   },
+   {
+    "id": "strum",
+    "name": "Strum d-u",
+    "meter": "4/4",
+    "step": "1/8",
+    "length": 8,
+    "play": "all",
+    "valid": true,
+    "file": "strum.yaml",
+    "edited": false
+   },
+   {
+    "id": "travis",
+    "name": "Travis pick",
+    "meter": "4/4",
+    "step": "1/8",
+    "length": 8,
+    "play": "all",
+    "valid": true,
+    "file": "travis.yaml",
+    "edited": false
+   },
+   {
+    "id": "waltz",
+    "name": "Waltz 3/4",
+    "meter": "3/4",
+    "step": "1/4",
+    "length": 6,
+    "play": "all",
+    "valid": true,
+    "file": "waltz.yaml",
+    "edited": false
+   }
+  ],
+  "latch": false,
+  "play": "all",
+  "play_override": null,
+  "tempo": {
+   "source": "bpm",
+   "bpm": 100.0,
+   "clock": null,
+   "measured": null,
+   "following": null,
+   "stopped": false,
+   "heard": []
+  },
+  "running": true,
+  "step": 1,
+  "length": 8,
+  "controls": "Play: latch on/off · Stop: stop the pattern",
+  "chords": {
+   "types": [
+    "maj",
+    "min",
+    "7",
+    "maj7",
+    "m7",
+    "sus2",
+    "sus4",
+    "dim"
+   ],
+   "selected": "m7",
+   "available": true
+  },
+  "slots": [
+   {
+    "slot": 1,
+    "pattern": "arpeggio-manual-bass",
+    "id": "arpeggio-manual-bass",
+    "name": "1-2-3 + bass",
+    "valid": true,
+    "edited": false
+   },
+   {
+    "slot": 2,
+    "pattern": "travis",
+    "id": "travis",
+    "name": "Travis pick",
+    "valid": true,
+    "edited": false
+   },
+   null,
+   {
+    "slot": 4,
+    "pattern": "strum",
+    "id": "strum",
+    "name": "Strum d-u",
+    "valid": true,
+    "edited": false
+   }
+  ],
+  "slot": 2,
+  "pads": "top row: chord types · bottom row: pattern slots",
+  "voicing": {
+   "root": "A",
+   "string": 5,
+   "chord": "m7",
+   "symbol": "Am7",
+   "shape": "x02010",
+   "notes": [
+    {
+     "string": 1,
+     "note": 64
+    },
+    {
+     "string": 2,
+     "note": 60
+    },
+    {
+     "string": 3,
+     "note": 55
+    },
+    {
+     "string": 4,
+     "note": 52
+    },
+    {
+     "string": 5,
+     "note": 45
+    }
+   ]
+  },
+  "timing": {
+   "ticks": 412,
+   "mean_ms": 0.08,
+   "p99_ms": 0.21,
+   "max_ms": 0.6
+  },
+  "message": null,
+  "edits": [],
+  "pattern_revision": 5
+ }
+}

@@ -32,6 +32,18 @@ def test_feedback_reaches_listeners_of_that_port_until_cancelled_and_presence_is
     assert presence == [("MPC Live III MIDI 1", False), ("MPC Live III MIDI 1", True)]
 
 
+def test_clock_bytes_reach_realtime_listeners_only_with_their_time():   # the performer's clock input, §2.10
+    ports = MemoryPorts(["MPC Live III MIDI 1"])
+    clock, notes = [], []
+    listener = ports.listen_realtime("MPC", lambda status, t: clock.append((status, t)))
+    ports.listen("MPC", notes.append)
+    assert ports.deliver_realtime("MPC Live III MIDI 1", 0xF8, 1.5) == 1
+    assert ports.deliver("MPC Live III MIDI 1", NoteOn(1, 36, 100)) == 1
+    listener.cancel()
+    assert ports.deliver_realtime("MPC Live III MIDI 1", 0xF8) == 0
+    assert clock == [(0xF8, 1.5)] and notes == [NoteOn(1, 36, 100)]
+
+
 def test_the_silent_prompt_asks_nothing_visible_and_answers_dismissed_when_withdrawn():
     async def scenario():
         prompt = SilentPrompt()

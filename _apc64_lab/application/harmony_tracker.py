@@ -12,6 +12,10 @@ the APC64's Custom port (a guitar layout sends each string on its own channel), 
 `played`, so the neck view puts a played note on its string. Other sources carry no string identity (None). The analysis itself stays in the pure, device-independent
 domain/harmony core; this service only feeds it and publishes each snapshot as it is applied (A78).
 
+The performer (Phase 2): a note it takes as a chord's root (TAKEN_VOICED) or as a control pad (TAKEN_CONTROL) is not
+counted; the performer shows the voicing it plays instead (show_voicing: its notes with their strings' channels, as
+the Custom port's), which never counts as held at a window shift.
+
 After the guitar live test (2026-10-27): the trail can be cleared (clear_trail: the API, CLI and panel), the layout's
 key spelling reaches the core through set_key (SessionService gives the active layout's scale overlay), and the
 inputs followed are published too (kind 'inputs'), so every open page shows a choice made elsewhere.
@@ -30,13 +34,14 @@ from _apc64_host.domain.issues import DomainInvariantError
 from _apc64_host.domain.midi import NoteOff, NoteOn
 
 from ..domain.harmony import Harmony, HarmonyState
-from .ports import HostLink, LabSettingsStore, LabStatePublisher, MemorySettings, NullPublisher
+from .ports import NOT_HELD_REASONS, HostLink, LabSettingsStore, LabStatePublisher, MemorySettings, NullPublisher
 
 log = logging.getLogger(__name__)
 INPUTS_KEY = "harmony.inputs"
 INPUTS = "inputs"   # the publisher kind of the inputs followed
 UNIT_KINDS = (PlaySourceKind.CUSTOM, PlaySourceKind.NOTES)
 _APC64 = "apc64"
+VOICING = (str(PlaySourceKind.CUSTOM), "performer voicing")   # the performer's voicing, shown on the strings
 
 
 class HarmonyTracker:
@@ -106,6 +111,8 @@ class HarmonyTracker:
         source = event.port
         if source is None or not source.played:                                        # A70, d50
             return False
+        if event.reason in NOT_HELD_REASONS:          # the performer shows its voicing itself; a control is no note
+            return False
         if source.kind is PlaySourceKind.INPUT and str(source.port) not in self._inputs:
             return False
         key = (str(source.kind), str(source.port))
@@ -115,6 +122,30 @@ class HarmonyTracker:
         if event.kind in ("note_off", NOTE_ENDED) or event.kind == "note_on":
             return self._off(key, event.note, channel)
         return False
+
+    def show_voicing(self, voices) -> None:
+        """The performer's voicing as held notes on their strings ((channel, note) each; () for none), in place of
+        the one shown before."""
+        wanted = Counter((int(channel), int(note)) for channel, note in voices)
+        with self._lock:
+            shown = Counter({(c, n): k for (key, c, n), k in self._voices.items() if key == VOICING})
+            if wanted == shown:
+                return
+            state = None
+            for (channel, note), count in (shown - wanted).items():
+                for _ in range(count):
+                    self._counts[(VOICING, note)] -= 1
+                    if self._counts[(VOICING, note)] <= 0:
+                        del self._counts[(VOICING, note)]
+                    self._voice_off(VOICING, channel, note)
+                    state = self._harmony.note_off(note)
+            for (channel, note), count in (wanted - shown).items():
+                for _ in range(count):
+                    self._counts[(VOICING, note)] += 1
+                    self._voices[(VOICING, channel, note)] += 1
+                    state = self._harmony.note_on(note)
+            state = self._with_voices(state if state is not None else self._harmony.state())
+        self._publish(state)
 
     # === other MIDI inputs (§2.7 q7) =======================================================================
     def inputs(self) -> dict:
@@ -240,7 +271,8 @@ class HarmonyTracker:
         """The notes a source kind holds now, lowest first (SessionService ends them at a shift, d47)."""
         self.pump()
         with self._lock:
-            return tuple(sorted({n for (k, n), c in self._counts.items() if c > 0 and k[0] == str(kind)}))
+            return tuple(sorted({n for (k, n), c in self._counts.items() if c > 0 and k[0] == str(kind)
+                                 and k != VOICING}))
 
     def state(self) -> HarmonyState:
         with self._lock:

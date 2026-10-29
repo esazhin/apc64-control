@@ -31,6 +31,12 @@ unit's own reports still override it. Switching to Session view repaints the pad
 more shortly after (the unit gives no report to repaint on, PROTOCOL-SPEC §4.6). press_view is the replica's and
 the API's way to it.
 
+The performer (contract 2 §2.10): a module may take what is played on the Notes or Custom port (take_played) instead
+of the router; the engine then publishes the held note's play event as usual, with the module's reason and nothing
+sent, so the harmony views follow what is held. perform() is the module's way back: messages routed by the router as
+if the unit had played them (the layout's rule, its channel and aftertouch), their play events from the PERFORMER
+source. Without a module that takes them, notes are routed exactly as before.
+
 Threads: post() may be called from any thread; it enqueues and hands a drain to `dispatch` (the
 composition root passes loop.call_soon_threadsafe). submit() is for callers on the loop: it enqueues and
 drains at once, so API calls return the state after their input was handled (s16.c2).
@@ -46,7 +52,8 @@ from typing import Callable
 from ..domain.controls import ControlId, Encoder, EncoderPress
 from ..domain.effects import (
     Activity, ActivityEntry, ActivityResult, CallModule, CatalogUpdate, EncoderTurn, FeedbackMessage, InputSource,
-    LayoutSwap, Led, Oled, Origin, Play, PlayedMidi, PlayedNote, PlaySource, PlaySourceKind, Press, Redraw, Release,
+    LayoutSwap, Led, Oled, Origin, Play, PlayEvent, PlayedMidi, PlayedNote, PlaySource, PlaySourceKind, Press, Redraw,
+    Release,
     RequestLayout, ScheduleAfter, SelectBank, SelectPage, Send, SetPageShift, SetResting, ShowTransient, StripBar,
     StripMove, Tick, UnitView, ViewReport,
 )
@@ -55,7 +62,7 @@ from ..domain.layout import (
 )
 from ..domain.issues import DomainInvariantError
 from ..domain.leds import LedFrame
-from ..domain.midi import ChannelPressure, PolyAftertouch
+from ..domain.midi import ChannelPressure, NoteOff, NoteOn, PolyAftertouch
 from ..domain.oled import OLED_WIDTH, OledText
 from ..domain.outbound import HAZARD_TEXT
 from ..domain.router import NOT_ROUTED, ExpressiveRouter
@@ -75,6 +82,7 @@ POSITIONS_FLUSH = 1.0   # strip positions are written at most once a second
 SESSION_REPAINT_AFTER = 0.15   # a requested Session view is repainted again after this (no report comes)
 MODULE_WARNINGS = 5     # the newest module warnings kept for the banner
 SESSION_SOURCE = PlaySource(PlaySourceKind.SESSION_BINDING)
+PERFORMER_SOURCE = PlaySource(PlaySourceKind.PERFORMER)
 
 
 # --- values the engine hands out ------------------------------------------------------------------------
@@ -174,6 +182,12 @@ class _Repaint:
 @dataclass(frozen=True)
 class _EndNotes:
     notes: tuple[int, ...]
+    role: UnitPortRole
+
+
+@dataclass(frozen=True)
+class _Perform:
+    messages: tuple
     role: UnitPortRole
 
 
@@ -306,6 +320,13 @@ class HostEngine:
     def end_notes(self, notes, role: UnitPortRole = UnitPortRole.CUSTOM) -> None:
         """One note-off per held note at its target, a NOTE_ENDED play event each, later releases absorbed."""
         self._module_post(_EndNotes(tuple(int(n) for n in notes), UnitPortRole(role)))
+
+    def perform(self, messages, role: UnitPortRole = UnitPortRole.CUSTOM) -> None:
+        """From any thread (the performer's scheduler, a module hook): messages routed as if played on the unit's
+        port, in order (NotePlayer, §2.10)."""
+        messages = tuple(messages)
+        if messages:
+            self._module_post(_Perform(messages, UnitPortRole(role)))
 
     def _module_post(self, item) -> None:
         """From inside the engine's own handling (a hook or module action): queued behind the current input;
@@ -462,6 +483,9 @@ class HostEngine:
                     self._run(self._surface.handle(Redraw()))
             case _EndNotes(notes=notes, role=role):
                 self._run(self._router.end_notes(notes, role, self._surface.view), PlaySource.of_role(role))
+            case _Perform(messages=messages, role=role):
+                for message in messages:
+                    self._run(self._router.handle(PlayedMidi(role, message), self._surface.view), PERFORMER_SOURCE)
             case SelectPage() | SelectBank() | SetPageShift() | FeedbackMessage() | Tick() \
                     | Redraw() | CatalogUpdate() | SetResting() | ShowTransient():
                 self._run(self._surface.handle(item))
@@ -509,6 +533,12 @@ class HostEngine:
 
     def _played(self, played: PlayedMidi) -> None:
         self._calibration.observe(played, self._surface.view)
+        taken = self._hooks.take_played(played) if self._hooks else None
+        if taken:   # a module plays it (the performer, §2.10): the held note is published, nothing is routed
+            event = _taken_event(played, self._surface.view, taken)
+            if event is not None:
+                self._run([Play(event)], PlaySource.of_role(played.role))
+            return
         self._run(self._router.handle(played, self._surface.view), PlaySource.of_role(played.role))
 
     def _view_report(self, report: ViewReport) -> None:
@@ -719,6 +749,21 @@ def _oled_rows(text: str) -> tuple[str, str]:
     cut = text.rfind(" ", 0, OLED_WIDTH + 1)
     cut = cut if cut > 0 else OLED_WIDTH
     return text[:cut], text[cut:].strip()
+
+
+def _taken_event(played: PlayedMidi, view, reason: str) -> PlayEvent | None:
+    """The play event of a message a module took: what was played, sent nowhere by the host itself."""
+    message = played.message
+    channel = int(message.channel)
+    if isinstance(message, NoteOn) and message.velocity > 0:
+        return PlayEvent("note_on", view=view, note=int(message.note), velocity=int(message.velocity), reason=reason,
+                         channel=channel)
+    if isinstance(message, (NoteOn, NoteOff)):
+        return PlayEvent("note_off", view=view, note=int(message.note), reason=reason, channel=channel)
+    if isinstance(message, PolyAftertouch):
+        return PlayEvent("aftertouch", view=view, note=int(message.note), aftertouch=int(message.pressure),
+                         reason=reason, channel=channel)
+    return None
 
 
 def _set_exception(future: asyncio.Future, error: Exception) -> None:

@@ -306,7 +306,7 @@ export function padGridModel(lab, controls = {}) {
       const pad = byPad.get(id);
       const silent = !pad || pad.silent;
       return { pad: id, row, column, note: silent ? null : pad.note, rgb: silent ? null : pad.rest,
-        name: silent ? null : (pad.name ?? NOTE_NAMES[mod(pad.note, 12)]) };
+        name: silent ? null : (pad.name ?? NOTE_NAMES[mod(pad.note, 12)]), control: !silent && pad.control === true };
     });
     return { source: 'lab', exact: true, cells, rows: active.rows?.length === 8 ? active.rows : null,
       scale: active.scale ?? null, neck: active.neck ?? null };
@@ -370,6 +370,12 @@ export function padGridView(grid, harmony) {
         style: cell.rgb ? { background: cell.rgb } : {}, title: `${cell.pad}: silent` }));
       continue;
     }
+    if (cell.control) {        // the performer's control pads (a chord type, a pattern slot): their name, no note
+      cells.push(h('div', { class: ['grid-pad', 'control', inkFor(cell.rgb)], data: { pad: cell.pad, note: '', control: '' },
+        style: cell.rgb ? { background: cell.rgb } : {}, title: `${cell.pad}: ${cell.name} (a performer control pad)` },
+      h('span', { class: 'pad-name', text: cell.name })));
+      continue;
+    }
     const pc = mod(cell.note, 12);
     cells.push(h('div', {
       class: ['grid-pad', inkFor(cell.rgb), notes.has(cell.note) && 'held', tones.has(pc) && 'chord-tone',
@@ -395,7 +401,8 @@ export function padReplicaView(grid, harmony) {
   const rows = (grid?.cells ?? PAD_IDS.map(({ id }) => ({ pad: id, note: null, rgb: null }))).map((cell) => {
     const silent = exact ? cell.note === null : !cell.rgb;
     return h('div', {
-      class: ['lab-pad', silent && 'silent', !exact && 'approx', !silent && cell.note !== null && notes.has(cell.note) && 'held'],
+      class: ['lab-pad', silent && 'silent', !exact && 'approx', !silent && !cell.control && cell.note !== null
+        && notes.has(cell.note) && 'held'],
       data: { pad: cell.pad, note: cell.note ?? '', rgb: cell.rgb ?? '' },
       style: cell.rgb ? { background: cell.rgb } : {},
       title: cell.note === null ? `${cell.pad}: ${cell.rgb ?? 'silent'}` : `${cell.pad}: note ${cell.note}, ${cell.rgb}`

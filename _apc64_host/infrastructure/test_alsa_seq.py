@@ -270,6 +270,20 @@ def test_feedback_listeners_get_midi_messages_in_order_and_follow_their_port_by_
     assert got[-1] == NoteOn(1, 37, 80)
 
 
+def test_realtime_listeners_hear_the_clock_with_its_arrival_time_and_note_listeners_do_not():   # §2.10
+    seq, at = world()
+    sequencer = adapter(seq)
+    clock, notes = [], []
+    sequencer.listen_realtime(MPC, lambda status, t: clock.append((status, t)))
+    sequencer.listen(MPC, notes.append)
+    for data in (b"\xfa", b"\xf8", b"\x90\x24\x64", b"\xf8", b"\xfc"):
+        seq.push(MidiBytesEvent(data, source=at["mpc"]))
+    sequencer.process_pending()
+    assert [status for status, _ in clock] == [0xFA, 0xF8, 0xF8, 0xFC]
+    assert all(isinstance(t, float) for _, t in clock) and clock == sorted(clock, key=lambda c: c[1])
+    assert notes == [NoteOn(1, 36, 100)]
+
+
 def test_a_listener_on_a_missing_port_connects_when_the_port_appears():
     seq, _ = world()
     sequencer = adapter(seq)

@@ -16,9 +16,11 @@ from ruamel.yaml import YAML
 
 from _apc64_host.domain.controls import PadPos
 from _apc64_host.notation.compiler import compile_text
+from _apc64_lab.application.pattern_library import PatternLibrary
 from _apc64_lab.application.registry import GeneratorRegistry
 from _apc64_lab.application.section_compiler import LabSectionCompiler
 from _apc64_lab.domain.pads import WHITE
+from _apc64_lab.infrastructure.pattern_files import PatternFiles
 from _apc64_lab.infrastructure.plugin_discovery import PluginDiscovery
 from _apc64_lab.presentation import lab_schema
 from _apc64_lab.presentation.api import LabServices, lab_router
@@ -30,10 +32,12 @@ API = (ROOT / "docs" / "lab-api.md").read_text()
 EXAMPLES = re.findall(r"```yaml\n(.*?)```", GUIDE, re.DOTALL)
 PORTS = ["MPC Live III MIDI 1", "Bitwig Studio In"]
 REGISTRY = GeneratorRegistry(PluginDiscovery()).load()
+PATTERNS = PatternLibrary(PatternFiles(ROOT / "patterns"))
 
 
 def compiled(text, file="example.yaml"):
-    return compile_text(text, file, PORTS, sections={"lab": LabSectionCompiler(REGISTRY.generators, REGISTRY.schemes)})
+    return compile_text(text, file, PORTS, sections={"lab": LabSectionCompiler(REGISTRY.generators, REGISTRY.schemes,
+                                                                                 patterns=PATTERNS.names)})
 
 
 def test_the_guide_has_worked_examples():
@@ -144,8 +148,9 @@ def shipped(name):
 
 @pytest.mark.parametrize("name,display,low,high", [
     ("thirds-grid", "Thirds grid", 36, 85), ("wicki-hayden", "Wicki-Hayden", 36, 85), ("janko", "Janko", 48, 69),
-    ("fifths-grid", "Fifths grid", 36, 92), ("modes-c", "Modes C", 48, 60),
+    ("fifths-grid", "Fifths grid", 36, 92), ("modes-c", "Modes", 48, 60),
     ("guitar", "Guitar", 40, 71), ("guitar-7", "Guitar 7", 35, 71), ("guitar-8", "Guitar 8", 30, 71),
+    ("guitar-picker", "Guitar picker", 40, 71), ("guitar-picker-key", "Picker in key", 40, 71),
 ])
 def test_the_new_shipped_layouts_validate_within_a_playable_range(name, display, low, high):
     layout, notes = shipped(name)
@@ -174,11 +179,11 @@ def test_the_fifths_grid_runs_round_the_circle_and_the_wicki_hayden_and_janko_st
     assert janko[(3, 1)] == janko[(1, 2)]   # each note again two rows up, one column left
 
 
-def test_the_modes_c_layout_plays_cs_modes_by_brightness():
+def test_the_modes_layout_plays_cs_modes_from_ionian_to_locrian():
     _, notes = shipped("modes-c")
     rows = [[notes[(r, c)] for c in range(1, 9)] for r in range(1, 9)]
-    assert rows[0] == [48, 49, 51, 53, 54, 56, 58, 60] and rows[5] == [48, 50, 52, 53, 55, 57, 59, 60]
-    assert rows[6][3] == 54 and rows[7] == list(range(48, 56))
+    assert rows[0] == [48, 50, 52, 53, 55, 57, 59, 60] and rows[6] == [48, 49, 51, 53, 54, 56, 58, 60]
+    assert rows[3][3] == 54 and rows[7] == [None] * 8
 
 
 @pytest.mark.parametrize("name,strings,rows", [("guitar", 6, range(2, 8)), ("guitar-7", 7, range(1, 8)),
@@ -210,3 +215,55 @@ def test_the_api_document_names_every_command():
     lab = sub.choices["lab"]
     commands = next(a for a in lab._actions if isinstance(a, argparse._SubParsersAction)).choices
     assert [c for c in commands if f"`apc64 lab {c}" not in API] == []
+
+
+# --- the performer (§2.10): docs/performer-format.md holds -------------------------------------------------------
+FORMAT = (ROOT / "docs" / "performer-format.md").read_text()
+
+
+def test_the_formats_examples_parse_and_the_yaml_and_json_forms_agree():
+    import json
+    from performer import parse_pattern
+    yaml_example = re.findall(r"```yaml\n(.*?)```", FORMAT, re.DOTALL)[0]
+    json_example = re.findall(r"```json\n(.*?)```", FORMAT, re.DOTALL)[0]
+    from_yaml = PATTERNS.compile_text(yaml_example, "example.yaml")
+    assert from_yaml.valid and from_yaml.issues == ()
+    assert parse_pattern(json.loads(json_example)) == from_yaml.pattern
+
+
+def test_every_error_the_format_quotes_is_the_validators_text():
+    blocks = re.findall(r"```yaml\n([^`]*)```\n\nand gets:\n\n```text\n([^`]*)```", FORMAT)
+    assert len(blocks) == 1
+    text, quoted = blocks[0]
+    produced = [i.message() for i in PATTERNS.compile_text(text, "travis.yaml").errors]
+    assert produced == quoted.strip().splitlines()
+
+
+def test_the_canonical_form_shown_is_the_shipped_waltzs():
+    import json
+    from performer import to_data
+    shown = json.loads(re.findall(r"```json\n(.*?)```", FORMAT, re.DOTALL)[1])
+    assert shown == {k: v for k, v in to_data(PATTERNS.get("waltz")[1]).items() if k != "description"}
+
+
+PERFORMER_ERROR_CASES = [   # the guide's section 12 (line numbers as quoted)
+    "name: Guitar picker\nlab:\n  generator: guitar\n  tuning: e-standard\n  performer:\n    pattern: travs\n",
+    "name: Guitar picker\nlab:\n  generator: guitar\n  tuning: e-standard\n  performer:\n    pattern: travis\n"
+    "    tempo: 400\n",
+    "name: Guitar picker\nlab:\n  generator: guitar\n  tuning: e-standard\n  performer:\n    pattern: travis\n"
+    "    tempo: clock\n",
+    "name: Guitar picker\ndevices:\n  mpc: MPC Live III MIDI 1\nlab:\n  generator: guitar\n  performer:\n"
+    "    pattern: travis\npages:\n  1:\n    play: cc 118 on mpc\n",
+    "name: Guitar picker\nlab:\n  generator: guitar\n  tuning: e-standard\n  performer:\n    pattern: travis\n"
+    "    chords: [maj, min7b5]\n",                                                 # Phase 2
+]
+
+
+def test_every_performer_error_the_guide_quotes_is_the_validators_text():   # §2.10
+    produced = {i.message() for case in PERFORMER_ERROR_CASES for i in compiled(case, "guitar-picker.yaml").issues}
+    produced.add(PATTERNS.compile_text("name: P\nmeter: 4/4\nstep: 1/8\nlength: 8\nlanes:\n  1: x . . . . . . .\n"
+                                       "  3: . . x . . . x .\n  4: . . . . . . . .\n  2: . . . x . . .\n",
+                                       "my-pick.yaml").errors[0].message())
+    quoted = [line for block in re.findall(r"```text\n(.*?)```", GUIDE, re.DOTALL) for line in block.splitlines()
+              if line.startswith(("guitar-picker.yaml", "my-pick.yaml"))]
+    assert len(quoted) == 6 and [line for line in quoted if line not in produced] == []

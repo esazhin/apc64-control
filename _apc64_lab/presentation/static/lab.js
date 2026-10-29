@@ -11,9 +11,12 @@
 // Its "?" buttons open the host page's one help overlay (handlers.help, the host's help.js) with the topics below.
 // The harmony views also have a full view across the whole page (HARMONY_VIEW): the host page shows it alone when
 // its address says ?view=harmony (a new tab, a bookmark, another device), or when Full screen is pressed
-// (handlers.openView); the panel draws it into its own element at the end of <body> (.module-view).
+// (handlers.openView); the panel draws it into its own element at the end of <body> (.module-view). The performer's
+// pattern editor has one too, the sequencer (SEQUENCER_VIEW, ?view=sequencer): the same editor, draft and state as
+// the panel's, the grid large across the page with the controls needed while playing.
 import { h, mount } from './lab_dom.js';
 import { MAIN_CHOICES, harmonyFullView, harmonyView, mainChoices, mainViewKind, padGridModel } from './harmony_views.js';
+import { blankDraft, draftData, draftOf, idFor, markPlayhead, patternConfirmView, patternEditor } from './performer_editor.js';
 
 export const UNIT_HINT = 'encoder: shift · Tempo: interval';
 export const SLOTS = Array.from({ length: 24 }, (_, k) => k + 1);
@@ -21,6 +24,9 @@ const STYLE_ID = 'lab-panel-style';
 export const HARMONY_VIEW = 'harmony';
 // relative to the page: the host page at the same address, showing only the harmony full view
 export const HARMONY_ADDRESS = `?view=${HARMONY_VIEW}`;
+// the performer's sequencer: the pattern editor alone across the page, at ?view=sequencer (a tab of its own)
+export const SEQUENCER_VIEW = 'sequencer';
+export const SEQUENCER_ADDRESS = `?view=${SEQUENCER_VIEW}`;
 // the full view's Main choice (auto / tonnetz / pads / neck), remembered per browser
 export const MAIN_KEY = 'apc64-lab.harmony-main';
 // the neck drawn for a left-handed player (the nut on the right), remembered per browser
@@ -82,6 +88,48 @@ export const HARMONY_HELP = {
   ],
 };
 
+export const PERFORMER_HELP = {
+  id: 'performer',
+  title: 'Performer',
+  items: [
+    ['What it does', 'Plays a pattern over the notes you hold: strumming and fingerpicking. It starts at step 1 the '
+      + 'moment you press a note, and a chord change does not restart it: the next hits play the new notes. Release '
+      + 'everything and it stops one step later. The notes go to the layout\'s note target, like the pads.'],
+    ['Strings and lanes', 'A pattern has a row (lane) per string, 1 the highest. On a guitar layout each string is '
+      + 'its own lane; on other layouts lane 1 is the highest note you hold, lane 2 the next (voices). Manual strings '
+      + 'are yours: what you press there passes straight through, so you can play a bass by hand under the pattern.'],
+    ['Play', 'All: every string plays at its hits, one you do not press rings open, as on a guitar. Pressed: only '
+      + 'the strings you press play. A missing note leaves its step silent; the timing never moves.'],
+    ['Latch, Stop', 'Latch on: the last chord keeps playing after you let go, until Stop or a new chord. On the unit, '
+      + 'Play toggles the latch and Stop stops the pattern (for a layout with a performer: block; the OLED says so).'],
+    ['Tempo', 'In BPM (quarter notes a minute; a change applies as you type or click the arrows), or from the MIDI '
+      + 'clock of an input, e.g. the MPC, or auto: the first input that sends one. The MPC sends its clock only while '
+      + 'its sequencer plays, and only to the outputs its sync settings send clock to. The clock sets the speed; the '
+      + 'pattern still starts when you press. The grid below is the pattern; the lit column is the step playing.'],
+    ['Key', 'The layout\'s scale is the key (scheme: scale, its scale and root): the pads light in key, the notes out '
+      + 'of it dark. Key here changes it for the session (not the file): a tonic and a scale, or none (chromatic); '
+      + '"file" goes back to the layout\'s. The chord types key and key 7 play the key\'s own chord on the note you '
+      + 'press (in C major: D is Dm, Dm7; B is Bdim, Bm7b5); a note out of key plays nothing.'],
+    ['Chord types', 'Choose a type (maj, m7 …: the top row of pads on a guitar layout with a performer, or here); it '
+      + 'stays chosen until another or the same one again (off). Then one note you press is the root: the chord is '
+      + 'voiced on the strings from it (the A string\'s C as maj: x32010) and the pattern plays it. Two notes or more '
+      + 'play as fretted. On 7 or 8 strings: Shift + a pad in the type\'s column.'],
+    ['Slots', 'The bottom row of pads (the top row on 7 strings, Shift + the top row on 8) chooses one of the '
+      + 'layout\'s patterns (its performer: block\'s slots); the OLED names it.'],
+    ['R and A', 'Rows R and A follow the chord you hold: R is its root string, A the alternate bass (root on 6 or 5: '
+      + 'string 4; on 4: string 3). A string you do not press below the root stays silent, so a C never rings the '
+      + 'open low E.'],
+    ['Editing', 'Click a cell: · → ● hit → ◉ accent; the strum row: ↓ down → ↑ up; a string\'s box makes it manual. '
+      + 'Meter, step, length, swing, spread, play, name and description beside it. Every edit plays from the next '
+      + 'step. Unsaved edits are kept per pattern (● marks them) while you choose others, until Save, Revert or '
+      + 'Delete; a restart of the service drops them. Save writes patterns/<name>.yaml (checked first; the old text '
+      + 'is kept), Save as under another name, New, Duplicate, Delete (asked first). Sequencer opens the editor '
+      + 'alone across the page, the grid large (New tab: ?view=sequencer, a tab of its own); it is the same editor.'],
+    'Changes here last for the session; the layout file\'s performer: block sets them at activation. Patterns are '
+      + 'files in patterns/ (docs/performer-format.md).',
+  ],
+};
+
 // --- the lab's routes (docs/lab-api.md) ----------------------------------------------------------------------
 export function labApi(api) {
   const call = (method, path, body) => api.call(method, path, body);
@@ -95,6 +143,7 @@ export function labApi(api) {
     activate: (layout) => call('POST', '/api/lab/activate', { layout }),
     leave: () => call('POST', '/api/lab/leave', {}),
     tweak: (field, value) => call('POST', '/api/lab/tweak', { field, value }),
+    key: (body) => call('POST', '/api/lab/key', body),
     turn: (steps) => call('POST', '/api/control/encoder/move', { value: steps }),
     tempo: async () => {
       const pressed = await call('POST', '/api/control/tempo/press', {});
@@ -114,6 +163,11 @@ export function labApi(api) {
     globals: () => call('GET', '/api/lab/globals'),
     changeGlobals: (changes, confirm) => call('POST', '/api/lab/globals', confirm ? { changes, confirm: true } : { changes }),
     dismissRecovery: () => call('POST', '/api/lab/recovery/dismiss', {}),
+    performer: () => call('GET', '/api/lab/performer'),
+    changePerformer: (changes) => call('POST', '/api/lab/performer', changes),
+    stopPerformer: () => call('POST', '/api/lab/performer/stop', {}),
+    savePattern: (body) => call('POST', '/api/lab/patterns/save', body),
+    deletePattern: (id, base) => call('POST', '/api/lab/patterns/delete', base ? { id, base } : { id }),
   };
 }
 
@@ -123,6 +177,8 @@ export function initialView() {
     lab: null, harmony: null, backups: null, library: null, globals: null, globalsProblem: null, ports: null,
     inputs: null, slot: 1, entry: '', restoreBackup: null, base: null, slotView: null, captureName: '', importName: '',
     globalsDraft: {}, confirm: null, result: null, mainView: rememberedMain(), leftHanded: rememberedFlip(),
+    performer: null, bpm: null, draft: null, typing: {}, saveAs: null, patternConfirm: null,
+    editing: 0, draftRevision: 0, seenRevision: 0,
   };
 }
 
@@ -162,8 +218,28 @@ function rememberFlip(on, storage = globalThis.localStorage) {
 }
 
 const answerText = (answer) => (answer.ok ? (answer.data?.message ?? 'done') : answer.problem);
+// the tempo field applies this long after the last keystroke or arrow click (at once on Enter or on leaving it)
+export const BPM_DELAY = 250;
+// the pattern select's value for the session's new, never-saved pattern
+export const NEW_PATTERN = '*new';
+const TIMERS = { set: (fn, ms) => setTimeout(fn, ms), clear: (id) => clearTimeout(id) };
 
-export function createLab({ api, onChange = () => {}, readFile = null, help = null, page = null } = {}) {
+// The editor's draft follows the service: when the pattern playing changed elsewhere (a slot pad, another page, the
+// CLI) since the draft was made, the draft goes and the editor shows the state again; never while this page's own
+// edit is on its way (its answer says which change it made). Called before each render.
+export function followPerformer(view, p) {
+  if (!p) return false;
+  const revision = p.pattern_revision ?? 0;
+  if (!view.draft) {
+    view.seenRevision = revision;
+    return false;
+  }
+  if (view.editing || revision <= (view.draftRevision ?? 0)) return false;
+  Object.assign(view, { draft: null, typing: {}, saveAs: null, seenRevision: revision });
+  return true;
+}
+
+export function createLab({ api, onChange = () => {}, readFile = null, help = null, page = null, timers = TIMERS } = {}) {
   const lab = labApi(api);
   const view = initialView();
   const set = (patch) => { Object.assign(view, patch); onChange(view); };
@@ -188,6 +264,7 @@ export function createLab({ api, onChange = () => {}, readFile = null, help = nu
     // the harmony full view (the host page's handlers: openView, closeView, toggleFullscreen)
     fullScreen: () => page?.openView?.(HARMONY_VIEW, { fullscreen: true }),
     leaveFullView: () => page?.closeView?.(),
+    openSequencer: () => page?.openView?.(SEQUENCER_VIEW),
     toggleFullscreen: () => page?.toggleFullscreen?.(),
     setMainView: (value) => {
       const choice = MAIN_CHOICES.some(([key]) => key === value) ? value : 'auto';
@@ -199,9 +276,11 @@ export function createLab({ api, onChange = () => {}, readFile = null, help = nu
       set({ leftHanded: !view.leftHanded });
     },
     async load() {
-      const [state, harmony, inputs, ports] = await Promise.all([lab.state(), lab.harmony(), lab.inputs(), lab.ports()]);
+      const [state, harmony, inputs, ports, performer] = await Promise.all([lab.state(), lab.harmony(), lab.inputs(),
+        lab.ports(), lab.performer()]);
       set({ lab: state.ok ? state.data : null, harmony: harmony.ok ? harmony.data : null,
-        inputs: inputs.ok ? inputs.data : null, ports: ports.ok ? ports.data : null });
+        inputs: inputs.ok ? inputs.data : null, ports: ports.ok ? ports.data : null,
+        performer: performer.ok ? performer.data : null });
       await refreshLists();
       await actions.readGlobals(true);
     },
@@ -276,7 +355,157 @@ export function createLab({ api, onChange = () => {}, readFile = null, help = nu
       return answer;
     },
     cancelConfirm: () => set({ confirm: null }),
+    // the performer (§2.10): each change for the session, its answer in the result line
+    setPerformer: async (changes) => {
+      const answer = await lab.changePerformer(changes);
+      show(answer);
+      if (answer.ok) set({ performer: answer.data, bpm: null });
+      return answer;
+    },
+    stopPerformer: async () => {
+      const answer = await lab.stopPerformer();
+      show(answer);
+      if (answer.ok) set({ performer: answer.data });
+      return answer;
+    },
+    // the tempo applies as it changes: after a pause in typing (or the arrows), at once on Enter or on leaving it
+    draftBpm: (value) => {
+      view.bpm = value;
+      timers.clear(bpmTimer);
+      bpmTimer = timers.set(() => actions.applyBpm(), BPM_DELAY);
+    },
+    applyBpm: async () => {
+      timers.clear(bpmTimer);
+      const value = view.bpm;
+      if (value === null || value === undefined || String(value).trim() === '') return null;
+      const bpm = Number(value);
+      const answer = await lab.changePerformer({ bpm: Number.isFinite(bpm) ? bpm : String(value) });
+      show(answer);
+      if (answer.ok) set({ performer: answer.data, ...(view.bpm === value ? { bpm: null } : {}) });
+      return answer;
+    },
+    // chord types and pattern slots (Phase 2)
+    chooseType: (name) => actions.setPerformer({ chord_type: name }),
+    // the key for the session (the layout's scale; not the file): a tonic and a scale, none, or the file's again
+    setKey: async (tonic, scale) => {
+      const answer = await lab.key(tonic ? { tonic, scale: scale || 'major' } : { tonic: null });
+      show(answer);
+      if (answer.ok) set({ lab: answer.data });
+      return answer;
+    },
+    resetKey: async () => {
+      const answer = await lab.key({ layout: true });
+      show(answer);
+      if (answer.ok) set({ lab: answer.data });
+      return answer;
+    },
+    chooseSlot: (slot) => {
+      set({ draft: null, saveAs: null, typing: {} });                  // the slot's pattern (its kept edit) shows
+      return actions.setPerformer({ slot });
+    },
+    // the pattern editor (Phase 2): every edit plays at once and is kept (unsaved) by the service, Save writes it
+    choosePattern: (id) => {
+      set({ draft: null, saveAs: null, typing: {} });
+      return actions.setPerformer(id === NEW_PATTERN ? { new_pattern: true } : { pattern: id });
+    },
+    typePattern: (field, value) => { view.typing = { ...view.typing, [field]: value }; },
+    editPattern: async (pattern, change) => {
+      const typing = { ...view.typing };
+      const fresh = !view.draft;
+      let draft = view.draft ?? draftOf(pattern);
+      for (const [field, value] of Object.entries(typing)) if (value !== draft[field]) draft = { ...draft, [field]: value, dirty: true };
+      draft = change(draft);
+      const seq = (editSeq += 1);
+      set({ draft, typing: {}, editing: view.editing + 1, ...(fresh ? { draftRevision: view.seenRevision } : {}) });
+      let answer;
+      try {
+        answer = await lab.changePerformer({ pattern_data: draftData(draft), edits: draft.id ?? null });
+      } finally {
+        view.editing -= 1;
+      }
+      if (answer.ok) view.draftRevision = Math.max(view.draftRevision, answer.data?.pattern_revision ?? 0);
+      if (seq !== editSeq || !view.draft) {                             // a newer edit is on its way
+        if (answer.ok) set({ performer: answer.data });
+        return answer;
+      }
+      if (!answer.ok && answer.data?.code === 'stale') {                 // another pattern plays now: show it
+        show(answer);
+        set({ draft: null, saveAs: null, typing: {} });
+        return answer;
+      }
+      const dirty = answer.ok ? Boolean(answer.data?.pattern?.edited) : view.draft.dirty;
+      set({ draft: { ...view.draft, dirty, issues: answer.ok ? [] : (answer.data?.issues ?? [{ text: answer.problem }]) },
+        ...(answer.ok ? { performer: answer.data } : {}) });
+      return answer;
+    },
+    // New and Duplicate make the session's one new pattern: when one is kept already, asked first
+    newPattern: (p = null) => {
+      const kept = keptNew(p);
+      if (kept) return set({ patternConfirm: { kind: 'new', name: kept.name } });
+      return set({ draft: blankDraft(), saveAs: null, typing: {}, draftRevision: view.seenRevision });
+    },
+    duplicatePattern: (pattern, p = null) => {
+      const kept = keptNew(p);
+      if (kept) return set({ patternConfirm: { kind: 'duplicate', name: kept.name, pattern } });
+      const from = view.draft ?? draftOf(pattern);
+      return actions.editPattern(pattern, () => ({ ...from, id: null, base: null, name: `${from.name} copy`.slice(0, 40),
+        dirty: true, issues: [] }));
+    },
+    savePattern: async (pattern) => {
+      const draft = view.draft ?? draftOf(pattern);
+      if (!draft.id) return actions.saveAsPattern(pattern);
+      return writePattern({ id: draft.id, data: draftData(withTyping(draft)), base: draft.base, edits: draft.id });
+    },
+    saveAsPattern: (pattern) => {
+      const draft = view.draft ?? draftOf(pattern);
+      return set({ draft: { ...draft }, saveAs: { id: draft.id ? `${draft.id}-2` : idFor(draft.name) } });
+    },
+    typeSaveAs: (value) => { if (view.saveAs) view.saveAs = { ...view.saveAs, id: value }; },
+    confirmSaveAs: () => {
+      const draft = view.draft;
+      if (!draft || !view.saveAs) return null;
+      return writePattern({ id: String(view.saveAs.id).trim(), data: draftData(withTyping(draft)), create: true,
+        edits: draft.id ?? null });
+    },
+    cancelSaveAs: () => set({ saveAs: null }),
+    revertPattern: (id) => {
+      set({ draft: null, saveAs: null, typing: {} });
+      return actions.setPerformer({ revert: id });
+    },
+    deletePattern: (pattern) => {
+      const draft = view.draft ?? draftOf(pattern);
+      if (!draft.id) return null;
+      return set({ patternConfirm: { kind: 'delete', id: draft.id, name: draft.name, base: draft.dirty ? null : draft.base } });
+    },
+    confirmPattern: async () => {
+      const c = view.patternConfirm;
+      set({ patternConfirm: null });
+      if (!c) return null;
+      if (c.kind === 'delete') {
+        const answer = await lab.deletePattern(c.id, c.base);
+        show(answer);
+        if (answer.ok) set({ draft: null, saveAs: null, typing: {} });
+        return answer;
+      }
+      set({ draft: null, saveAs: null, typing: {} });
+      if (c.kind === 'duplicate') return actions.duplicatePattern(c.pattern);
+      return set({ draft: blankDraft(), draftRevision: view.seenRevision });
+    },
+    cancelPatternConfirm: () => set({ patternConfirm: null }),
   };
+  let editSeq = 0;
+  let bpmTimer = null;
+  // the session's kept new pattern ({id: null, name, new: true}), unless it is the draft being replaced already
+  const keptNew = (p) => (p?.edits ?? []).find((e) => e.new) ?? null;
+  const withTyping = (draft) => Object.entries(view.typing).reduce((d, [field, value]) => ({ ...d, [field]: value }), draft);
+  async function writePattern(body) {
+    const answer = await lab.savePattern(body);
+    show(answer);
+    if (answer.ok) set({ draft: null, saveAs: null, typing: {} });
+    else if (view.draft) set({ draft: { ...view.draft, issues: answer.data?.issues?.length ? answer.data.issues
+      : [{ text: answer.problem + (answer.data?.fix ? `; ${answer.data.fix}` : '') }] } });
+    return answer;
+  }
   return { view, actions, api: lab };
 }
 
@@ -334,6 +563,11 @@ export function harmonyOf(model, view) {
   return topic(model, 'harmony') ?? view.harmony;
 }
 
+// The performer: as last pushed (every change and every step while it plays), else as fetched.
+export function performerOf(model, view) {
+  return topic(model, 'performer') ?? view.performer;
+}
+
 // The inputs harmony follows: as last pushed (a choice made in another tab or through the API), else as fetched.
 export function inputsOf(model, view) {
   return topic(model, 'inputs') ?? view.inputs;
@@ -359,12 +593,16 @@ function paramText(p) {
   return `${p.name} ${p.min}–${p.max} (default ${p.default})`;
 }
 
+// The panel's top: the heading, the messages and the active layout (then the performer, then the lists).
 export function statusView(model, view, actions) {
+  const head = statusHeadView(model, view, actions);
+  return labOf(model, view) ? [...head, ...listsView(model, view, actions)] : head;
+}
+
+export function statusHeadView(model, view, actions) {
   const lab = labOf(model, view);
-  if (!lab) return h('div', { class: 'lab-loading muted', text: 'Loading the lab…' });
-  const active = lab.active;
+  if (!lab) return [h('div', { class: 'lab-loading muted', text: 'Loading the lab…' })];
   const target = lab.target ?? {};
-  const layouts = layoutsOf(lab, view);
   // a pending recovery says it once (its own box); the message line would repeat the same text
   const message = lab.message && lab.message !== lab.recovery?.message ? lab.message : null;
   return [
@@ -379,6 +617,16 @@ export function statusView(model, view, actions) {
       button('Dismiss', () => actions.dismissRecovery(), { data: { action: 'dismiss-recovery' } })) : null,
     (lab.warnings ?? []).map((w) => h('div', { class: 'lab-warning', text: `start-up: ${w}` })),
     activeView(lab, view, actions),
+  ];
+}
+
+// The generated layouts (Activate), the generators and the colour schemes.
+export function listsView(model, view, actions) {
+  const lab = labOf(model, view);
+  if (!lab) return [];
+  const active = lab.active;
+  const layouts = layoutsOf(lab, view);
+  return [
     h('section', { class: 'lab-sub', data: { part: 'layouts' } },
       h('h3', { text: 'Generated layouts' }),
       layouts.length ? h('ul', { class: 'lab-list' }, layouts.map((e) => (e.valid === false
@@ -727,31 +975,284 @@ export function resultView(view) {
     text: view.result.text });
 }
 
+// --- the performer (§2.10): on/off, pattern, play mode, latch, tempo or clock, Stop; the pattern as a grid --------
+const PLAY_CHOICES = [['', 'pattern\'s'], ['all', 'all'], ['pressed', 'pressed']];
+
+export function performerView(model, view, actions) {
+  const p = performerOf(model, view);
+  const heading = h('h2', {}, 'Performer', helpButton(PERFORMER_HELP, actions), h('span', { class: 'grow' }),
+    sequencerButtons(actions));
+  if (!p) return [heading, h('div', { class: 'muted', text: 'Loading the performer…' })];
+  if (!p.available) return [heading, performerIdle()];
+  if (sequencerShown(model)) return [heading, h('div', { class: 'muted', text: 'Shown in the sequencer view.' })];
+  return [heading, ...performerBody(p, view, actions, { layoutKey: labOf(model, view)?.active?.key })];
+}
+
+const performerIdle = () => h('div', { class: 'muted', data: { performer: 'idle' },
+  text: 'Activate a generated layout to play a pattern over what you hold.' });
+
+// The sequencer is the page's current view (the host model's ui.view): the panel's editor steps aside meanwhile.
+export function sequencerShown(model) {
+  return model?.ui?.view?.name === SEQUENCER_VIEW;
+}
+
+// Beside the Performer "?": the sequencer view on this page, or in a tab of its own.
+function sequencerButtons(actions) {
+  return h('span', { class: 'view-btns' },
+    button('Sequencer', () => actions.openSequencer(), { class: 'view-btn', data: { action: 'sequencer-open' },
+      title: 'The pattern editor alone across the page, the grid large (Esc leaves)' }),
+    h('a', { class: 'view-btn', href: SEQUENCER_ADDRESS, target: '_blank', rel: 'noopener', data: { action: 'sequencer-tab' },
+      title: 'The sequencer in a tab of its own: bookmark it, or open the same address on a tablet', text: 'New tab ↗' }));
+}
+
+// The sequencer view: its heading (live, the pattern, the full-screen toggle and Leave), then the performer's controls
+// and the editor with the grid large, the same parts as the panel's; nothing while the page shows something else.
+export function sequencerFullPart(model, view, actions) {
+  if (!sequencerShown(model)) return [];
+  const p = performerOf(model, view);
+  const head = h('header', { class: 'full-head' },
+    h('h2', {}, h('span', { class: ['full-conn', model.connected && 'live'], title: model.connected ? 'Live' : 'Reconnecting…' }),
+      'Sequencer', helpButton(PERFORMER_HELP, actions)),
+    p?.available ? h('span', { class: 'seq-name', data: { part: 'sequencer-name' },
+      text: `${p.pattern?.name ?? 'no pattern'}${p.pattern?.edited ? ' ●' : ''} · ${p.name}` }) : null,
+    h('span', { class: 'grow' }),
+    fullViewButtons(model, actions, 'full'));
+  if (!p) return [head, h('div', { class: 'muted full-waiting', text: 'Loading the performer…' })];
+  if (!p.available) return [head, performerIdle()];
+  return [head, h('div', { class: 'seq-body' }, performerBody(p, view, actions,
+    { large: true, layoutKey: labOf(model, view)?.active?.key }))];
+}
+
+// The performer's controls, chord types and slots, status and editor (the panel's and the sequencer's).
+function performerBody(p, view, actions, { large = false, layoutKey = null } = {}) {
+  const tempo = p.tempo ?? {};
+  const valid = (p.patterns ?? []).filter((row) => row.valid);
+  const inputs = (view.ports ?? []).filter((port) => port.present !== false && port.direction !== 'output'
+    && port.direction !== 'declared' && !/apc64/i.test(port.name)).map((port) => port.name);
+  const clocks = [...new Set([...inputs, ...(tempo.clock && tempo.clock !== 'auto' ? [tempo.clock] : [])])];
+  const kept = (p.edits ?? []).find((e) => e.new);
+  const following = tempo.source === 'clock';
+  return [
+    h('div', { class: 'performer-controls row', data: { part: 'performer-controls' } },
+      button(p.enabled ? 'On' : 'Off', () => actions.setPerformer({ enabled: !p.enabled }), {
+        class: ['view-btn', p.enabled && 'on'], 'aria-pressed': p.enabled ? 'true' : 'false', data: { action: 'performer-on' },
+        title: p.enabled ? 'the performer plays a pattern over what you hold: click to play the pads as they are'
+          : 'play the pads as they are: click to play a pattern over what you hold' }),
+      h('label', {}, 'pattern ', h('select', { data: { field: 'performer-pattern' },
+        title: '● an unsaved edit, kept until Save or Revert (while the service runs)',
+        onchange: (e) => actions.choosePattern(e.target.value) },
+      valid.map((row) => h('option', { value: row.id, selected: row.id === p.pattern?.id,
+        text: row.edited ? `● ${row.name}` : row.name })),
+      kept ? h('option', { value: NEW_PATTERN, selected: Boolean(p.pattern?.new), text: `● ${kept.name} (new)` }) : null)),
+      h('label', {}, ' play ', h('select', { data: { field: 'performer-play' },
+        title: 'all: an unpressed string rings open; pressed: only the strings you press play',
+        onchange: (e) => actions.setPerformer({ play: e.target.value || null }) },
+      PLAY_CHOICES.map(([value, label]) => h('option', { value, selected: (p.play_override ?? '') === value,
+        text: value ? label : `${label} (${p.pattern?.play ?? 'all'})` })))),
+      button(p.latch ? 'Latch on' : 'Latch off', () => actions.setPerformer({ latch: !p.latch }), {
+        class: ['view-btn', p.latch && 'on'], 'aria-pressed': p.latch ? 'true' : 'false', data: { action: 'performer-latch' },
+        title: 'on: the last chord keeps playing after you let go (the unit\'s Play)' }),
+      button('Stop', () => actions.stopPerformer(), { data: { action: 'performer-stop' },
+        title: 'stop the pattern now, its notes off (the unit\'s Stop)' })),
+    h('div', { class: 'performer-tempo row', data: { part: 'performer-tempo' } },
+      h('label', {}, 'tempo ', h('input', { type: 'number', min: 20, max: 300, step: 1, size: 4,
+        value: following ? bpmText(tempo.measured ?? tempo.bpm) : (view.bpm ?? bpmText(tempo.bpm ?? 100)),
+        data: { field: 'performer-bpm' }, disabled: following,
+        title: following ? 'the clock sets the tempo' : 'applies as you change it (20–300)',
+        oninput: (e) => actions.draftBpm(e.target.value), onchange: () => actions.applyBpm(),
+        onkeydown: (e) => { if (e.key === 'Enter') actions.applyBpm(); } }), ' BPM'),
+      h('label', {}, ' clock ', h('select', { data: { field: 'performer-clock' },
+        title: 'follow the MIDI clock of an input (the MPC sends it while its sequencer plays); internal: the BPM here',
+        onchange: (e) => actions.setPerformer(e.target.value ? { clock: e.target.value } : { bpm: tempo.bpm ?? 100 }) },
+      h('option', { value: '', selected: !following, text: 'internal' }),
+      h('option', { value: 'auto', selected: following && tempo.clock === 'auto', text: 'auto (the first input with a clock)' }),
+      clocks.map((port) => h('option', { value: port, selected: following && tempo.clock === port, text: port }))))),
+    following ? h('div', { class: ['muted', 'small', tempo.measured ? 'clock-ok' : 'clock-wait'],
+      data: { part: 'performer-clock-status' }, text: clockStatus(tempo) }) : null,
+    chordsView(p, actions, layoutKey),
+    h('div', { class: 'muted small', data: { part: 'performer-status' }, text: performerStatus(p) }),
+    p.message ? h('div', { class: 'lab-message', text: p.message }) : null,
+    p.pattern || view.draft ? patternEditor(p, view, actions, { large }) : null,
+    patternConfirmView(view, actions),
+  ];
+}
+
+// The key (the layout's scale, for the session), chord types (a single note held is the root of the chord chosen; key
+// and key 7 the key's own) and the layout's pattern slots (Phase 2).
+export const KEY_TONICS = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
+export const KEY_SCALES = [['major', 'major'], ['dorian', 'dorian'], ['phrygian', 'phrygian'], ['lydian', 'lydian'],
+  ['mixolydian', 'mixolydian'], ['aeolian', 'minor'], ['locrian', 'locrian'], ['harmonic-minor', 'harmonic minor'],
+  ['melodic-minor', 'melodic minor']];
+const KEY_TYPES = ['key', 'key 7'];
+
+export function keyView(p, actions, layoutKey = null) {
+  const key = p.key;
+  const tonic = key ? KEY_TONICS.find((t) => t.replace('♭', 'b').replace('♯', '#') === key.tonic
+    || t === key.tonic) ?? key.tonic : '';
+  const scale = key?.scale ?? 'major';
+  const scales = KEY_SCALES.some(([k]) => k === scale) ? KEY_SCALES : [...KEY_SCALES, [scale, scale.replace(/-/g, ' ')]];
+  const session = Boolean(layoutKey?.session);
+  return h('div', { class: 'row key-choice', role: 'group', 'aria-label': 'key', data: { part: 'performer-key' } },
+    h('span', { class: 'muted small', text: 'key' }),
+    h('select', { data: { field: 'key-tonic' }, title: 'the key for the session (the layout\'s scale; not its file)',
+      onchange: (e) => actions.setKey(e.target.value || null, scale) },
+    h('option', { value: '', selected: !key, text: 'none' }),
+    KEY_TONICS.map((t) => h('option', { value: t, selected: t === tonic, text: t }))),
+    h('select', { data: { field: 'key-scale' }, disabled: !key,
+      onchange: (e) => actions.setKey(tonic, e.target.value) },
+    scales.map(([k, label]) => h('option', { value: k, selected: k === scale, text: label }))),
+    h('span', { class: 'muted small', data: { part: 'key-source' }, text: session
+      ? `for the session · the file: ${layoutKey.file ?? 'none'}` : (key ? 'the layout\'s' : 'chromatic: no key') }),
+    session ? button('file', () => actions.resetKey(), { class: 'link', data: { action: 'key-reset' },
+      title: 'the layout\'s key, as its file says' }) : null,
+    key && !key.chords ? h('span', { class: 'muted small', text: '· key chords need a seven-note scale' }) : null);
+}
+
+export function chordsView(p, actions, layoutKey = null) {
+  const chords = p.chords ?? {};
+  const slots = (p.slots ?? []).filter(Boolean);
+  if (!chords.available && !slots.length) return null;
+  const voicing = p.voicing;
+  const keyed = Boolean(p.key?.chords);
+  return h('div', { class: 'performer-chords', data: { part: 'performer-chords' } },
+    chords.available ? keyView(p, actions, layoutKey) : null,
+    chords.available ? h('div', { class: 'row chord-types', role: 'group', 'aria-label': 'chord type' },
+      h('span', { class: 'muted small', text: 'chord' }),
+      (chords.types ?? []).map((name) => button(name, () => actions.chooseType(chords.selected === name ? null : name), {
+        class: ['view-btn', 'type-btn', chords.selected === name && 'on', KEY_TYPES.includes(name) && 'key-type'],
+        'aria-pressed': chords.selected === name ? 'true' : 'false',
+        data: { type: name }, disabled: KEY_TYPES.includes(name) && !keyed && chords.selected !== name,
+        title: chords.selected === name ? `${name}: click for off (fretted)`
+          : KEY_TYPES.includes(name) ? (keyed ? `${name}: the key's own ${name === 'key' ? 'triad' : 'seventh'} on the note `
+            + 'you press; a note out of key plays nothing' : `${name}: choose a key of seven notes first`)
+            : `${name}: one note you press is the root of this chord` })),
+      button('off', () => actions.chooseType(null), { class: ['view-btn', 'type-btn', !chords.selected && 'on'],
+        'aria-pressed': chords.selected ? 'false' : 'true', data: { type: 'off' }, title: 'off: what you fret plays' }),
+      h('span', { class: 'voicing small', data: { part: 'voicing' },
+        text: voicing ? `${voicing.symbol} ${voicing.shape}` : (chords.selected ? 'press one note: the root' : '') })) : null,
+    slots.length ? h('div', { class: 'row pattern-slots', role: 'group', 'aria-label': 'pattern slot' },
+      h('span', { class: 'muted small', text: 'slots' }),
+      slots.map((slot) => button(`${slot.slot} ${slot.name}${slot.edited ? ' ●' : ''}`, () => actions.chooseSlot(slot.slot), {
+        class: ['view-btn', 'slot-btn', p.slot === slot.slot && 'on', !slot.valid && 'bad'],
+        'aria-pressed': p.slot === slot.slot ? 'true' : 'false', data: { slot: slot.slot }, disabled: !slot.valid,
+        title: slot.valid ? `slot ${slot.slot}: ${slot.name}` : `slot ${slot.slot}: no pattern "${slot.pattern}"` }))) : null,
+    p.pads ? h('div', { class: 'muted small', text: `pads: ${p.pads}` }) : null);
+}
+
+const bpmText = (bpm) => String(Math.round((bpm ?? 100) * 10) / 10);
+
+// What the clock followed is doing, plainly: waiting for it (and where the MPC sends it), following it, or stopped.
+export function clockStatus(tempo) {
+  const following = tempo.following;
+  const heard = (tempo.heard ?? []).filter((port) => port !== following);
+  const also = heard.length ? ` · a clock was heard lately from ${heard.join(', ')}` : '';
+  if (tempo.measured) return `following ${following}: ${Number(tempo.measured).toFixed(1)} BPM${also}`;
+  if (tempo.stopped) return `the clock stopped; keeping ${Number(tempo.bpm).toFixed(1)} BPM${also}`;
+  const from = following ?? (tempo.clock === 'auto' ? 'any input' : tempo.clock);
+  return `no clock heard from ${from} yet — the MPC sends its clock while its sequencer plays, to the outputs its `
+    + `sync settings send clock to${also}`;
+}
+
+export function performerStatus(p) {
+  const parts = [p.enabled ? (p.running ? `playing · step ${p.step}/${p.length}` : 'waiting for a press') : 'off',
+    p.addressing === 'voices' ? 'lanes are the held notes from the top' : 'a lane per string'];
+  if (p.controls) parts.push(p.controls);
+  return parts.join(' · ');
+}
+
+// The pattern, read-only: a row per lane (the string's name, or the voice), a column per step, the bars marked, the
+// playing step lit; manual lanes say so. (The panel draws the editor, performer_editor.js; this stays for a page
+// that only shows a pattern.)
+export function patternGrid(p) {
+  const pattern = p.pattern;
+  const labels = new Map((p.lanes ?? []).map((lane) => [lane.lane, lane.label]));
+  const steps = Array.from({ length: pattern.length }, (_, k) => k);
+  const playing = p.running ? (p.step ?? 0) - 1 : -1;
+  const cellClass = (k) => [k === playing && 'now', pattern.bar && k && k % pattern.bar === 0 && 'bar'];
+  const mark = { '.': '', x: '●', X: '◉', d: '↓', u: '↑' };
+  return h('table', { class: 'pattern-grid', data: { part: 'pattern-grid' },
+    'aria-label': `${pattern.name}: ${pattern.meter}, ${pattern.step} steps` },
+  h('caption', { class: 'muted small', text: `${pattern.name} · ${pattern.meter} · ${pattern.step} · ${pattern.length} steps`
+    + (pattern.description ? ` · ${pattern.description}` : '') }),
+  h('tr', {}, h('th', {}), steps.map((k) => h('th', { class: cellClass(k), text: String(k + 1) }))),
+  pattern.lanes.map((lane) => h('tr', { class: lane.manual && 'manual', data: { lane: lane.lane } },
+    h('th', { text: labels.get(lane.lane) ?? `lane ${lane.lane}` }),
+    lane.manual ? h('td', { class: 'manual-note', colspan: pattern.length, text: 'manual: played as you press' })
+      : steps.map((k) => h('td', { class: [...cellClass(k), lane.cells[k] === 'X' && 'accent', lane.cells[k] === 'x' && 'hit'],
+        data: { cell: lane.cells[k] }, text: mark[lane.cells[k]] ?? '' })))),
+  pattern.strum ? h('tr', { class: 'strum' }, h('th', { text: 'strum' }),
+    steps.map((k) => h('td', { class: cellClass(k), text: mark[pattern.strum[k]] ?? '' }))) : null);
+}
+
 // --- mounting into the host page -------------------------------------------------------------------------------
 const harmonyKey = (m, v) => [harmonyOf(m, v), labOf(m, v)?.active?.pads, labOf(m, v)?.active?.definition,
   labOf(m, v)?.active?.rows, labOf(m, v)?.active?.scale, labOf(m, v)?.active?.neck, v.leftHanded, inputsOf(m, v), v.ports,
   labOf(m, v)?.active ? null : m?.state?.controls];
 
+const performerKey = (m, v) => [steady(performerOf(m, v)), labOf(m, v)?.active?.key, v.ports, v.bpm, v.draft, v.saveAs,
+  v.patternConfirm];
+
 const PARTS = [
-  ['status', (m, v, a) => statusView(m, v, a), (m, v) => [labOf(m, v), v.library, v.base]],
+  ['status', (m, v, a) => statusHeadView(m, v, a), (m, v) => [labOf(m, v), v.base]],
+  // the playhead and the status line are marked on the drawn part (markPlayhead), so a step redraws nothing
+  ['performer', (m, v, a) => performerView(m, v, a), (m, v) => [sequencerShown(m), ...(sequencerShown(m) ? []
+    : performerKey(m, v))]],
+  ['lists', (m, v, a) => listsView(m, v, a), (m, v) => [labOf(m, v)?.layouts, labOf(m, v)?.active?.layout,
+    labOf(m, v)?.generators, labOf(m, v)?.schemes, v.library]],
   ['result', (m, v) => resultView(v), (m, v) => [v.result]],
   ['harmony', (m, v, a) => harmonySectionView(m, v, a), (m, v) => [fullViewShown(m), ...(fullViewShown(m) ? [] : harmonyKey(m, v))]],
   ['memory', (m, v, a) => memoryView(m, v, a), (m, v) => [v.backups, v.library, v.slot, v.slotView]],
   ['globals', (m, v, a) => globalsView(m, v, a), (m, v) => [v.globals, v.globalsProblem, v.confirm]],
-  // the full view: its own element at the end of <body>, drawn only while it is shown
+  // the full views: each its own element at the end of <body>, drawn only while it is shown
   ['full', (m, v, a) => harmonyFullPart(m, v, a), (m, v) => (fullViewShown(m)
     ? [m.ui.view, m.ui.fullscreen, m.connected, v.mainView, ...harmonyKey(m, v)] : null)],
+  ['sequencer', (m, v, a) => sequencerFullPart(m, v, a), (m, v) => (sequencerShown(m)
+    ? [m.ui.view, m.ui.fullscreen, m.connected, ...performerKey(m, v)] : null)],
 ];
 
 export function renderParts(containers, model, controller, memo, doc = globalThis.document) {
+  followPerformer(controller.view, performerOf(model, controller.view));
   for (const [name, view, key] of PARTS) {
     if (!containers[name]) continue;
     const k = JSON.stringify(key(model, controller.view));
     if (memo.get(name) === k) continue;
     memo.set(name, k);
+    const focused = focusedField(containers[name], doc);
     mount(containers[name], view(model, controller.view, controller.actions) ?? [], doc);
+    if (focused) refocus(containers[name], focused);
+  }
+  const performer = performerOf(model, controller.view);
+  if (performer?.available) {
+    markPlayhead(sequencerShown(model) ? containers.sequencer : containers.performer, performer, performerStatus(performer));
   }
   containers.full?.classList?.toggle('current', fullViewShown(model));
+  containers.sequencer?.classList?.toggle('current', sequencerShown(model));
+}
+
+// A redraw keeps the focus on the field that had it (the tempo while its arrows are clicked, a pattern field).
+function focusedField(container, doc) {
+  const active = doc?.activeElement;
+  const field = active?.dataset?.field;
+  if (!field || !container?.contains?.(active)) return null;
+  return { field, start: active.selectionStart ?? null, end: active.selectionEnd ?? null };
+}
+
+function refocus(container, { field, start, end }) {
+  const el = container.querySelector?.(`[data-field="${field}"]`);
+  if (!el?.focus) return;
+  el.focus();
+  try {
+    if (start !== null && el.setSelectionRange) el.setSelectionRange(start, end);
+  } catch {
+    // a number input has no selection; the focus is enough
+  }
+}
+
+// The performer's state without what changes at every step (the playhead, the running flag, the timer's lateness).
+function steady(p) {
+  if (!p) return p;
+  const { step, running, timing, ...rest } = p;
+  return rest;
 }
 
 function ensureStyles(doc, href) {
@@ -770,11 +1271,12 @@ export function mountPanel(element, { store, api, handlers, panel } = {}, { doc 
   const containers = {};
   for (const [name] of PARTS) {
     const part = doc.createElement('div');
-    if (name === 'full') {
+    if (name === 'full' || name === 'sequencer') {
       // outside the side column, so it shows whichever panel is chosen beside the surface
-      part.className = 'module-view lab-panel harmony-full';
-      part.setAttribute?.('aria-label', 'Harmony full view');
-      part.dataset.view = HARMONY_VIEW;
+      const harmony = name === 'full';
+      part.className = `module-view lab-panel ${harmony ? 'harmony-full' : 'sequencer-full'}`;
+      part.setAttribute?.('aria-label', harmony ? 'Harmony full view' : 'Sequencer');
+      part.dataset.view = harmony ? HARMONY_VIEW : SEQUENCER_VIEW;
       (doc.body ?? element).appendChild(part);
     } else {
       part.className = `lab-part lab-${name}`;

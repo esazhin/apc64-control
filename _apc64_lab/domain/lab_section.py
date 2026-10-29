@@ -9,19 +9,26 @@
         C: [255, 255, 255]
       strips:                     # optional strip section (§2.7 q6); without it strips stay as read
         1-8: {cc: 20, channel: 1, bar: red, bipolar: false}
+      performer:                  # optional (§2.10): a pattern played over what is held (performer_block.py)
+        pattern: travis
 
 A valid section binds the base-layer encoder to the window shift and Tempo to the interval cycle, so the
 active layout is the single owner of those controls (Shift + encoder stays the host's browser). An explicit
-encoder or tempo binding on a page clashes with that and is refused at its line.
+encoder or tempo binding on a page clashes with that and is refused at its line. With a performer block it also
+binds Play (the latch) and Stop (stop the pattern): in Custom view only Shift, Tempo, Play, Stop and the encoder
+reach the host, so a page binding of play or stop clashes the same way.
 """
 from dataclasses import dataclass, field
 from typing import Mapping
 
-from _apc64_host.domain.controls import Encoder, FunctionButton, FunctionName, Strip, parse_controls
+from _apc64_host.domain.controls import (
+    Encoder, FunctionButton, FunctionName, Strip, Transport, TransportName, parse_controls,
+)
 from _apc64_host.domain.issues import DomainInvariantError, LayoutIssue, Severity, SourceRef
 from _apc64_host.domain.layout import (
     Binding, ModuleAction, SectionEntry, SectionList, SectionMap, SectionResult, SectionScalar,
 )
+from performer import key_type
 
 from .bulk_edit import NAMED_COLOURS
 from .generators import (
@@ -30,6 +37,8 @@ from .generators import (
     raw_notes, root_of, row_labels_of, scheme_params, window_of,
 )
 from .music import PitchClass
+from .performer_block import PerformerSettings, parse_performer
+from .performer_pads import CONTROL_CHANNEL, control_rows
 from .harmony.spelling import parse_pitch_class, pc_name
 from .pads import PadGrid, Rgb
 from .records import StripAssignment
@@ -37,17 +46,24 @@ from .window import WindowSpec
 
 LAB_MODULE, SECTION = "lab", "lab"
 WINDOW_SHIFT, INTERVAL_CYCLE = "window_shift", "interval_cycle"
+PERFORMER_LATCH, PERFORMER_STOP = "performer_latch", "performer_stop"
 TEMPO = FunctionButton(FunctionName.TEMPO)
-OWN_KEYS = ("generator", "scheme", "colours", "strips")
+PLAY, STOP = Transport(TransportName.PLAY), Transport(TransportName.STOP)
+OWN_KEYS = ("generator", "scheme", "colours", "strips", "performer")
 STRIP_KEYS = ("cc", "lsb", "channel", "ch", "bar", "indicator", "bipolar", "outputs")
 
 
-def implied_bindings(window: WindowSpec | None = None) -> dict:
+def implied_bindings(window: WindowSpec | None = None, performer: bool = False) -> dict:
     """The base-layer encoder and Tempo of a generated layout. Tempo's label names what it toggles: 'interval'
-    (octave / fifth / third), or the generator's own step kinds ('Fret / Page' for the guitar)."""
+    (octave / fifth / third), or the generator's own step kinds ('Fret / Page' for the guitar). With a performer
+    block (§2.10), Play toggles the latch and Stop stops the pattern."""
     tempo = " / ".join(step.label for step in window.steps) if window is not None else "interval"
-    return {Encoder(): Binding((), label="window shift", module_action=ModuleAction(LAB_MODULE, WINDOW_SHIFT)),
-            TEMPO: Binding((), label=tempo, module_action=ModuleAction(LAB_MODULE, INTERVAL_CYCLE))}
+    bindings = {Encoder(): Binding((), label="window shift", module_action=ModuleAction(LAB_MODULE, WINDOW_SHIFT)),
+                TEMPO: Binding((), label=tempo, module_action=ModuleAction(LAB_MODULE, INTERVAL_CYCLE))}
+    if performer:
+        bindings[PLAY] = Binding((), label="latch", module_action=ModuleAction(LAB_MODULE, PERFORMER_LATCH))
+        bindings[STOP] = Binding((), label="stop pattern", module_action=ModuleAction(LAB_MODULE, PERFORMER_STOP))
+    return bindings
 
 
 @dataclass(frozen=True)
@@ -64,6 +80,7 @@ class LabDefinition:
     field_lines: tuple[tuple[str, int], ...] = field(default=(), compare=False)
     scheme_params: tuple[tuple[str, int | str | None], ...] = ()
     layout_root: int | None = None   # the generator's root(params) when it has one (the guitar: its lowest string)
+    performer: PerformerSettings | None = None   # the performer block (§2.10), or None
 
     @property
     def parameters(self) -> dict[str, int | str]:
@@ -111,17 +128,20 @@ class LabDefinition:
 
 def compile_lab_section(section: SectionEntry, file: str, existing: Mapping | None = None,
                         generators: Mapping[str, PadLayoutGenerator] | None = None,
-                        schemes: Mapping[str, ColourScheme] | None = None) -> SectionResult:
-    """The SectionCompiler body for 'lab:' (the application wraps it with the registry's generators)."""
+                        schemes: Mapping[str, ColourScheme] | None = None,
+                        patterns: Mapping[str, str] | None = None) -> SectionResult:
+    """The SectionCompiler body for 'lab:' (the application wraps it with the registry's generators). `patterns`:
+    {id: name} of the performer patterns available, to check a performer block's pattern (None: not checked)."""
     return _LabSection(section, file, existing or {},
                        generators if generators is not None else {g.name: g for g in BUILTIN_GENERATORS},
-                       schemes if schemes is not None else {s.name: s for s in BUILTIN_SCHEMES}).run()
+                       schemes if schemes is not None else {s.name: s for s in BUILTIN_SCHEMES}, patterns).run()
 
 
 class _LabSection:
-    def __init__(self, section, file, existing, generators, schemes):
+    def __init__(self, section, file, existing, generators, schemes, patterns=None):
         self.section, self.file, self.existing = section, file, existing
-        self.generators, self.schemes = generators, schemes
+        self.generators, self.schemes, self.patterns = generators, schemes, patterns
+        self.performer: PerformerSettings | None = None
         self.issues: list[LayoutIssue] = []
         self.lines: dict[str, int] = {}
 
@@ -137,24 +157,28 @@ class _LabSection:
             self.lines[f"lab.{entry.key.lower()}"] = entry.line
         generator = self._generator(body)
         scheme = self._scheme(body)
+        self._keyed = any(p.name == "scale" for p in scheme_params(self.schemes[scheme])) if scheme in self.schemes \
+            else False
         values = self._params(body, generator, self.schemes.get(scheme)) if generator is not None else None
         params, given_scheme_params = values if values is not None else (None, None)
         colours = self._colours(body.get("colours"))
         strips = self._strips(body.get("strips"))
         if generator is not None and params is not None:
             self._check_range(generator, params, body)
+            self._performer(body.get("performer"), generator, params)
         self._clashes()
         if any(issue.is_error for issue in self.issues):
             return SectionResult(None, {}, tuple(self.issues))
         own_root = root_of(generator, params) if callable(getattr(generator, "root", None)) else None
         definition = LabDefinition(generator.name, tuple(params.items()), scheme, tuple(colours.items()),
                                    tuple(strips.items()), self.file, line, tuple(self.lines.items()),
-                                   tuple(given_scheme_params.items()), own_root)
+                                   tuple(given_scheme_params.items()), own_root, self.performer)
         try:
             window = window_of(generator, params)
         except Exception:   # checked above (_check_range); a label is no reason to refuse the layout
             window = None
-        return SectionResult(definition, implied_bindings(window), tuple(self.issues))   # warnings only
+        return SectionResult(definition, implied_bindings(window, self.performer is not None),
+                             tuple(self.issues))   # warnings only
 
     # --- generator, scheme, parameters ----------------------------------------------------------------
     def _available(self, names) -> str:
@@ -331,12 +355,50 @@ class _LabSection:
             return None
         return settings
 
+    # --- the performer block (§2.10) -----------------------------------------------------------------
+    def _performer(self, entry: SectionEntry | None, generator: PadLayoutGenerator, params: dict):
+        if entry is None:
+            return
+        try:
+            strings = channels_of(generator, params) is not None
+        except GeneratorFault:
+            strings = False
+        settings, issues, lines = parse_performer(entry, strings, self.patterns)
+        self.lines.update(lines)
+        if settings is not None and any(key_type(name) for name in settings.chords) and not self._keyed:
+            self.issues.append(LayoutIssue(Severity.WARNING, SourceRef(self.file, dict(lines).get(
+                "lab.performer.chords", entry.line)), "chords", "key and key 7 need a key: this scheme lights no scale",
+                "write 'scheme: scale' with 'scale:' and 'root:', or choose a Key on the page"))
+        for issue in issues:
+            self.issues.append(LayoutIssue(Severity.WARNING if issue.warning else Severity.ERROR,
+                                           SourceRef(self.file, issue.line), issue.field, issue.problem, issue.fix))
+        if settings is not None and strings:
+            settings = self._control_channel(entry, generator, params, settings)
+        self.performer = settings
+
+    def _control_channel(self, entry, generator, params, settings):
+        """The control pads send on channel 16 (performer_pads.py): a string playing on it would clash."""
+        neck = neck_of(generator, params)
+        if neck is None or not control_rows(len(neck.strings)):
+            return settings
+        clash = sorted({s.number for s in neck.strings if s.channel == CONTROL_CHANNEL})
+        if clash:
+            self.error(entry.line, "performer", f"string {clash[0]} sends on channel {CONTROL_CHANNEL}, the "
+                       "performer's control pads' channel", f"give the strings channels 1–{CONTROL_CHANNEL - 1}")
+            return None
+        return settings
+
     # --- the controls the section owns ----------------------------------------------------------------
     def _clashes(self):
-        for control, what, fix in ((Encoder(), "the lab section shifts the window with the encoder",
-                                    "remove this encoder binding; Shift + encoder still browses layouts"),
-                                   (TEMPO, "the lab section cycles the interval with Tempo",
-                                    "remove this tempo binding")):
+        owned = [(Encoder(), "the lab section shifts the window with the encoder",
+                  "remove this encoder binding; Shift + encoder still browses layouts"),
+                 (TEMPO, "the lab section cycles the interval with Tempo", "remove this tempo binding")]
+        if self.performer is not None:
+            owned += [(PLAY, "the lab section's performer toggles the latch with Play",
+                       "remove this play binding, or the performer block"),
+                      (STOP, "the lab section's performer stops the pattern with Stop",
+                       "remove this stop binding, or the performer block")]
+        for control, what, fix in owned:
             for found in self.existing.get(control, ()):
                 self.error(found.line, str(control), what, fix)
 

@@ -176,11 +176,12 @@ def test_build_lab_returns_a_module_with_the_specified_shape(tmp_path):   # s32 
         assert lab.module.outbound_additions() == {SysexCommand.PROJECT_READ, SysexCommand.GLOBAL_READ}
         assert lab.module.outbound_scoped() == {SysexCommand.PROJECT_WRITE: capability,
                                                  SysexCommand.GLOBAL_WRITE: capability}
-        assert set(lab.module.actions()) == {"window_shift", "interval_cycle"}
+        assert set(lab.module.actions()) == {"window_shift", "interval_cycle", "performer_latch", "performer_stop"}
         assert set(lab.module.layout_sections()) == {"lab"}
         assert lab.module.panel() == str(composition.STATIC_DIR) and (composition.STATIC_DIR / "lab.js").is_file()
         assert lab.module.cli_commands() == (lab.cli,) and lab.module.router() is lab.router
         assert isinstance(lab.publisher, HubPublisher)
+        assert lab.session._on_scale == lab.performer.set_key            # the layout's key reaches the performer
     finally:
         lab.stop()
 

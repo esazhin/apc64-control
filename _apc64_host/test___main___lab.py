@@ -201,3 +201,51 @@ def test_the_lab_asks_for_custom_view_and_the_host_assumes_it(tmp_path):   # 202
         client.post("/api/control/view custom/press")
         assert wait_until(lambda: lab.session.message is None and sim.current_view is UnitView.CUSTOM)
         client.post("/api/unit/release", json={})
+
+
+GUITAR_PICKER = """name: Guitar picker
+lab:
+  generator: guitar
+  performer:
+    pattern: strum
+    tempo: 120
+"""
+
+
+def test_the_performer_plays_a_pattern_over_held_strings_to_the_target(tmp_path):   # contract 2 §2.10, composed
+    from _apc64_host.domain.controls import Transport, TransportName
+    from _apc64_host.domain.midi import NoteOff
+    (tmp_path / "layouts").mkdir()
+    (tmp_path / "layouts" / "jam.yaml").write_text(JAM)
+    (tmp_path / "layouts" / "guitar-picker.yaml").write_text(GUITAR_PICKER)
+    config = config_for(tmp_path, lab_target="MPC Live III MIDI 1 ch 2 aftertouch pass")
+    adapters = root.simulated_adapters(config)
+    comp = root.compose(config, adapters, root.MODULES, local_names=("studio-pc",))
+    (lab,) = comp.parts
+    sim, midi = adapters.simulator, adapters.midi
+    with TestClient(comp.app, base_url=BASE, client=("127.0.0.1", 4000)) as client:
+        on_loop = client.portal.call
+        client.post("/api/unit/take", json={"source": "agent"})
+        client.post("/api/lab/activate", json={"layout": "Guitar picker"})
+        assert wait_until(lambda: lab.session.running and client.get("/api/lab/performer").json()["enabled"])
+        on_loop(sim.play, UnitPortRole.CUSTOM, NoteOn(3, 57, 127))            # A on the G string (fret 2)
+        # the strum (6 lanes, all at the down stroke) to the target on the rule's channel, open strings included
+        assert wait_until(lambda: {m.note for _, m in midi.sent if isinstance(m, NoteOn)} >= {40, 45, 50, 57, 59, 64})
+        assert all(m.channel == 2 for _, m in midi.sent)
+        held = lab.publisher.current().get("harmony") or {}
+        assert [n["note"] for n in held.get("held", [])] == [57]                # the harmony follows what is held
+        assert wait_until(lambda: sim.oled.get(1) == "Frets 0-7")              # the layout name's 2 s are over
+        on_loop(sim.press, Transport(TransportName.PLAY))
+        on_loop(sim.release, Transport(TransportName.PLAY))
+        assert wait_until(lambda: client.get("/api/lab/performer").json()["latch"])
+        assert wait_until(lambda: sim.oled.get(1) == "Latch on"), sim.oled
+        on_loop(sim.play, UnitPortRole.CUSTOM, NoteOff(3, 57, 0))
+        time.sleep(0.6)                                                         # latched: it goes on
+        assert client.get("/api/lab/performer").json()["running"]
+        on_loop(sim.press, Transport(TransportName.STOP))
+        assert wait_until(lambda: not client.get("/api/lab/performer").json()["running"])
+        sent = list(midi.sent)
+        ons = sum(1 for _, m in sent if isinstance(m, NoteOn))
+        offs = sum(1 for _, m in sent if isinstance(m, NoteOff))
+        assert ons == offs                                                      # every note the performer started ended
+        client.post("/api/unit/release", json={})

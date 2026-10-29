@@ -229,3 +229,17 @@ def test_the_inputs_followed_are_published():
     rig.tracker.select_inputs(["Keys"])
     assert rig.publisher.published[-1] == {"kind": "inputs", "apc64": ["APC64 Custom", "APC64 Notes"],
                                            "inputs": ["Keys"]}
+
+
+def test_the_performers_voicing_is_shown_on_its_strings_and_a_voiced_root_or_control_is_not_counted():   # Phase 2
+    from _apc64_lab.application.ports import TAKEN_CONTROL, TAKEN_VOICED
+    tracker = HarmonyTracker(RecordingPublisher())
+    assert not tracker.apply(PlayEvent("note_on", note=45, velocity=90, port=CUSTOM, reason=TAKEN_VOICED, channel=5))
+    assert not tracker.apply(PlayEvent("note_on", note=0, velocity=90, port=CUSTOM, reason=TAKEN_CONTROL, channel=16))
+    tracker.show_voicing([(5, 45), (4, 52), (3, 57), (2, 60), (1, 64)])                  # Am x02210
+    state = tracker.state()
+    assert state.chord == "Am" and [(v[0], v[1], v[2]) for v in state.played][:2] == [("custom", 5, 45), ("custom", 4, 52)]
+    tracker.show_voicing([(5, 45), (4, 52), (3, 55), (2, 60), (1, 64)])                  # Am7: one string changed
+    assert tracker.state().chord == "Am7" and tracker.held_notes() == ()                 # never ended at a shift
+    tracker.show_voicing(())
+    assert tracker.state().chord == "—" and tracker.state().played == ()

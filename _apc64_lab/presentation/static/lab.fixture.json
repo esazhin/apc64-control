@@ -673,6 +673,12 @@
      "scheme_params": {}
     },
     "interval": "Fret",
+    "key": {
+     "file": null,
+     "scale": null,
+     "session": false,
+     "tonic": null
+    },
     "layout": "guitar",
     "name": "Guitar",
     "neck": {
@@ -1544,6 +1550,12 @@
     "scheme_params": {}
    },
    "interval": "Oct",
+   "key": {
+    "file": null,
+    "scale": null,
+    "session": false,
+    "tonic": null
+   },
    "layout": "tonnetz-c",
    "name": "Tonnetz C",
    "neck": null,

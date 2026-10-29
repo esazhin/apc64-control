@@ -6,6 +6,7 @@ bindings, or LayoutIssues. Two additions:
 - §2.7 q2: with a lab-wide default NoteTarget configured, a valid section also implies the Custom-port routing
   rule to it (and its device). The host compiler keeps a layout's own 'routing: custom:' line instead: that is
   the per-layout override. With neither, Custom-view notes are only shown.
+- a performer block's pattern is checked against the pattern files (`patterns`, {id: name}; §2.10);
 - every valid definition is reported to `on_compiled(layout id, definition)`, so the lab knows the generated
   layouts (the library listing and push by layout) without asking the host's library; a section that does not
   compile is reported to `on_failed(layout id, first error)`, so the panel lists it as invalid with its reason.
@@ -28,14 +29,17 @@ class LabSectionCompiler:
     def __init__(self, generators: Callable[[], Mapping], schemes: Callable[[], Mapping],
                  target: NoteTarget | None = None,
                  on_compiled: Callable[[LayoutId, LabDefinition], None] | None = None,
-                 on_failed: Callable[[LayoutId, str], None] | None = None):
+                 on_failed: Callable[[LayoutId, str], None] | None = None,
+                 patterns: Callable[[], Mapping] | None = None):
         self._generators, self._schemes = generators, schemes
+        self._patterns = patterns
         self.target = target
         self._on_compiled = on_compiled
         self._on_failed = on_failed
 
     def compile(self, section: SectionEntry, file: str, existing) -> SectionResult:
-        result = compile_lab_section(section, file, existing, self._generators(), self._schemes())
+        result = compile_lab_section(section, file, existing, self._generators(), self._schemes(),
+                                     self._patterns() if self._patterns is not None else None)
         if result.value is None or any(issue.is_error for issue in result.issues):
             if self._on_failed is not None:
                 errors = [issue for issue in result.issues if issue.is_error]

@@ -113,32 +113,33 @@ def modes_grid(base=48, scheme=None):
     return generate(MODES, parse_params(MODES.params, {"base": base}), scheme or FifthsHue())
 
 
-def test_the_modes_rows_are_the_parallel_modes_by_brightness_root_to_octave():
-    grid = modes_grid(48)
-    rows = [[grid.note_at(r, c) - 48 for c in range(1, 9)] for r in range(1, 9)]
-    assert rows[0] == [0, 1, 3, 5, 6, 8, 10, 12]     # Locrian
-    assert rows[2] == [0, 2, 3, 5, 7, 8, 10, 12]     # Aeolian
-    assert rows[5] == [0, 2, 4, 5, 7, 9, 11, 12]     # Ionian
-    assert rows[6] == [0, 2, 4, 6, 7, 9, 11, 12]     # Lydian
-    assert rows[7] == list(range(8))                 # the chromatic reference row
-    assert MODES.row_labels({}) == ("Locrian", "Phrygian", "Aeolian", "Dorian", "Mixolydian", "Ionian", "Lydian",
-                                    "Chromatic")
+IONIAN_TO_LOCRIAN = ("Ionian", "Dorian", "Phrygian", "Lydian", "Mixolydian", "Aeolian", "Locrian", "")
 
 
-def test_adjacent_mode_rows_differ_by_one_note_and_that_note_is_stressed():
+def test_the_modes_rows_go_from_ionian_to_locrian_root_to_octave_and_row_8_is_dark():
     grid = modes_grid(48)
-    for r in range(1, 7):
-        below = [grid.note_at(r, c) for c in range(1, 9)]
-        above = [grid.note_at(r + 1, c) for c in range(1, 9)]
-        differs = [c for c in range(8) if below[c] != above[c]]
-        assert len(differs) == 1 and above[differs[0]] - below[differs[0]] == 1   # one note, raised a semitone
-        column = differs[0] + 1
-        stressed = grid.at(PadPos(r + 1, column)).rest
-        others = [grid.at(PadPos(r + 1, c)).rest for c in range(2, 8) if c != column]
-        assert all(sum((o.r, o.g, o.b)) < sum((stressed.r, stressed.g, stressed.b)) for o in others)
-    for r in range(1, 8):   # the root and the octave of every mode row
+    rows = [[grid.note_at(r, c) - 48 if grid.note_at(r, c) is not None else None for c in range(1, 9)]
+            for r in range(1, 9)]
+    assert rows[0] == [0, 2, 4, 5, 7, 9, 11, 12]     # Ionian
+    assert rows[1] == [0, 2, 3, 5, 7, 9, 10, 12]     # Dorian
+    assert rows[3] == [0, 2, 4, 6, 7, 9, 11, 12]     # Lydian
+    assert rows[6] == [0, 1, 3, 5, 6, 8, 10, 12]     # Locrian
+    assert rows[7] == [None] * 8 and all(grid.at(PadPos(8, c)).silent for c in range(1, 9))
+    assert MODES.row_labels({}) == IONIAN_TO_LOCRIAN
+
+
+def test_the_notes_that_differ_from_ionian_are_stressed_the_rest_dimmed_root_and_octave_white():
+    grid = modes_grid(48)
+    ionian = (0, 2, 4, 5, 7, 9, 11, 12)
+    for r in range(1, 8):
+        row = [grid.note_at(r, c) - 48 for c in range(1, 9)]
         assert grid.at(PadPos(r, 1)).rest == WHITE and grid.at(PadPos(r, 8)).rest == WHITE
-    assert grid.at(PadPos(1, 5)).rest == FifthsHue().colour(54, 0)[0]   # Locrian stresses its ♭5
+        for c in range(2, 8):
+            full = FifthsHue().colour(48 + row[c - 1], 0)[0]
+            rest = grid.at(PadPos(r, c)).rest
+            assert (rest == full) == (row[c - 1] != ionian[c - 1]), (r, c)   # full colour exactly where it differs
+    assert grid.at(PadPos(7, 5)).rest == FifthsHue().colour(54, 0)[0]   # Locrian's ♭5 differs: full
+    assert grid.at(PadPos(4, 4)).rest == FifthsHue().colour(54, 0)[0]   # Lydian's ♯4
 
 
 def test_the_modes_range_is_one_octave_and_the_highest_base_is_115():
@@ -151,17 +152,42 @@ def test_the_modes_range_is_one_octave_and_the_highest_base_is_115():
 
 def test_the_modes_explorer_takes_any_scheme_and_a_scale_overlay():
     grid = modes_grid(48, configure(SCALE, {"scale": "major"}))
-    assert grid.at(PadPos(1, 2)).rest != OUT_OF_SCALE   # D♭ in Locrian, dimmed out-of-scale colour
-    assert len(grid.active) == 64
+    assert grid.at(PadPos(3, 2)).rest == OUT_OF_SCALE   # D♭ in Phrygian: outside C major, at full (it differs)
+    assert len(grid.active) == 56
 
 
-def test_each_modes_row_is_spelled_in_its_mode_at_any_window():
+def test_each_modes_row_is_spelled_in_its_mode_at_any_key():
     names = MODES.pad_names({"base": 48}, 0)
     rows = [names[r * 8:(r + 1) * 8] for r in range(8)]
-    assert rows[0] == ("C", "D♭", "E♭", "F", "G♭", "A♭", "B♭", "C")      # Locrian
-    assert rows[6] == ("C", "D", "E", "F♯", "G", "A", "B", "C")          # Lydian
-    assert rows[7][:3] == ("C", "C♯", "D")                               # the chromatic row: the fixed table
-    assert MODES.pad_names({"base": 48}, 7)[40:48] == ("G", "A", "B", "C", "D", "E", "F♯", "G")   # G Ionian
+    assert rows[6] == ("C", "D♭", "E♭", "F", "G♭", "A♭", "B♭", "C")      # Locrian
+    assert rows[3] == ("C", "D", "E", "F♯", "G", "A", "B", "C")          # Lydian
+    assert rows[7] == (None,) * 8
+    assert MODES.pad_names({"base": 48}, 7)[:8] == ("G", "A", "B", "C", "D", "E", "F♯", "G")    # G Ionian
+    assert MODES.pad_names({"base": 48}, 1)[:8] == ("D♭", "E♭", "F", "G♭", "A♭", "B♭", "C", "D♭")   # D♭ Ionian
+
+
+def test_the_modes_window_walks_the_keys_by_semitone_or_fifth_and_shows_the_key():
+    from _apc64_lab.domain.pads import NoteSpan
+    from _apc64_lab.domain.window import StepWindow
+    spec = MODES.window({"base": 49})                                      # D♭2
+    window = StepWindow.starting(spec)
+    assert window.oled("Modes").row1 == "Key Db" and [s.label for s in spec.steps] == ["Semitone", "Fifth"]
+    span = NoteSpan(49, 61)
+    fifths = window.cycled()
+    assert fifths.flash_step("Modes").row1 == "Step: Fifth"
+    keys = []
+    for _ in range(12):
+        fifths = fifths.shifted(+1, span)
+        keys.append(fifths.oled("Modes").row1.removeprefix("Key "))
+    assert keys == ["Ab", "Eb", "Bb", "F", "C", "G", "D", "A", "E", "B", "Gb", "Db"]   # round the circle and home
+    assert 0 <= fifths.position <= 11 and window.shifted(-1, span).oled("Modes").row1 == "Key C"   # wraps
+
+
+def test_the_modes_colours_and_marks_follow_the_key():
+    params = parse_params(MODES.params, {"base": 48})
+    in_c, in_d = generate(MODES, params, FifthsHue(), 0), generate(MODES, params, FifthsHue(), 2)
+    assert [p.rest for _, p in in_c.active] == [p.rest for _, p in in_d.active]   # the same picture in every key
+    assert in_d.note_at(1, 1) == 50 and in_d.at(PadPos(1, 1)).rest == WHITE
 
 
 # --- the guitar neck (amendment 2026-10-27) --------------------------------------------------------------
@@ -348,3 +374,17 @@ def test_a_guitar_tweak_reloads_at_the_same_fret_while_it_fits(factory_frame):
                                     short.window_spec(GENERATORS))
     assert session.reloaded(shorter).oled.row1 == "Frets 0-7"                # 10 is past a 12-fret neck's end
     assert isinstance(session.window, StepWindow)
+
+
+def test_every_modes_row_starts_on_the_keys_root_name_and_spells_each_letter_once_in_all_twelve_keys():
+    from _apc64_lab.domain.window import KEY_NAMES
+    for t in range(12):
+        names = MODES.pad_names({"base": 48}, t)
+        root = KEY_NAMES[t].replace("b", "♭") if len(KEY_NAMES[t]) > 1 else KEY_NAMES[t]
+        for r in range(7):
+            row = names[r * 8:(r + 1) * 8]
+            assert row[0] == root and row[7] == root, (KEY_NAMES[t], r, row)
+            assert len({name[0] for name in row[:7]}) == 7, (KEY_NAMES[t], r, row)
+    eb = MODES.pad_names({"base": 51}, 0)
+    assert eb[16:24] == ("E♭", "F♭", "G♭", "A♭", "B♭", "C♭", "D♭", "E♭")     # E♭ Phrygian
+    assert eb[48:56] == ("E♭", "F♭", "G♭", "A♭", "B𝄫", "C♭", "D♭", "E♭")    # E♭ Locrian: the key needs B𝄫

@@ -141,8 +141,10 @@ def _code(root: Path, sub: str = ""):
 
 def test_the_lab_application_imports_only_its_domain_host_domain_values_and_host_ports():
     """Contract 2 §7: `_apc64_lab/application` imports the lab domain and `_apc64_host/application/ports.py`
-    Protocols only, never infrastructure or presentation (its own or the host's)."""
-    allowed = ("_apc64_lab.domain", "_apc64_lab.application", "_apc64_host.domain", "_apc64_host.application.ports")
+    Protocols only, never infrastructure or presentation (its own or the host's). §2.10: and the pure performer
+    package (standard library only, as its own test enforces), like the standard library."""
+    allowed = ("_apc64_lab.domain", "_apc64_lab.application", "_apc64_host.domain", "_apc64_host.application.ports",
+               "performer")
     offenders = []
     for path in _code(LAB, "application"):
         for module in _module_imports(path, LAB):

@@ -75,6 +75,18 @@ class ModuleHooks:
                 log.exception("module %s: led_filter failed", getattr(module, "name", module))
         return led
 
+    def take_played(self, played) -> str | None:
+        """The first module that takes a played message gives its reason; None: no module took it (§2.10)."""
+        for module in self.modules:
+            try:
+                reason = _hook(module, "take_played")(played)
+            except Exception:   # a failing module never swallows the playing: the router has it
+                log.exception("module %s: take_played failed", getattr(module, "name", module))
+                continue
+            if reason:
+                return str(reason)
+        return None
+
 
 @dataclass(frozen=True)
 class ModuleCollection:
