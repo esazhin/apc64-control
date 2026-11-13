@@ -44,6 +44,14 @@ A page on your home network shows a live replica of the whole unit with every co
 > **1.2.1.6**; on other firmware the host warns. The protocol, as far as it is known, is in
 > [PROTOCOL-SPEC.md](PROTOCOL-SPEC.md) and [NOTES-daw-mode.md](NOTES-daw-mode.md).
 
+### Standalone companion: MPC Session Bridge
+
+A second, host-free path lives in [`mpc-session-bridge/`](mpc-session-bridge/): a drop-in **MPC controller
+script** that turns the APC64 into an Ableton-style **Session View for the MPC's Clip Matrix** — running on the
+MPC itself, no computer, on stock MPC OS 3.10.1. Clip/scene launch, track select, mute/solo/record-arm,
+grid-scroll and true-colour LEDs all work; the 8 faders don't (they emit pitch-bend the MPC script layer can't
+receive — see that folder's README). Uses the same DAW-mode protocol this project documents.
+
 ## The layout lab
 
 The lab is the **Lab** choice beside the surface on the same page, plus `apc64 lab …` and `/api/lab…`.
